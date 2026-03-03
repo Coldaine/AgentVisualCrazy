@@ -142,7 +142,7 @@ async function sendPrompt(client, sessionId, options) {
     body.reasoning = reasoning;
   }
 
-  return client.session.prompt({
+  return client.session.promptAsync({
     path: { id: sessionId },
     body
   });
