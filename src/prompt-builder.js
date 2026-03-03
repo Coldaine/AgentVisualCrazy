@@ -242,7 +242,7 @@ When complete, output your findings in this format:
 
 **Open Questions:** (if any)
 
-[SIDECAR_COMPLETE]`;
+[SIDECAR_FOLD]`;
 
   if (summaryLength === 'brief') {
     summaryFormat = `## Summary Format
@@ -257,7 +257,7 @@ When complete, output a BRIEF summary in this format:
 **Recommendations:**
 [Suggested actions]
 
-[SIDECAR_COMPLETE]`;
+[SIDECAR_FOLD]`;
   } else if (summaryLength === 'verbose') {
     // Verbose could include more details or examples
     summaryFormat = `## Summary Format (VERBOSE)
@@ -291,7 +291,7 @@ When complete, output a COMPREHENSIVE summary in this format, including all deta
 **Open Questions:** (if any)
 [List all remaining ambiguities, unresolved issues, or areas requiring further investigation.]
 
-[SIDECAR_COMPLETE]`;
+[SIDECAR_FOLD]`;
   }
 
   return `## HEADLESS MODE INSTRUCTIONS
@@ -300,14 +300,14 @@ You are running autonomously without human interaction.
 
 1. Execute the task completely
 2. Make reasonable assumptions and document them
-3. When done, output your summary followed by [SIDECAR_COMPLETE]
+3. When done, output your summary followed by [SIDECAR_FOLD]
 
 Do NOT ask questions. Work independently.
 
 If you encounter a blocker you cannot resolve:
 1. Document what you tried
 2. Output partial results
-3. End with [SIDECAR_COMPLETE]
+3. End with [SIDECAR_FOLD]
 
 ${summaryFormat}`;
 }

@@ -347,4 +347,105 @@ ${FOLD_MARKER}`;
       expect(promptCall[2].model).toBe('anthropic/claude-3.5-sonnet');
     });
   });
+
+  describe('V3 API Names', () => {
+    it('should accept prompt/cwd/noUi instead of v2 names', async () => {
+      createMockClaudeSession(tmpDir, [
+        { role: 'user', content: 'Testing v3 arg names' }
+      ]);
+
+      const logSpy = jest.spyOn(console, 'log').mockImplementation();
+
+      await startSidecar({
+        model: 'google/gemini-2.5-flash',
+        prompt: 'Debug the auth issue',
+        cwd: tmpDir,
+        noUi: true,
+        timeout: 5
+      });
+
+      const sessions = fs.readdirSync(path.join(tmpDir, '.claude', 'sidecar_sessions'));
+      expect(sessions.length).toBe(1);
+      const metadata = JSON.parse(fs.readFileSync(
+        path.join(tmpDir, '.claude', 'sidecar_sessions', sessions[0], 'metadata.json'), 'utf-8'
+      ));
+      expect(metadata.briefing).toContain('Debug the auth issue');
+      expect(metadata.status).toBe('complete');
+      expect(metadata.mode).toBe('headless');
+
+      logSpy.mockRestore();
+    });
+
+    it('should pass sessionDir through to context building', async () => {
+      // Create session file in an explicit directory (simulating code-web)
+      const webSessionDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sidecar-web-'));
+      const sessionFile = path.join(webSessionDir, 'web-session.jsonl');
+      fs.writeFileSync(sessionFile, JSON.stringify({
+        type: 'user', message: { content: 'from web sandbox' }, timestamp: new Date().toISOString()
+      }) + '\n');
+
+      const logSpy = jest.spyOn(console, 'log').mockImplementation();
+
+      await startSidecar({
+        model: 'google/gemini-2.5-flash',
+        prompt: 'Test code-web client',
+        cwd: tmpDir,
+        client: 'code-web',
+        sessionDir: webSessionDir,
+        sessionId: 'web-session',
+        noUi: true,
+        timeout: 5
+      });
+
+      const sessions = fs.readdirSync(path.join(tmpDir, '.claude', 'sidecar_sessions'));
+      expect(sessions.length).toBe(1);
+
+      // Verify the context was built using the web session dir
+      const contextPath = path.join(tmpDir, '.claude', 'sidecar_sessions', sessions[0], 'initial_context.md');
+      const context = fs.readFileSync(contextPath, 'utf-8');
+      expect(context).toContain('Test code-web client');
+
+      logSpy.mockRestore();
+      fs.rmSync(webSessionDir, { recursive: true, force: true });
+    });
+  });
+
+  describe('V3 Module Exports', () => {
+    it('should export environment detection functions', () => {
+      const index = require('../src/index');
+      expect(typeof index.detectEnvironment).toBe('function');
+      expect(typeof index.inferClient).toBe('function');
+      expect(typeof index.getSessionRoot).toBe('function');
+    });
+
+    it('should export context compression functions', () => {
+      const index = require('../src/index');
+      expect(typeof index.compressContext).toBe('function');
+      expect(typeof index.estimateTokenCount).toBe('function');
+      expect(typeof index.buildPreamble).toBe('function');
+    });
+
+    it('should export FOLD_MARKER as [SIDECAR_FOLD]', () => {
+      const index = require('../src/index');
+      expect(index.FOLD_MARKER).toBe('[SIDECAR_FOLD]');
+      expect(index.COMPLETE_MARKER).toBe('[SIDECAR_FOLD]');
+    });
+
+    it('should export formatFoldOutput', () => {
+      const index = require('../src/index');
+      expect(typeof index.formatFoldOutput).toBe('function');
+
+      const output = index.formatFoldOutput({
+        model: 'test-model',
+        sessionId: 'test-123',
+        client: 'code-local',
+        cwd: '/test',
+        mode: 'headless',
+        summary: 'Test summary'
+      });
+      expect(output).toContain('[SIDECAR_FOLD]');
+      expect(output).toContain('Client: code-local');
+      expect(output).toContain('CWD: /test');
+    });
+  });
 });

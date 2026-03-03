@@ -9,7 +9,7 @@
 jest.mock('../src/opencode-client', () => ({
   createClient: jest.fn().mockReturnValue({}),
   createSession: jest.fn().mockResolvedValue('mock-session-id'),
-  sendPrompt: jest.fn().mockResolvedValue({ data: { parts: [{ type: 'text', text: '[SIDECAR_COMPLETE]' }] } }),
+  sendPrompt: jest.fn().mockResolvedValue({ data: { parts: [{ type: 'text', text: '[SIDECAR_FOLD]' }] } }),
   getMessages: jest.fn().mockResolvedValue([]),
   checkHealth: jest.fn().mockResolvedValue(true),
   startServer: jest.fn().mockResolvedValue({

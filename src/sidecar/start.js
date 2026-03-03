@@ -174,8 +174,8 @@ async function startSidecar(options) {
     contextTurns = 50, contextSince, contextMaxTokens = 80000,
     noUi, headless = false,
     timeout = 15, agent, mcp, mcpConfig,
-    summaryLength = 'normal', thinking
-    // v3 flags accepted but not yet consumed: client, sessionDir, foldShortcut, opencodePort
+    summaryLength = 'normal', thinking,
+    client, sessionDir, foldShortcut, opencodePort
   } = options;
 
   // Resolve v3 names with backward compatibility
@@ -189,7 +189,7 @@ async function startSidecar(options) {
   logger.info('Starting task', { taskId, model, mode: effectiveHeadless ? 'headless' : 'interactive' });
 
   // Build context and prompts
-  const context = buildContext(effectiveProject, effectiveSession, { contextTurns, contextSince, contextMaxTokens });
+  const context = buildContext(effectiveProject, effectiveSession, { contextTurns, contextSince, contextMaxTokens, sessionDir, client });
   const { system: systemPrompt, userMessage } = buildPrompts(
     effectivePrompt, context, effectiveProject, effectiveHeadless, agent, summaryLength
   );

@@ -66,7 +66,7 @@ describe('Prompt Builder', () => {
         const prompt = buildSystemPrompt(defaultBriefing, defaultContext, defaultProject, false);
 
         expect(prompt).not.toContain('## HEADLESS MODE');
-        expect(prompt).not.toContain('[SIDECAR_COMPLETE]');
+        expect(prompt).not.toContain('[SIDECAR_FOLD]');
       });
 
       it('should NOT include "Do NOT ask questions"', () => {
@@ -83,10 +83,10 @@ describe('Prompt Builder', () => {
         expect(prompt).toContain('## HEADLESS MODE');
       });
 
-      it('should include [SIDECAR_COMPLETE] marker instruction per spec §6.2', () => {
+      it('should include [SIDECAR_FOLD] marker instruction per spec §6.2', () => {
         const prompt = buildSystemPrompt(defaultBriefing, defaultContext, defaultProject, true);
 
-        expect(prompt).toContain('[SIDECAR_COMPLETE]');
+        expect(prompt).toContain('[SIDECAR_FOLD]');
       });
 
       it('should include "Do NOT ask questions. Work independently." per spec §6.2', () => {
@@ -107,7 +107,7 @@ describe('Prompt Builder', () => {
         const prompt = buildSystemPrompt(defaultBriefing, defaultContext, defaultProject, true);
 
         expect(prompt).toContain('summary');
-        expect(prompt).toContain('[SIDECAR_COMPLETE]');
+        expect(prompt).toContain('[SIDECAR_FOLD]');
       });
 
       it('should include blocker handling instructions', () => {
