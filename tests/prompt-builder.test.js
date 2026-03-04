@@ -321,6 +321,28 @@ describe('Prompt Builder', () => {
       });
     });
 
+    describe('FOLD marker stripping from context', () => {
+      it('should strip [SIDECAR_FOLD] from context in headless mode', () => {
+        const { userMessage } = buildPrompts(
+          'task',
+          'context with [SIDECAR_FOLD] marker',
+          '/project',
+          true
+        );
+        expect(userMessage).not.toContain('[SIDECAR_FOLD]');
+      });
+
+      it('should strip [SIDECAR_FOLD] from context in interactive mode', () => {
+        const { system } = buildPrompts(
+          'task',
+          'context with [SIDECAR_FOLD] marker',
+          '/project',
+          false
+        );
+        expect(system).not.toContain('[SIDECAR_FOLD]');
+      });
+    });
+
     describe('buildSystemPrompt with mode parameter', () => {
       it('should delegate tool restrictions to OpenCode', () => {
         const prompt = buildSystemPrompt(
