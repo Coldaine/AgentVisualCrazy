@@ -6,8 +6,10 @@
 
 const {
   PRIMARY_AGENTS,
+  HEADLESS_SAFE_AGENTS,
   mapAgentToOpenCode,
   isValidAgent,
+  isHeadlessSafe,
   isValidSubagent,
   normalizeSubagent
 } = require('../src/utils/agent-mapping');
@@ -67,6 +69,49 @@ describe('Agent Mapping', () => {
       expect(isValidSubagent('chat')).toBe(false);
       expect(isValidSubagent('build')).toBe(false);
       expect(isValidSubagent('plan')).toBe(false);
+    });
+  });
+
+  describe('HEADLESS_SAFE_AGENTS', () => {
+    it('should contain build, plan, explore, general', () => {
+      expect(HEADLESS_SAFE_AGENTS).toContain('build');
+      expect(HEADLESS_SAFE_AGENTS).toContain('plan');
+      expect(HEADLESS_SAFE_AGENTS).toContain('explore');
+      expect(HEADLESS_SAFE_AGENTS).toContain('general');
+    });
+
+    it('should NOT contain chat', () => {
+      expect(HEADLESS_SAFE_AGENTS).not.toContain('chat');
+    });
+  });
+
+  describe('isHeadlessSafe', () => {
+    it('should return true for headless-safe agents', () => {
+      expect(isHeadlessSafe('build')).toBe(true);
+      expect(isHeadlessSafe('plan')).toBe(true);
+      expect(isHeadlessSafe('explore')).toBe(true);
+      expect(isHeadlessSafe('general')).toBe(true);
+    });
+
+    it('should be case-insensitive', () => {
+      expect(isHeadlessSafe('Build')).toBe(true);
+      expect(isHeadlessSafe('PLAN')).toBe(true);
+    });
+
+    it('should return false for chat agent', () => {
+      expect(isHeadlessSafe('chat')).toBe(false);
+      expect(isHeadlessSafe('Chat')).toBe(false);
+    });
+
+    it('should return null for unknown/custom agents', () => {
+      expect(isHeadlessSafe('my-custom-agent')).toBeNull();
+      expect(isHeadlessSafe('unknown')).toBeNull();
+    });
+
+    it('should return null for empty/undefined', () => {
+      expect(isHeadlessSafe(null)).toBeNull();
+      expect(isHeadlessSafe(undefined)).toBeNull();
+      expect(isHeadlessSafe('')).toBeNull();
     });
   });
 

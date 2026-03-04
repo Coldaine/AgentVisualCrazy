@@ -7,7 +7,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { isValidAgent, OPENCODE_AGENTS } = require('./agent-mapping');
+const { isValidAgent, isHeadlessSafe, OPENCODE_AGENTS } = require('./agent-mapping');
 
 /**
  * Valid agent modes for --agent option
@@ -151,6 +151,37 @@ function validateAgentMode(agent) {
     return {
       valid: false,
       error: `Error: --agent cannot be empty. Examples: ${VALID_AGENT_MODES.join(', ')}`
+    };
+  }
+
+  return { valid: true };
+}
+
+/**
+ * Validate agent is compatible with headless (--no-ui) mode.
+ * 'chat' agent requires user permission for writes/bash and stalls headless.
+ *
+ * @param {string} agent - Agent name
+ * @returns {{valid: boolean, error?: string, warning?: string}}
+ */
+function validateHeadlessAgent(agent) {
+  if (!agent) {
+    return { valid: true };
+  }
+
+  const safe = isHeadlessSafe(agent);
+
+  if (safe === false) {
+    return {
+      valid: false,
+      error: 'Error: --agent chat requires interactive mode (remove --no-ui or use --agent build)'
+    };
+  }
+
+  if (safe === null) {
+    return {
+      valid: true,
+      warning: `Warning: Custom agent '${agent}' may not be headless-safe. Ensure it does not require user interaction.`
     };
   }
 
@@ -304,6 +335,12 @@ function validateThinkingLevel(thinking, model) {
 
 /**
  * Validate API key is present for the given model's provider
+ *
+ * NOTE: OpenCode manages its own credentials via `opencode auth`.
+ * The env var check is a convenience hint, not a hard requirement.
+ * If OpenCode has credentials configured, the model will work
+ * even without the env var set.
+ *
  * @param {string} model - The model string (e.g., 'openrouter/google/gemini-2.5-flash')
  * @returns {{valid: boolean, error?: string}}
  */
@@ -316,11 +353,18 @@ function validateApiKey(model) {
   const providerInfo = PROVIDER_KEY_MAP[provider];
 
   if (!providerInfo) {
-    // Unknown provider - skip validation, let runtime handle it
     return { valid: true };
   }
 
   if (!process.env[providerInfo.key]) {
+    // Check if OpenCode has credentials configured (auth.json)
+    const os = require('os');
+    const authPath = path.join(os.homedir(), '.local', 'share', 'opencode', 'auth.json');
+    if (fs.existsSync(authPath)) {
+      // OpenCode manages its own auth — skip env var check
+      return { valid: true };
+    }
+
     return {
       valid: false,
       error: `Error: ${providerInfo.key} environment variable is required for ${providerInfo.name} models. Set it with: export ${providerInfo.key}=your-api-key`
@@ -341,6 +385,7 @@ module.exports = {
   validateProjectPath,
   validateExplicitSession,
   validateAgentMode,
+  validateHeadlessAgent,
   validateMcpSpec,
   validateMcpConfigFile,
   validateApiKey,

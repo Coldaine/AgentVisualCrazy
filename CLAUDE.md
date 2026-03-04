@@ -512,6 +512,10 @@ mapAgentToOpenCode('general')  // → { agent: 'General' }
 mapAgentToOpenCode('custom')   // → { agent: 'custom' } // passed through
 ```
 
+**Headless mode defaults:** When `--no-ui` is set, the default agent is `build` (not `chat`).
+The `chat` agent requires user interaction for write/bash permissions and stalls in headless mode.
+`isHeadlessSafe(agent)` returns `true` (safe), `false` (chat), or `null` (custom/unknown).
+
 ### Key Integration Files
 
 | File | OpenCode Integration |
@@ -572,6 +576,7 @@ Full documentation in `/docs/`: [opencode-sdk.md](docs/opencode-sdk.md), [openco
 | Jest ESM mock fails | Dynamic import | Skip test with `it.skip()` or use `--experimental-vm-modules` |
 | Session resolution fails | No recent session | Pass explicit `--session` flag |
 | Electron window blank | Assets not built | Run from project root |
+| Headless stalls silently | `chat` agent in `--no-ui` mode | Use `--agent build` or remove `--no-ui` |
 | Headless timeout | Task too complex | Increase `SIDECAR_TIMEOUT` |
 | Context too large | Too many turns | Use `--turns` or `--tokens` filter |
 | API key errors | Missing env var | Set `OPENROUTER_API_KEY` in .env |

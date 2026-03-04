@@ -588,6 +588,23 @@ This is useful when you want to:
 - Runs autonomously, no GUI
 - Agent works until done or timeout
 - Summary returns automatically
+- **Default agent is `build`** — `chat` agent requires interactive UI and will stall in headless mode
+
+**Agent Headless Compatibility:**
+
+| Agent | Headless Safe | Notes |
+|-------|--------------|-------|
+| `build` | Yes | Default for `--no-ui` — full autonomous access |
+| `plan` | Yes | Read-only analysis |
+| `explore` | Yes | Read-only codebase exploration |
+| `general` | Yes | Full-access subagent |
+| `chat` | **No** | Blocked — requires interactive mode for write permissions |
+
+```bash
+# Error: chat + headless
+sidecar start --model gemini --prompt "..." --agent chat --no-ui
+# → Error: --agent chat requires interactive mode (remove --no-ui or use --agent build)
+```
 
 **Use for:** Bulk tasks, test generation, documentation, linting
 
@@ -654,6 +671,18 @@ The summary includes:
 - Verify assumptions listed
 - Don't repeat failed approaches
 - Review files with conflict warnings carefully
+
+### Handling Config Update Notices
+
+When sidecar emits `[SIDECAR_CONFIG_UPDATE]` on stderr, the user's model aliases have changed (via `sidecar setup`). The message contains a hash comment and a markdown alias table.
+
+**Action required:**
+1. Find the "Model Aliases" section in the project's CLAUDE.md
+2. Replace that section's content with the block provided in the message
+3. If no "Model Aliases" section exists, add one after the title line
+4. Do **not** remove the `<!-- sidecar-config-hash: ... -->` comment — it tracks config changes and prevents duplicate notifications
+
+The update is purely informational (alias mappings) and safe to apply without user confirmation.
 
 ---
 

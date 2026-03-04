@@ -7,9 +7,13 @@
  * Routes commands to appropriate handlers.
  */
 
-// Load environment variables from .env file
+// Load environment variables from .env files
 const path = require('path');
-require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
+require('dotenv').config({ path: path.join(__dirname, '..', '.env'), quiet: true });
+
+// Also load API keys from ~/.config/sidecar/.env (override: false = project .env takes precedence)
+const homeDir = process.env.HOME || process.env.USERPROFILE;
+require('dotenv').config({ path: path.join(homeDir, '.config', 'sidecar', '.env'), override: false });
 
 const { parseArgs, validateStartArgs, getUsage } = require('../src/cli');
 
@@ -77,6 +81,10 @@ async function handleStart(args) {
     process.exit(1);
   }
 
+  // Normalize agent: --agent takes precedence, otherwise use --mode
+  // (Must happen before validation so --mode alias is also validated)
+  args.agent = args.agent || args.mode;
+
   // Validate required arguments (model is now resolved)
   const validation = validateStartArgs(args);
   if (!validation.valid) {
@@ -87,8 +95,7 @@ async function handleStart(args) {
   // Lazy load to avoid circular dependencies and improve startup time
   const { startSidecar } = require('../src/index');
 
-  // Determine agent: --agent takes precedence, otherwise use --mode
-  const agent = args.agent || args.mode;
+  const agent = args.agent;
 
   await startSidecar({
     model: args.model,
@@ -211,7 +218,19 @@ async function handleRead(args) {
  * Runs interactive setup wizard or adds an alias via --add-alias
  */
 async function handleSetup(args) {
-  const { addAlias, runInteractiveSetup } = require('../src/sidecar/setup');
+  const { addAlias, runInteractiveSetup, runApiKeySetup } = require('../src/sidecar/setup');
+
+  // Standalone API key window
+  if (args['api-keys']) {
+    const success = await runApiKeySetup();
+    if (success) {
+      console.log('API keys configured successfully.');
+    } else {
+      console.log('API key setup was not completed.');
+      process.exit(1);
+    }
+    return;
+  }
 
   if (args['add-alias']) {
     const spec = args['add-alias'];

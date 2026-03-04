@@ -177,7 +177,7 @@ Claude Code will automatically know how to use sidecars after installation.
 ## Features
 
 - **Interactive mode**: GUI window, human-in-the-loop
-- **Headless mode**: Autonomous execution with timeout
+- **Headless mode**: Autonomous execution with timeout (defaults to `build` agent; `chat` agent is interactive-only)
 - **Context passing**: Automatically pulls from Claude Code conversation
 - **Session persistence**: Resume or continue past sidecars
 - **Conflict detection**: Warns when files change during async execution

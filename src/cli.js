@@ -10,6 +10,7 @@ const {
   validateCwdPath,
   validateExplicitSession,
   validateAgentMode,
+  validateHeadlessAgent,
   validateMcpSpec,
   validateMcpConfigFile,
   validateApiKey,
@@ -81,7 +82,8 @@ function isBooleanFlag(key) {
      'conversation',
      'json',
      'version',
-     'help'
+     'help',
+     'api-keys'
    ];
   return booleanFlags.includes(key);
 }
@@ -149,6 +151,19 @@ function validateStartArgs(args) {
     return agentCheck;
   }
 
+  // Validate agent is headless-safe when --no-ui is set
+  let headlessWarning;
+  if (args['no-ui']) {
+    const headlessCheck = validateHeadlessAgent(args.agent);
+    if (!headlessCheck.valid) {
+      return headlessCheck;
+    }
+    if (headlessCheck.warning) {
+      logger.warn('Custom agent headless warning', { warning: headlessCheck.warning });
+      headlessWarning = headlessCheck.warning;
+    }
+  }
+
   // Validate --client (if provided)
   if (args.client) {
     const validClients = ['code-local', 'code-web', 'cowork'];
@@ -211,7 +226,11 @@ function validateStartArgs(args) {
     return apiKeyCheck;
   }
 
-  return { valid: true };
+  const result = { valid: true };
+  if (headlessWarning) {
+    result.warning = headlessWarning;
+  }
+  return result;
 }
 
 /**
@@ -310,6 +329,7 @@ Commands:
   read        Output sidecar summary/conversation
   subagent    Manage sub-agents within a sidecar
   setup       Configure default model and aliases
+    --api-keys               Open API key setup window
 
 Options for 'start':
   --model <model>              Optional (uses config default). Model to use:
@@ -361,12 +381,16 @@ Subagent Commands:
 
 OpenCode Agent Types:
   PRIMARY AGENTS (for main sidecar sessions):
-    Build      Full tool access (default)
+    Chat       Reads auto, writes/bash ask permission (interactive default)
+    Build      Full tool access (headless default)
     Plan       Read-only analysis and planning
 
   SUBAGENTS (spawned within sessions):
     General    Full-access subagent for research
     Explore    Read-only subagent for codebase exploration
+
+  NOTE: --agent chat is interactive-only (incompatible with --no-ui).
+  Headless mode defaults to build agent.
 
 Custom agents defined in ~/.config/opencode/agents/ or
 .opencode/agents/ are also supported for primary sessions.

@@ -36,6 +36,12 @@ const SUBAGENT_TYPES = ['general', 'explore'];
 const OPENCODE_AGENTS = [...PRIMARY_AGENTS, ...SUBAGENT_TYPES];
 
 /**
+ * Agents safe for headless (--no-ui) mode.
+ * 'chat' requires user permission for writes/bash and stalls in headless.
+ */
+const HEADLESS_SAFE_AGENTS = ['build', 'plan', 'explore', 'general'];
+
+/**
  * Map an agent name to OpenCode native agent configuration
  *
  * @param {string} agent - Agent name (OpenCode native or custom)
@@ -65,6 +71,31 @@ function mapAgentToOpenCode(agent) {
 
   // Pass through custom agent names as lowercase (OpenCode API expects lowercase)
   return { agent: normalized };
+}
+
+/**
+ * Check if an agent is safe for headless (--no-ui) mode
+ *
+ * @param {string} agent - Agent name to check
+ * @returns {boolean|null} true if safe, false if unsafe (chat), null if unknown/custom
+ */
+function isHeadlessSafe(agent) {
+  if (!agent || (typeof agent === 'string' && agent.trim() === '')) {
+    return null;
+  }
+
+  const normalized = agent.toLowerCase();
+
+  if (HEADLESS_SAFE_AGENTS.includes(normalized)) {
+    return true;
+  }
+
+  if (normalized === 'chat') {
+    return false;
+  }
+
+  // Unknown/custom agents — we can't determine safety
+  return null;
 }
 
 /**
@@ -140,8 +171,10 @@ module.exports = {
   PRIMARY_AGENTS,
   SUBAGENT_TYPES,
   OPENCODE_AGENTS,
+  HEADLESS_SAFE_AGENTS,
   mapAgentToOpenCode,
   isValidAgent,
+  isHeadlessSafe,
   isValidPrimaryAgent,
   isValidSubagent,
   normalizeSubagent

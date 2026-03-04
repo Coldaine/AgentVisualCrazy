@@ -46,7 +46,7 @@ function createSessionMetadata(taskId, project, options) {
     project,
     briefing: effectiveBriefing,
     mode: isHeadless ? 'headless' : 'interactive',
-    agent: agent || 'code',
+    agent: agent || (isHeadless ? 'build' : 'chat'),
     thinking: thinking || 'medium',
     status: 'running',
     createdAt: new Date().toISOString()
@@ -254,7 +254,7 @@ async function startSidecar(options) {
   }
   const configCheck = checkConfigChanged(currentHash);
   if (configCheck.changed) {
-    process.stderr.write(`\n[SIDECAR_CONFIG_UPDATE] Model configuration has changed.\nUpdate your project doc file with:\n\n${configCheck.updateData}\n\n`);
+    process.stderr.write(`\n[SIDECAR_CONFIG_UPDATE] Model configuration has changed.\nAction: Replace the "Model Aliases" section in CLAUDE.md (near the top, after the title) with the content below.\nIf no "Model Aliases" section exists, add it after the title line.\nThe hash comment tracks config changes — do not remove it.\n\n${configCheck.updateData}\n\n`);
   }
 
   const context = buildContext(effectiveProject, effectiveSession, { contextTurns, contextSince, contextMaxTokens, sessionDir, client });
@@ -275,7 +275,7 @@ async function startSidecar(options) {
     if (effectiveHeadless) {
       result = await runHeadless(
         model, systemPrompt, userMessage, taskId, effectiveProject,
-        timeout * 60 * 1000, agent, { mcp: mcpServers, summaryLength, reasoning }
+        timeout * 60 * 1000, agent || 'build', { mcp: mcpServers, summaryLength, reasoning }
       );
       summary = result.summary || '## Sidecar Results: No Output\n\nHeadless mode completed without summary.';
       if (result.timedOut) { logger.warn('Task timed out', { taskId }); }

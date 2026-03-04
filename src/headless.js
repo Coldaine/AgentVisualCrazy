@@ -164,8 +164,8 @@ async function runHeadless(model, systemPrompt, userMessage, taskId, project, ti
       parts: [{ type: 'text', text: userMessage }]
     };
 
-    // Always set agent — defaults to 'chat' when not specified
-    const agentConfig = mapAgentToOpenCode(agent);
+    // Default to 'build' in headless mode — 'chat' stalls without user interaction
+    const agentConfig = mapAgentToOpenCode(agent || 'build');
     promptOptions.agent = agentConfig.agent;
 
     // Add reasoning/thinking configuration if provided
@@ -186,7 +186,10 @@ async function runHeadless(model, systemPrompt, userMessage, taskId, project, ti
     const startTime = Date.now();
     let pollCount = 0;
     let lastAssistantMsgId = null;
-    let stablePolls = 0; // Count polls where assistant message hasn't changed
+    let lastOutputLength = 0; // Track output growth to detect streaming
+    let stablePolls = 0; // Count polls where nothing has changed
+    const seenTextParts = new Map(); // partId -> last captured text length
+    const seenPartIds = new Set(); // Track processed non-text part IDs
 
     while (!completed && (Date.now() - startTime) < timeoutMs) {
       await new Promise(resolve => setTimeout(resolve, 2000));
@@ -223,13 +226,21 @@ async function runHeadless(model, systemPrompt, userMessage, taskId, project, ti
             }
 
             for (const part of msg.parts) {
-              if (part.type === 'text' && part.text && !output.includes(part.text)) {
-                output += part.text;
-                logMessage(conversationPath, {
-                  role: 'assistant',
-                  content: part.text,
-                  timestamp: new Date().toISOString()
-                });
+              const partId = part.id || `${msg.info.id}:${part.type}:${msg.parts.indexOf(part)}`;
+
+              if (part.type === 'text' && part.text) {
+                const prevLen = seenTextParts.get(partId) || 0;
+                if (part.text.length > prevLen) {
+                  // Append only the new portion (handles streaming growth)
+                  const newText = part.text.slice(prevLen);
+                  output += newText;
+                  seenTextParts.set(partId, part.text.length);
+                  logMessage(conversationPath, {
+                    role: 'assistant',
+                    content: newText,
+                    timestamp: new Date().toISOString()
+                  });
+                }
               } else if ((part.type === 'tool_use' || part.type === 'tool') && !toolCalls.find(t => t.id === part.id)) {
                 const toolCall = {
                   id: part.id,
@@ -282,17 +293,27 @@ async function runHeadless(model, systemPrompt, userMessage, taskId, project, ti
           elapsed: Date.now() - startTime
         });
 
-        // Check for completion marker in output
-        if (output.includes(FOLD_MARKER)) {
+        // Check for completion marker on its own line (not inline in prose).
+        // Models may mention [SIDECAR_FOLD] when describing code — only treat
+        // it as a signal when it appears as a standalone line.
+        if (/^\s*\[SIDECAR_FOLD\]\s*$/m.test(output)) {
           completed = true;
           break;
         }
 
-        // If assistant message is finished and stable for 2 polls, consider it done
-        if (assistantFinished && currentAssistantMsgId === lastAssistantMsgId) {
+        // Count as stable when nothing has changed — same messages, no new output.
+        // Two paths to completion:
+        //   1. assistantFinished + stable for 2 polls (ideal)
+        //   2. No output growth + same message count for 4 polls (fallback
+        //      for models that don't set time.completed reliably)
+        const outputGrew = output.length > lastOutputLength;
+        lastOutputLength = output.length;
+
+        if (!outputGrew && currentAssistantMsgId === lastAssistantMsgId) {
           stablePolls++;
-          if (stablePolls >= 2) {
-            logger.debug('Session appears complete (assistant finished, stable)', { stablePolls });
+          const threshold = assistantFinished ? 2 : 4;
+          if (stablePolls >= threshold) {
+            logger.debug('Session appears complete', { stablePolls, assistantFinished });
             break;
           }
         } else {
@@ -358,9 +379,15 @@ function extractSummary(output) {
     return '';
   }
 
-  // Split on the fold marker and take everything before it
-  const parts = output.split(FOLD_MARKER);
-  return parts[0].trim();
+  // Split on the fold marker only when it appears on its own line.
+  // Models may mention [SIDECAR_FOLD] inline when describing code —
+  // only treat it as a delimiter when standalone.
+  const markerRegex = /^\s*\[SIDECAR_FOLD\]\s*$/m;
+  const match = output.match(markerRegex);
+  if (match) {
+    return output.slice(0, match.index).trim();
+  }
+  return output.trim();
 }
 
 /**

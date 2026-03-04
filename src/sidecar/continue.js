@@ -95,7 +95,7 @@ function createContinueSessionMetadata(taskId, project, options, oldTaskId) {
     project,
     briefing,
     mode: headless ? 'headless' : 'interactive',
-    agent: agent || 'code',
+    agent: agent || (headless ? 'build' : 'chat'),
     status: 'running',
     createdAt: new Date().toISOString(),
     continuesFrom: oldTaskId

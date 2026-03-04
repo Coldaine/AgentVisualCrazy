@@ -87,7 +87,7 @@ describe('Headless Mode Runner', () => {
       mockSendPromptAsync.mockResolvedValue(undefined);
       mockGetMessages.mockResolvedValue([{
         info: { role: 'assistant', id: 'msg-1', time: { completed: Date.now() } },
-        parts: [{ type: 'text', text: `Done! ${COMPLETE_MARKER}` }]
+        parts: [{ type: 'text', text: `Done!\n${COMPLETE_MARKER}` }]
       }]);
 
       await runHeadless(testModel, testSystemPrompt, testUserMessage, testTaskId, testProject, 5000);
@@ -147,13 +147,56 @@ describe('Headless Mode Runner', () => {
           .mockResolvedValueOnce([{ parts: [{ type: 'text', text: 'Still working...' }] }])
           .mockResolvedValueOnce([{
             info: { role: 'assistant', id: 'msg-1', time: { completed: Date.now() } },
-            parts: [{ type: 'text', text: `Done! ${COMPLETE_MARKER}` }]
+            parts: [{ type: 'text', text: `Done!\n${COMPLETE_MARKER}` }]
           }]);
 
         await runHeadless(testModel, testSystemPrompt, testUserMessage, testTaskId, testProject, 10000);
 
         expect(mockGetMessages).toHaveBeenCalledWith(mockClient, 'session-123');
       }, 15000); // Increase timeout for polling test
+    });
+
+    describe('Default Agent', () => {
+      it('should default to build agent when no agent specified', async () => {
+        mockCheckHealth.mockResolvedValue(true);
+        mockCreateSession.mockResolvedValue('session-123');
+        mockSendPromptAsync.mockResolvedValue(undefined);
+        mockGetMessages.mockResolvedValue([{
+          info: { role: 'assistant', id: 'msg-1', time: { completed: Date.now() } },
+          parts: [{ type: 'text', text: COMPLETE_MARKER }]
+        }]);
+
+        // Call without agent parameter (undefined)
+        await runHeadless(testModel, testSystemPrompt, testUserMessage, testTaskId, testProject, 5000, undefined);
+
+        expect(mockSendPromptAsync).toHaveBeenCalledWith(
+          mockClient,
+          'session-123',
+          expect.objectContaining({
+            agent: 'build'
+          })
+        );
+      });
+
+      it('should respect explicit agent when provided', async () => {
+        mockCheckHealth.mockResolvedValue(true);
+        mockCreateSession.mockResolvedValue('session-123');
+        mockSendPromptAsync.mockResolvedValue(undefined);
+        mockGetMessages.mockResolvedValue([{
+          info: { role: 'assistant', id: 'msg-1', time: { completed: Date.now() } },
+          parts: [{ type: 'text', text: COMPLETE_MARKER }]
+        }]);
+
+        await runHeadless(testModel, testSystemPrompt, testUserMessage, testTaskId, testProject, 5000, 'plan');
+
+        expect(mockSendPromptAsync).toHaveBeenCalledWith(
+          mockClient,
+          'session-123',
+          expect.objectContaining({
+            agent: 'plan'
+          })
+        );
+      });
     });
 
     describe('Completion Detection', () => {
@@ -279,7 +322,7 @@ describe('Headless Mode Runner', () => {
         mockSendPromptAsync.mockResolvedValue(undefined);
         mockGetMessages.mockResolvedValue([{
           info: { role: 'assistant', id: 'msg-1', time: { completed: Date.now() } },
-          parts: [{ type: 'text', text: `${responseText}${COMPLETE_MARKER}` }]
+          parts: [{ type: 'text', text: `${responseText}\n${COMPLETE_MARKER}` }]
         }]);
 
         await runHeadless(testModel, testSystemPrompt, testUserMessage, testTaskId, testProject, 5000);
@@ -320,7 +363,7 @@ describe('Headless Mode Runner', () => {
         mockSendPromptAsync.mockResolvedValue(undefined);
         mockGetMessages.mockResolvedValue([{
           info: { role: 'assistant', id: 'msg-1', time: { completed: Date.now() } },
-          parts: [{ type: 'text', text: `Summary${COMPLETE_MARKER}` }]
+          parts: [{ type: 'text', text: `Summary\n${COMPLETE_MARKER}` }]
         }]);
 
         const result = await runHeadless(testModel, testSystemPrompt, testUserMessage, testTaskId, testProject, 5000);
@@ -519,5 +562,169 @@ describe('Headless Mode Runner', () => {
     it('should be 15 minutes per spec §6.2', () => {
       expect(DEFAULT_TIMEOUT).toBe(15 * 60 * 1000);
     });
+  });
+
+  describe('Polling Behavior', () => {
+    const testProject = '/test/project';
+    const testModel = 'openrouter/google/gemini-2.5-flash';
+    const testSystemPrompt = '# Test system prompt';
+    const testUserMessage = 'Please complete the task';
+    const testTaskId = 'poll12345';
+
+    beforeEach(() => {
+      mockCheckHealth.mockResolvedValue(true);
+      mockCreateSession.mockResolvedValue('session-123');
+      mockSendPromptAsync.mockResolvedValue(undefined);
+    });
+
+    it('should capture streaming text incrementally (no duplication)', async () => {
+      // Simulate text growing between polls (same part, increasing length)
+      mockGetMessages
+        .mockResolvedValueOnce([{
+          info: { role: 'assistant', id: 'msg-1', time: {} },
+          parts: [{ id: 'p1', type: 'text', text: 'Hello' }]
+        }])
+        .mockResolvedValueOnce([{
+          info: { role: 'assistant', id: 'msg-1', time: {} },
+          parts: [{ id: 'p1', type: 'text', text: 'Hello world' }]
+        }])
+        .mockResolvedValueOnce([{
+          info: { role: 'assistant', id: 'msg-1', time: { completed: Date.now() } },
+          parts: [{ id: 'p1', type: 'text', text: `Hello world done\n${COMPLETE_MARKER}` }]
+        }]);
+
+      const result = await runHeadless(testModel, testSystemPrompt, testUserMessage, testTaskId, testProject, 15000);
+
+      // Output should be "Hello world done" — not "HelloHello worldHello world done"
+      expect(result.summary).toBe('Hello world done');
+    }, 20000);
+
+    it('should only finish when the LAST assistant message is complete', async () => {
+      // Two assistant messages: first is finished, second still streaming
+      mockGetMessages
+        .mockResolvedValueOnce([
+          {
+            info: { role: 'assistant', id: 'msg-1', time: { completed: Date.now() } },
+            parts: [{ id: 'p1', type: 'text', text: 'First response done' }]
+          },
+          {
+            info: { role: 'assistant', id: 'msg-2', time: {} },
+            parts: [{ id: 'p2', type: 'text', text: 'Still working...' }]
+          }
+        ])
+        .mockResolvedValueOnce([
+          {
+            info: { role: 'assistant', id: 'msg-1', time: { completed: Date.now() } },
+            parts: [{ id: 'p1', type: 'text', text: 'First response done' }]
+          },
+          {
+            info: { role: 'assistant', id: 'msg-2', time: { completed: Date.now() } },
+            parts: [{ id: 'p2', type: 'text', text: `Still working... Done\n${COMPLETE_MARKER}` }]
+          }
+        ]);
+
+      const result = await runHeadless(testModel, testSystemPrompt, testUserMessage, testTaskId, testProject, 15000);
+      expect(result.summary).toContain('Done');
+    }, 20000);
+
+    it('should exclude user message parts from output', async () => {
+      mockGetMessages.mockResolvedValue([
+        {
+          info: { role: 'user', id: 'msg-u1', time: {} },
+          parts: [{ id: 'pu1', type: 'text', text: 'USER TEXT SHOULD NOT APPEAR' }]
+        },
+        {
+          info: { role: 'assistant', id: 'msg-a1', time: { completed: Date.now() } },
+          parts: [{ id: 'pa1', type: 'text', text: `Assistant output\n${COMPLETE_MARKER}` }]
+        }
+      ]);
+
+      const result = await runHeadless(testModel, testSystemPrompt, testUserMessage, testTaskId, testProject, 10000);
+      expect(result.summary).not.toContain('USER TEXT SHOULD NOT APPEAR');
+      expect(result.summary).toContain('Assistant output');
+    }, 15000);
+
+    it('should handle tool part type same as tool_use', async () => {
+      mockGetMessages.mockResolvedValue([{
+        info: { role: 'assistant', id: 'msg-1', time: { completed: Date.now() } },
+        parts: [
+          { id: 'tool-1', type: 'tool', name: 'Read', input: { path: '/test.js' } },
+          { id: 'p1', type: 'text', text: `Found file\n${COMPLETE_MARKER}` }
+        ]
+      }]);
+
+      const result = await runHeadless(testModel, testSystemPrompt, testUserMessage, testTaskId, testProject, 10000);
+      expect(result.toolCalls).toEqual(
+        expect.arrayContaining([expect.objectContaining({ name: 'Read' })])
+      );
+    }, 15000);
+
+    it('should NOT trigger fold for inline [SIDECAR_FOLD] in prose', async () => {
+      // First poll has FOLD inline (not on its own line) — should NOT trigger
+      mockGetMessages
+        .mockResolvedValueOnce([{
+          info: { role: 'assistant', id: 'msg-1', time: {} },
+          parts: [{ id: 'p1', type: 'text', text: 'The function splits on [SIDECAR_FOLD] marker' }]
+        }])
+        // Second poll: same output, assistant finishes (stablePolls kicks in)
+        .mockResolvedValueOnce([{
+          info: { role: 'assistant', id: 'msg-1', time: { completed: Date.now() } },
+          parts: [{ id: 'p1', type: 'text', text: 'The function splits on [SIDECAR_FOLD] marker' }]
+        }])
+        .mockResolvedValue([{
+          info: { role: 'assistant', id: 'msg-1', time: { completed: Date.now() } },
+          parts: [{ id: 'p1', type: 'text', text: 'The function splits on [SIDECAR_FOLD] marker' }]
+        }]);
+
+      const result = await runHeadless(testModel, testSystemPrompt, testUserMessage, testTaskId, testProject, 15000);
+      // Should NOT have detected FOLD — completed via stablePolls fallback
+      expect(result.completed).toBe(false);
+      expect(result.summary).toContain('[SIDECAR_FOLD]');
+    }, 25000);
+
+    it('should trigger fold when [SIDECAR_FOLD] is on its own line', async () => {
+      mockGetMessages.mockResolvedValue([{
+        info: { role: 'assistant', id: 'msg-1', time: { completed: Date.now() } },
+        parts: [{ id: 'p1', type: 'text', text: `Summary content\n[SIDECAR_FOLD]` }]
+      }]);
+
+      const result = await runHeadless(testModel, testSystemPrompt, testUserMessage, testTaskId, testProject, 10000);
+      expect(result.completed).toBe(true);
+      expect(result.summary).toBe('Summary content');
+    }, 15000);
+
+    it('should complete via stablePolls fallback after 4 stable polls without assistantFinished', async () => {
+      // assistantFinished is never true (time.completed not set), but output is stable
+      const stableMessage = [{
+        info: { role: 'assistant', id: 'msg-1', time: {} },
+        parts: [{ id: 'p1', type: 'text', text: 'Final output' }]
+      }];
+
+      mockGetMessages.mockResolvedValue(stableMessage);
+
+      const result = await runHeadless(testModel, testSystemPrompt, testUserMessage, testTaskId, testProject, 30000);
+      // Should break out after 4 stable polls (first poll captures text, then 4 stable)
+      expect(result.summary).toBe('Final output');
+    }, 35000);
+
+    it('should reset stablePolls when output grows', async () => {
+      // Simulate streaming: same part ID, text grows each poll then stabilizes
+      let callCount = 0;
+      const textStages = ['A', 'AB', 'ABC', 'ABC', 'ABC', 'ABC', 'ABC', 'ABC', 'ABC'];
+      mockGetMessages.mockImplementation(() => {
+        callCount++;
+        const text = textStages[Math.min(callCount - 1, textStages.length - 1)];
+        return Promise.resolve([{
+          info: { role: 'assistant', id: 'msg-1', time: {} },
+          parts: [{ id: 'p1', type: 'text', text }]
+        }]);
+      });
+
+      const result = await runHeadless(testModel, testSystemPrompt, testUserMessage, testTaskId, testProject, 30000);
+      // Output should be "ABC" (incremental: "A" + "B" + "C")
+      expect(result.summary).toBe('ABC');
+      // Polls: 1(A), 2(AB), 3(ABC), then 4 stable polls needed → at least 7
+      expect(callCount).toBeGreaterThanOrEqual(7);
+    }, 35000);
   });
 });

@@ -512,6 +512,69 @@ describe('CLI Argument Parser', () => {
       });
     });
 
+    describe('headless agent validation (--no-ui + --agent)', () => {
+      it('should reject --agent chat with --no-ui', () => {
+        const result = validateStartArgs({
+          model: 'openrouter/google/gemini-2.5-flash',
+          prompt: 'Test task',
+          agent: 'chat',
+          'no-ui': true
+        });
+        expect(result.valid).toBe(false);
+        expect(result.error).toContain('interactive');
+      });
+
+      it('should reject --agent Chat (case-insensitive) with --no-ui', () => {
+        const result = validateStartArgs({
+          model: 'openrouter/google/gemini-2.5-flash',
+          prompt: 'Test task',
+          agent: 'Chat',
+          'no-ui': true
+        });
+        expect(result.valid).toBe(false);
+        expect(result.error).toContain('interactive');
+      });
+
+      it.each(['build', 'plan', 'explore', 'general'])('should accept --agent %s with --no-ui', (agent) => {
+        const result = validateStartArgs({
+          model: 'openrouter/google/gemini-2.5-flash',
+          prompt: 'Test task',
+          agent,
+          'no-ui': true
+        });
+        expect(result.valid).toBe(true);
+      });
+
+      it('should accept custom agent with --no-ui (with warning)', () => {
+        const result = validateStartArgs({
+          model: 'openrouter/google/gemini-2.5-flash',
+          prompt: 'Test task',
+          agent: 'my-custom-agent',
+          'no-ui': true
+        });
+        expect(result.valid).toBe(true);
+        expect(result.warning).toBeDefined();
+      });
+
+      it('should accept --agent chat without --no-ui (interactive is fine)', () => {
+        const result = validateStartArgs({
+          model: 'openrouter/google/gemini-2.5-flash',
+          prompt: 'Test task',
+          agent: 'chat'
+        });
+        expect(result.valid).toBe(true);
+      });
+
+      it('should accept no agent + --no-ui (defaults to build)', () => {
+        const result = validateStartArgs({
+          model: 'openrouter/google/gemini-2.5-flash',
+          prompt: 'Test task',
+          'no-ui': true
+        });
+        expect(result.valid).toBe(true);
+      });
+    });
+
     describe('--client validation', () => {
       it('should accept valid client values (non-web)', () => {
         const validClients = ['code-local', 'cowork'];
@@ -624,6 +687,24 @@ describe('CLI Argument Parser', () => {
     });
 
     describe('API key validation', () => {
+      let existsSyncSpy;
+
+      beforeEach(() => {
+        // Mock fs.existsSync so auth.json fallback doesn't short-circuit validation
+        const fs = require('fs');
+        const realExistsSync = fs.existsSync;
+        existsSyncSpy = jest.spyOn(fs, 'existsSync').mockImplementation((p) => {
+          if (typeof p === 'string' && p.includes('auth.json')) {
+            return false;
+          }
+          return realExistsSync(p);
+        });
+      });
+
+      afterEach(() => {
+        existsSyncSpy.mockRestore();
+      });
+
       it('should error when OPENROUTER_API_KEY is missing for openrouter model', () => {
         delete process.env.OPENROUTER_API_KEY;
         const result = validateStartArgs({
