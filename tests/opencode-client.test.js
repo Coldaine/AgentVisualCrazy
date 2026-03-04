@@ -503,6 +503,54 @@ describe('OpenCode Client Wrapper', () => {
     });
   });
 
+  describe('listSessions', () => {
+    it('should list all sessions', async () => {
+      const mockClient = {
+        session: {
+          list: jest.fn().mockResolvedValue({
+            data: [
+              { id: 'ses_abc123', title: 'Session 1' },
+              { id: 'ses_def456', title: 'Session 2' }
+            ]
+          })
+        }
+      };
+
+      const { listSessions } = require('../src/opencode-client');
+      const sessions = await listSessions(mockClient);
+
+      expect(sessions).toHaveLength(2);
+      expect(sessions[0].id).toBe('ses_abc123');
+      expect(mockClient.session.list).toHaveBeenCalled();
+    });
+
+    it('should return empty array if no sessions', async () => {
+      const mockClient = {
+        session: {
+          list: jest.fn().mockResolvedValue({ data: [] })
+        }
+      };
+
+      const { listSessions } = require('../src/opencode-client');
+      const sessions = await listSessions(mockClient);
+
+      expect(sessions).toEqual([]);
+    });
+
+    it('should return empty array on error', async () => {
+      const mockClient = {
+        session: {
+          list: jest.fn().mockRejectedValue(new Error('Connection error'))
+        }
+      };
+
+      const { listSessions } = require('../src/opencode-client');
+      const sessions = await listSessions(mockClient);
+
+      expect(sessions).toEqual([]);
+    });
+  });
+
   describe('sendPromptAsync alias', () => {
     it('should be the same function as sendPrompt', () => {
       const { sendPrompt, sendPromptAsync } = require('../src/opencode-client');

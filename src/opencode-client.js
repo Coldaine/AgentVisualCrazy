@@ -221,6 +221,21 @@ async function getChildren(client, parentId) {
 }
 
 /**
+ * List all sessions from the OpenCode server
+ *
+ * @param {import('@opencode-ai/sdk').OpencodeClient} client - SDK client
+ * @returns {Promise<Array>} Array of sessions
+ */
+async function listSessions(client) {
+  try {
+    const result = await client.session.list();
+    return result.data || [];
+  } catch (_error) {
+    return [];
+  }
+}
+
+/**
  * Get session status
  *
  * @param {import('@opencode-ai/sdk').OpencodeClient} client - SDK client
@@ -257,6 +272,20 @@ async function startServer(options = {}) {
   if (options.model) {
     config.model = options.model;
   }
+
+  // Register custom 'chat' agent: reads auto-approved, writes/bash require permission
+  config.agent = {
+    ...(config.agent || {}),
+    chat: {
+      description: 'Conversational agent — reads are auto-approved, writes and commands require permission',
+      mode: 'primary',
+      permission: {
+        edit: 'ask',
+        bash: 'ask',
+        webfetch: 'allow'
+      }
+    }
+  };
 
   const serverOptions = {
     hostname: options.hostname || '127.0.0.1',
@@ -380,6 +409,7 @@ module.exports = {
   sendPromptAsync: sendPrompt, // Alias: sendPrompt already uses promptAsync internally
   getMessages,
   getChildren,
+  listSessions,
   getSessionStatus,
   checkHealth,
   startServer,

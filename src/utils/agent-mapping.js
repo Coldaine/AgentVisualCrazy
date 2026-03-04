@@ -20,8 +20,9 @@
 /**
  * OpenCode's primary agent names (for main sessions)
  * Note: OpenCode API expects lowercase agent names
+ * 'chat' is a custom sidecar agent: reads auto, writes/bash ask
  */
-const PRIMARY_AGENTS = ['build', 'plan'];
+const PRIMARY_AGENTS = ['chat', 'build', 'plan'];
 
 /**
  * OpenCode's subagent names (spawned within sessions)
@@ -46,9 +47,9 @@ const OPENCODE_AGENTS = [...PRIMARY_AGENTS, ...SUBAGENT_TYPES];
  * mapAgentToOpenCode('custom')  // { agent: 'custom' }
  */
 function mapAgentToOpenCode(agent) {
-  // Handle undefined/null/empty - default to build
+  // Handle undefined/null/empty - default to chat (reads auto, writes ask)
   if (!agent || (typeof agent === 'string' && agent.trim() === '')) {
-    return { agent: 'build' };
+    return { agent: 'chat' };
   }
 
   // Normalize for case-insensitive matching of native agents

@@ -122,27 +122,31 @@ sidecar start --model anthropic/claude-sonnet-4 --prompt "..."
 
 ### Agent Selection Guidelines
 
-**Default to Plan mode** for most sidecar tasks:
+**Chat mode (default)** — no `--agent` flag needed. Reads are auto-approved, writes and bash commands require user permission in the Electron UI:
 ```bash
-sidecar start --model ... --prompt "..." --agent Plan
+# Default — good for questions, analysis, and guided work
+sidecar start --model gemini --prompt "Analyze the auth flow and suggest improvements"
 ```
 
-Plan mode prevents unintended changes and is ideal for:
-- Code review and analysis
-- Architecture exploration
-- Bug investigation
-- Documentation research
-- Understanding existing patterns
-
-**Use Build mode only when:**
-- User explicitly requests code changes ("implement", "fix", "write", "create")
-- The task specifically requires file modifications
-- You've already analyzed in Plan mode and are ready to implement
-
+**Plan mode** — fully read-only, no file modifications possible:
 ```bash
-# Only after confirming implementation is needed:
-sidecar start --model ... --prompt "Implement the login feature" --agent Build
+# Strict read-only for deep analysis
+sidecar start --model gemini --prompt "Review the codebase architecture" --agent Plan
 ```
+
+**Build mode** — full tool access, all operations auto-approved:
+```bash
+# Only when offloading development tasks
+sidecar start --model gemini --prompt "Implement the login feature" --agent Build
+```
+
+**When to use each mode:**
+
+| Mode | Use When |
+|------|----------|
+| **Chat** (default) | Questions, analysis, guided exploration — you control what gets written |
+| **Plan** | Comprehensive read-only analysis where no changes should happen |
+| **Build** | Offloading implementation tasks where full autonomy is desired |
 
 ---
 
@@ -186,21 +190,19 @@ sidecar start \
   - `name=url` - Remote MCP server (e.g., `--mcp "db=postgresql://localhost:5432/mydb"`)
   - `name=command` - Local MCP server (spawns process)
 - `--mcp-config <path>`: Path to opencode.json file with MCP server configuration. Alternative to `--mcp` for complex setups.
-- `--agent <agent>`: OpenCode agent type (controls tool access via native framework):
+- `--agent <agent>`: Agent mode (controls tool permissions). If omitted, defaults to **Chat**.
 
   **Primary Agents (for `sidecar start`):**
-  - `Plan` **(recommended default)**: Read-only mode - for analysis, exploration, and planning
-  - `Build`: Full tool access - for implementation when changes are explicitly requested
+  - `Chat` **(default)**: Reads auto-approved, writes/bash require user permission
+  - `Plan`: Read-only mode - no file modifications possible
+  - `Build`: Full tool access - all operations auto-approved
 
   **Subagents (for `sidecar subagent spawn`):**
   - `Explore`: Read-only subagent - for codebase exploration
   - `General`: Full-access subagent - for research requiring file writes
 
   **Custom Agents:**
-  You can also use custom agents defined in `~/.config/opencode/agents/` or
-  `.opencode/agents/` - they will be passed directly to OpenCode.
-
-  **Best Practice:** Always start with `--agent Plan` unless the user explicitly requests code changes or implementation. This prevents unintended modifications and allows thorough analysis before taking action. Switch to Build mode only when ready to implement.
+  Custom agents defined in `~/.config/opencode/agents/` or `.opencode/agents/` are passed through directly.
 
 ### Input Validation
 
@@ -477,52 +479,57 @@ token refresh race conditions. I suspect TokenManager.ts.
 
 ## Agent Modes
 
-Sidecar uses OpenCode's native agent framework with two distinct categories:
+Sidecar uses OpenCode's agent framework with three primary modes and two subagent types:
 
 ### Primary Agents (for Main Sessions)
 
-These agents are used when starting a sidecar session with `sidecar start`:
+| Agent | Reads | Writes/Edits | Bash | Default |
+|-------|-------|-------------|------|---------|
+| **Chat** | auto | asks permission | asks permission | Yes |
+| **Plan** | auto | denied | denied | No |
+| **Build** | auto | auto | auto | No |
 
-#### Plan Agent (Recommended Default)
+#### Chat Agent (Default)
 
-Read-only mode for analysis and planning without modifying files:
-- **read**: Read file contents
-- **glob/grep**: Search files
-- **list**: Directory listings
-- **webfetch**: Fetch web content
-- **todowrite/todoread**: Task tracking
-- **Disabled**: write, edit, patch, bash (no modifications)
+Conversational mode — reads are auto-approved, writes and bash commands prompt for user permission in the UI. This is the default when no `--agent` flag is provided.
 
 ```bash
-# RECOMMENDED: Start most sidecars in Plan mode
-sidecar start --model gemini --prompt "Analyze the auth flow" --agent Plan
+# These are equivalent — Chat is the default
+sidecar start --model gemini --prompt "Analyze the auth flow"
+sidecar start --model gemini --prompt "Analyze the auth flow" --agent Chat
+```
 
-# This is the safest approach - analyze first, implement later
+**Use Chat agent when:**
+- Asking questions or requesting analysis
+- You want to review and approve any file changes
+- Interactive exploration where the model might suggest edits
+- Any task where you want human-in-the-loop control over writes
+
+#### Plan Agent
+
+Strict read-only mode — file modifications are completely blocked:
+
+```bash
+sidecar start --model gemini --prompt "Review the codebase architecture" --agent Plan
 ```
 
 **Use Plan agent when:**
-- Reviewing code without making changes
-- Investigating bugs or issues
-- Creating implementation plans
-- Analyzing architecture
-- Any task where you're not 100% sure changes are needed
+- Comprehensive analysis where no changes should happen
+- Code review and security audits
+- Architecture exploration
 
 #### Build Agent
 
-Full tool access for implementation work. **Only use when implementation is explicitly requested.**
-
-- **read**: Read file contents
-- **write**: Create new files
-- **edit**: Modify existing files
-- **bash**: Execute shell commands
-- **glob/grep**: Search files
-- **webfetch**: Fetch web content
-- **todowrite/todoread**: Task tracking
+Full autonomous access — all operations auto-approved:
 
 ```bash
-# Only use when user explicitly requests changes:
 sidecar start --model gemini --prompt "Implement the login feature" --agent Build
 ```
+
+**Use Build agent when:**
+- Offloading development tasks to the sidecar
+- User explicitly requests implementation ("implement", "fix", "write", "create")
+- Headless batch operations (test generation, linting, etc.)
 
 ### Subagents (Spawned Within Sessions)
 
@@ -543,13 +550,12 @@ sidecar subagent spawn --parent abc123 --agent General --prompt "Research auth p
 Read-only subagent for codebase exploration:
 - Optimized for searching and understanding code
 - Read-only access (no writes, no bash)
-- Best for quick codebase questions
 
 ```bash
 sidecar subagent spawn --parent abc123 --agent Explore --prompt "Find all API endpoints"
 ```
 
-**Important:** When using `sidecar start`, use **Build** or **Plan**. When using `sidecar subagent spawn`, use **General** or **Explore**. Tool permissions are enforced by OpenCode's native agent framework.
+**Important:** When using `sidecar start`, use **Chat**, **Plan**, or **Build**. When using `sidecar subagent spawn`, use **General** or **Explore**.
 
 ---
 
@@ -670,13 +676,12 @@ If a relevant sidecar exists:
 
 ## Examples
 
-### Example 1: Interactive Debugging (Plan Mode - Recommended)
+### Example 1: Interactive Debugging (Chat Mode - Default)
 
 ```bash
-# Start in Plan mode to investigate without making changes
+# Default Chat mode — can read freely, asks before writing
 sidecar start \
   --model openrouter/openai/o3-mini \
-  --agent Plan \
   --session-id "$(ls -t ~/.claude/projects/-Users-john-myproject/*.jsonl | head -1 | xargs basename .jsonl)" \
   --prompt "## Debug Memory Leak
 
@@ -705,10 +710,10 @@ in src/utils/. Include edge cases. Write to tests/utils/." \
   --timeout 15
 ```
 
-### Example 3: Code Review (Plan Mode)
+### Example 3: Code Review (Plan Mode - Read-Only)
 
 ```bash
-# Plan mode is ideal for code review - read-only analysis
+# Plan mode for strict read-only review
 sidecar start \
   --model gemini \
   --agent Plan \
@@ -720,8 +725,8 @@ Analyze and report findings."
 ### Example 4: Spawn Subagents for Parallel Work
 
 ```bash
-# First, start a sidecar in Plan mode (recommended default)
-sidecar start --model gemini --agent Plan --prompt "Debug auth issues"
+# First, start a sidecar (defaults to Chat mode)
+sidecar start --model gemini --prompt "Debug auth issues"
 # Output: Started sidecar with task ID: abc123
 
 # Spawn an Explore subagent for codebase search

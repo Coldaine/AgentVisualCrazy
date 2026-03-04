@@ -164,17 +164,9 @@ async function runHeadless(model, systemPrompt, userMessage, taskId, project, ti
       parts: [{ type: 'text', text: userMessage }]
     };
 
-    // Map sidecar agent mode to OpenCode native agent
-    // This handles aliases (code→Build, plan→Plan) and passes custom agents through
-    if (agent) {
-      const agentConfig = mapAgentToOpenCode(agent);
-      promptOptions.agent = agentConfig.agent;
-
-      // Handle 'ask' mode which requires permission approval
-      if (agentConfig.permissions) {
-        promptOptions.permissions = agentConfig.permissions;
-      }
-    }
+    // Always set agent — defaults to 'chat' when not specified
+    const agentConfig = mapAgentToOpenCode(agent);
+    promptOptions.agent = agentConfig.agent;
 
     // Add reasoning/thinking configuration if provided
     if (reasoning) {
@@ -210,13 +202,11 @@ async function runHeadless(model, systemPrompt, userMessage, taskId, project, ti
 
         if (messages && Array.isArray(messages)) {
           for (const msg of messages) {
-            // Check if this is an assistant message with completion info
-            if (msg.info?.role === 'assistant') {
+            const role = msg.info?.role;
+
+            // Track assistant message state
+            if (role === 'assistant') {
               currentAssistantMsgId = msg.info.id;
-              // Check if the message has a completed time (indicates it's done)
-              if (msg.info.time?.completed) {
-                assistantFinished = true;
-              }
               // Check for errors
               if (msg.info.error) {
                 logger.warn('Session error detected', {
@@ -227,52 +217,61 @@ async function runHeadless(model, systemPrompt, userMessage, taskId, project, ti
               }
             }
 
-            // Process message parts
-            if (msg.parts) {
-              for (const part of msg.parts) {
-                if (part.type === 'text' && part.text && !output.includes(part.text)) {
-                  output += part.text;
-                  logMessage(conversationPath, {
-                    role: 'assistant',
-                    content: part.text,
-                    timestamp: new Date().toISOString()
-                  });
-                } else if (part.type === 'tool_use' && !toolCalls.find(t => t.id === part.id)) {
-                  const toolCall = {
-                    id: part.id,
-                    name: part.name,
-                    input: part.input
-                  };
-                  toolCalls.push(toolCall);
-                  logger.debug('Tool call detected (polling)', {
-                    toolName: part.name,
-                    toolId: part.id,
-                    subagentType: part.input?.subagent_type,
-                    model: part.input?.model
-                  });
-                  logMessage(conversationPath, {
-                    role: 'assistant',
-                    type: 'tool_use',
-                    toolCall,
-                    timestamp: new Date().toISOString()
-                  });
-                } else if (part.type === 'tool_result') {
-                  logger.debug('Tool result received (polling)', {
-                    toolUseId: part.tool_use_id,
-                    isError: part.is_error || false
-                  });
-                  logMessage(conversationPath, {
-                    role: 'tool',
-                    type: 'tool_result',
-                    toolUseId: part.tool_use_id,
-                    isError: part.is_error || false,
-                    content: part.content,
-                    timestamp: new Date().toISOString()
-                  });
-                }
+            // Only process parts from assistant messages (skip user messages)
+            if (role !== 'assistant' || !msg.parts) {
+              continue;
+            }
+
+            for (const part of msg.parts) {
+              if (part.type === 'text' && part.text && !output.includes(part.text)) {
+                output += part.text;
+                logMessage(conversationPath, {
+                  role: 'assistant',
+                  content: part.text,
+                  timestamp: new Date().toISOString()
+                });
+              } else if ((part.type === 'tool_use' || part.type === 'tool') && !toolCalls.find(t => t.id === part.id)) {
+                const toolCall = {
+                  id: part.id,
+                  name: part.name,
+                  input: part.input
+                };
+                toolCalls.push(toolCall);
+                logger.debug('Tool call detected (polling)', {
+                  toolName: part.name,
+                  toolId: part.id,
+                  subagentType: part.input?.subagent_type,
+                  model: part.input?.model
+                });
+                logMessage(conversationPath, {
+                  role: 'assistant',
+                  type: 'tool_use',
+                  toolCall,
+                  timestamp: new Date().toISOString()
+                });
+              } else if (part.type === 'tool_result') {
+                logger.debug('Tool result received (polling)', {
+                  toolUseId: part.tool_use_id,
+                  isError: part.is_error || false
+                });
+                logMessage(conversationPath, {
+                  role: 'tool',
+                  type: 'tool_result',
+                  toolUseId: part.tool_use_id,
+                  isError: part.is_error || false,
+                  content: part.content,
+                  timestamp: new Date().toISOString()
+                });
               }
             }
           }
+
+          // assistantFinished = true only when the LAST assistant message is complete
+          // (earlier messages may finish while the model continues in new messages)
+          const lastAssistant = messages
+            .filter(m => m.info?.role === 'assistant')
+            .pop();
+          assistantFinished = !!(lastAssistant?.info?.time?.completed);
         }
 
         logger.debug('Poll status', {

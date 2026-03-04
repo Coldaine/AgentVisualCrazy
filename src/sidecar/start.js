@@ -84,7 +84,7 @@ function buildMcpConfig(options) {
 
 /** Run sidecar in interactive mode (Electron GUI) */
 async function runInteractive(model, systemPrompt, userMessage, taskId, project, options = {}) {
-  const { agent, isResume, conversation, mcp, reasoning } = options;
+  const { agent, isResume, conversation, mcp, reasoning, opencodeSessionId } = options;
   const { createSession, sendPromptAsync } = require('../opencode-client');
 
   // Start OpenCode server (shared with headless mode)
@@ -101,25 +101,30 @@ async function runInteractive(model, systemPrompt, userMessage, taskId, project,
     };
   }
 
-  // Create session and send initial prompt
+  // Create or reconnect to session
   let sessionId;
   try {
-    sessionId = await createSession(client);
+    if (isResume && opencodeSessionId) {
+      // Resume: reconnect to existing OpenCode session
+      sessionId = opencodeSessionId;
+      logger.info('Reconnecting to existing session', { sessionId });
+    } else {
+      // New session: create and send initial prompt
+      sessionId = await createSession(client);
 
-    const promptOptions = {
-      model, system: systemPrompt,
-      parts: [{ type: 'text', text: userMessage }]
-    };
+      const promptOptions = {
+        model, system: systemPrompt,
+        parts: [{ type: 'text', text: userMessage }]
+      };
 
-    if (agent) {
+      // Always set agent — defaults to 'chat' when not specified
       const agentConfig = mapAgentToOpenCode(agent);
       promptOptions.agent = agentConfig.agent;
-      if (agentConfig.permissions) { promptOptions.permissions = agentConfig.permissions; }
-    }
-    if (reasoning) { promptOptions.reasoning = reasoning; }
+      if (reasoning) { promptOptions.reasoning = reasoning; }
 
-    await sendPromptAsync(client, sessionId, promptOptions);
-    logger.debug('Interactive session ready', { sessionId });
+      await sendPromptAsync(client, sessionId, promptOptions);
+    }
+    logger.debug('Interactive session ready', { sessionId, isResume: !!isResume });
   } catch (error) {
     server.close();
     return {
@@ -158,6 +163,7 @@ async function runInteractive(model, systemPrompt, userMessage, taskId, project,
     handleElectronProcess(electronProcess, taskId, (result) => {
       server.close();
       logger.debug('OpenCode server closed after Electron exit');
+      result.opencodeSessionId = sessionId;
       originalResolve(result);
     });
   });
@@ -263,10 +269,11 @@ async function startSidecar(options) {
 
   const heartbeat = createHeartbeat();
   let summary;
+  let result;
 
   try {
     if (effectiveHeadless) {
-      const result = await runHeadless(
+      result = await runHeadless(
         model, systemPrompt, userMessage, taskId, effectiveProject,
         timeout * 60 * 1000, agent, { mcp: mcpServers, summaryLength, reasoning }
       );
@@ -274,8 +281,9 @@ async function startSidecar(options) {
       if (result.timedOut) { logger.warn('Task timed out', { taskId }); }
       if (result.error) { logger.error('Task error', { taskId, error: result.error }); }
     } else {
-      logger.info('Launching interactive sidecar', { taskId, model, agent: agent || 'code' });
-      const result = await runInteractive(
+      const effectiveAgent = mapAgentToOpenCode(agent).agent;
+      logger.info('Launching interactive sidecar', { taskId, model, agent: effectiveAgent });
+      result = await runInteractive(
         model, systemPrompt, userMessage, taskId, effectiveProject,
         { agent, mcp: mcpServers, reasoning }
       );
@@ -289,6 +297,13 @@ async function startSidecar(options) {
   outputSummary(summary);
   const metaPath = SessionPaths.metadataFile(sessDir);
   const meta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'));
+
+  // Persist OpenCode session ID for resume capability
+  if (result && result.opencodeSessionId) {
+    meta.opencodeSessionId = result.opencodeSessionId;
+    fs.writeFileSync(metaPath, JSON.stringify(meta, null, 2));
+  }
+
   finalizeSession(sessDir, summary, effectiveProject, meta);
 }
 

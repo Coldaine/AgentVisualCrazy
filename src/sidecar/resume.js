@@ -140,7 +140,12 @@ async function resumeSidecar(options) {
       const result = await runInteractive(
         metadata.model, resumePrompt, metadata.briefing || '',
         taskId, project,
-        { agent: effectiveAgent, isResume: true, conversation: existingConversation }
+        {
+          agent: effectiveAgent,
+          isResume: true,
+          conversation: existingConversation,
+          opencodeSessionId: metadata.opencodeSessionId
+        }
       );
       summary = result.summary || '';
       if (result.error) { logger.error('Interactive resume error', { taskId, error: result.error }); }
