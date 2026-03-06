@@ -61,6 +61,7 @@ const OPENCODE_URL = `http://localhost:${OPENCODE_PORT}`;
 
 let mainWindow = null;
 let contentView = null;
+let currentToolbarH = TOOLBAR_H;
 
 const foldHandler = createFoldHandler({
   model: MODEL,
@@ -82,7 +83,7 @@ function createSidecarWindow() {
     width: 720, height: 850, minWidth: 550, minHeight: 600,
     show: false,
     frame: true, backgroundColor: '#2D2B2A',
-    title: CLIENT === 'cowork' ? 'Openwork Sidecar' : 'OpenCode Sidecar',
+    title: CLIENT === 'cowork' ? 'Openwork Sidecar' : 'Claude Sidecar',
     icon: ICON_PATH,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -90,8 +91,17 @@ function createSidecarWindow() {
     }
   });
 
+  // Check for updates before building toolbar (uses cached data, no network call)
+  const { getUpdateInfo, initUpdateCheck } = require('../src/utils/updater');
+  initUpdateCheck();
+  const updateInfo = getUpdateInfo();
+  if (updateInfo) {
+    currentToolbarH = TOOLBAR_H + 32; // Expand for 32px update banner
+    logger.info('Update available', { current: updateInfo.current, latest: updateInfo.latest });
+  }
+
   const toolbarHtml = buildToolbarHTML({
-    mode: 'sidecar', taskId: TASK_ID, foldShortcut: shortcutLabel, client: CLIENT
+    mode: 'sidecar', taskId: TASK_ID, foldShortcut: shortcutLabel, client: CLIENT, updateInfo
   });
   mainWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(toolbarHtml)}`);
   mainWindow.webContents.on('page-title-updated', (e) => e.preventDefault());
@@ -137,6 +147,41 @@ function createSidecarWindow() {
   globalShortcut.register(FOLD_SHORTCUT, () => {
     foldHandler.triggerFold(mainWindow, contentView);
   });
+
+  // Poll toolbar for update button clicks (IPC doesn't work with data: URLs)
+  if (updateInfo) {
+    const updatePoll = setInterval(() => {
+      if (!mainWindow || mainWindow.isDestroyed()) { clearInterval(updatePoll); return; }
+      mainWindow.webContents.executeJavaScript('window.__sidecarUpdateAction').then(action => {
+        if (action === 'perform-update') {
+          mainWindow.webContents.executeJavaScript('window.__sidecarUpdateAction = null');
+          const { performUpdate } = require('../src/utils/updater');
+          performUpdate().then(result => {
+            if (!mainWindow || mainWindow.isDestroyed()) { return; }
+            if (result.success) {
+              mainWindow.webContents.executeJavaScript(`
+                document.getElementById('update-text').textContent = 'Updated! Your next sidecar session will use the new version.';
+                document.getElementById('update-btn').style.display = 'none';
+                document.getElementById('dismiss-btn').style.display = '';
+              `);
+            } else {
+              mainWindow.webContents.executeJavaScript(`
+                document.getElementById('update-text').textContent = 'Update failed: ${(result.error || 'unknown').replace(/'/g, "\\'")}';
+                document.getElementById('update-btn').textContent = 'Retry';
+                document.getElementById('update-btn').disabled = false;
+                document.getElementById('dismiss-btn').style.display = '';
+              `);
+            }
+          });
+        } else if (action === 'dismiss') {
+          mainWindow.webContents.executeJavaScript('window.__sidecarUpdateAction = null');
+          currentToolbarH = TOOLBAR_H;
+          updateContentBounds();
+          clearInterval(updatePoll);
+        }
+      }).catch(() => {});
+    }, 500);
+  }
 
   mainWindow.on('close', () => {
     if (!foldHandler.hasFolded() && mainWindow) { mainWindow.destroy(); }
@@ -189,7 +234,7 @@ function createSetupWindow() {
 function updateContentBounds() {
   if (!mainWindow || !contentView) { return; }
   const [w, h] = mainWindow.getContentSize();
-  contentView.setBounds({ x: 0, y: 0, width: w, height: h - TOOLBAR_H });
+  contentView.setBounds({ x: 0, y: 0, width: w, height: h - currentToolbarH });
 }
 
 // Sidecar wordmark SVG in the same pixel/block art style as the OpenCode logo.
@@ -322,6 +367,12 @@ ipcMain.handle('sidecar:perform-update', async () => {
     mainWindow.webContents.send('sidecar:update-result', result);
   }
   return result;
+});
+
+// Resize toolbar area (called when update banner shows/hides)
+ipcMain.handle('sidecar:resize-toolbar', (_event, height) => {
+  currentToolbarH = height;
+  updateContentBounds();
 });
 
 // Setup mode: all setup IPC handlers (extracted to ipc-setup.js)

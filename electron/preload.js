@@ -28,4 +28,6 @@ contextBridge.exposeInMainWorld('sidecar', {
   performUpdate: () => ipcRenderer.invoke('sidecar:perform-update'),
   /** Listen for update result */
   onUpdateResult: (callback) => ipcRenderer.on('sidecar:update-result', (_event, data) => callback(data)),
+  /** Notify main process to resize toolbar area */
+  resizeToolbar: (height) => ipcRenderer.invoke('sidecar:resize-toolbar', height),
 });

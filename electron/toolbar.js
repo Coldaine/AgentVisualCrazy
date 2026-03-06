@@ -13,7 +13,7 @@ const TOOLBAR_H = 40;
  * @returns {string} Brand name to display
  */
 function getBrandName(client) {
-  return client === 'cowork' ? 'Openwork Sidecar' : 'OpenCode Sidecar';
+  return client === 'cowork' ? 'Openwork Sidecar' : 'Claude Sidecar';
 }
 
 /**
@@ -30,7 +30,8 @@ function buildToolbarHTML(options = {}) {
     mode = 'sidecar',
     taskId = 'unknown',
     foldShortcut = 'Cmd+Shift+F',
-    client = 'code-local'
+    client = 'code-local',
+    updateInfo = null
   } = options;
 
   const brandName = getBrandName(client);
@@ -96,7 +97,7 @@ function buildToolbarHTML(options = {}) {
   .right-actions { display: flex; align-items: center; gap: 8px; }
   .update-banner {
     position: fixed;
-    top: 0;
+    bottom: ${TOOLBAR_H}px;
     left: 0;
     right: 0;
     height: 32px;
@@ -190,55 +191,33 @@ function buildToolbarHTML(options = {}) {
     window.sidecar && window.sidecar.openSettings();
   });
 
-  // Update banner logic
+  // Update banner logic (data injected at build time, no IPC needed)
   (function() {
+    var updateInfo = ${JSON.stringify(updateInfo)};
+    if (!updateInfo || !updateInfo.hasUpdate) { return; }
+
     var banner = document.getElementById('update-banner');
     var text = document.getElementById('update-text');
     var btn = document.getElementById('update-btn');
     var dismiss = document.getElementById('dismiss-btn');
 
-    if (window.sidecar && window.sidecar.getUpdateInfo) {
-      window.sidecar.getUpdateInfo().then(function(info) {
-        if (info && info.hasUpdate) {
-          text.textContent = 'v' + info.latest + ' available';
-          banner.style.display = 'flex';
-        }
-      });
-    }
+    text.textContent = 'v' + updateInfo.latest + ' available';
+    banner.style.display = 'flex';
 
+    // Notify main process to expand toolbar area
+    // Uses postMessage since preload contextBridge doesn't work with data: URLs
+    window.__sidecarUpdateAction = null;
     btn.addEventListener('click', function() {
       btn.disabled = true;
       btn.textContent = 'Updating...';
       dismiss.style.display = 'none';
-      if (window.sidecar && window.sidecar.performUpdate) {
-        window.sidecar.performUpdate().then(function(result) {
-          if (result && result.success) {
-            text.textContent = 'Updated! Your next sidecar session will use the new version.';
-            btn.style.display = 'none';
-            dismiss.style.display = '';
-          } else {
-            text.textContent = 'Update failed: ' + (result && result.error || 'unknown error');
-            btn.textContent = 'Retry';
-            btn.disabled = false;
-            dismiss.style.display = '';
-          }
-        });
-      }
+      window.__sidecarUpdateAction = 'perform-update';
     });
 
     dismiss.addEventListener('click', function() {
       banner.style.display = 'none';
+      window.__sidecarUpdateAction = 'dismiss';
     });
-
-    if (window.sidecar && window.sidecar.onUpdateResult) {
-      window.sidecar.onUpdateResult(function(result) {
-        if (result && result.success) {
-          text.textContent = 'Updated! Your next sidecar session will use the new version.';
-          btn.style.display = 'none';
-          dismiss.style.display = '';
-        }
-      });
-    }
   })();
 </script>
 </body></html>`;
