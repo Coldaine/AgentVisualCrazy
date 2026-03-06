@@ -194,6 +194,7 @@ sidecar start \
   - `name=url` - Remote MCP server (e.g., `--mcp "db=postgresql://localhost:5432/mydb"`)
   - `name=command` - Local MCP server (spawns process)
 - `--mcp-config <path>`: Path to opencode.json file with MCP server configuration. Alternative to `--mcp` for complex setups.
+- `--client <type>`: Client entry point (`code-local`, `code-web`, `cowork`). Affects system prompt personality. Default: `code-local`.
 - `--agent <agent>`: Agent mode (controls tool permissions). If omitted, defaults to **Chat**.
 
   **Primary Agents (for `sidecar start`):**

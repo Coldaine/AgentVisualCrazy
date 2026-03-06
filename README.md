@@ -16,6 +16,13 @@ Sidecar extends Claude Code with the ability to delegate tasks to other LLMs. Th
 - **Keep context clean**: Deep explorations stay in the sidecar, only the summary returns
 - **Work in parallel**: Background sidecars while you continue with Claude Code
 
+### Adaptive Personality
+
+When launched from Cowork, sidecar adapts its persona from a coding assistant to a general-purpose helper. Research, analysis, writing, brainstorming — it matches the context of how it was invoked.
+
+- **From Claude Code** (`--client code-local`): SE-focused prompting (debug, implement, review code)
+- **From Cowork** (`--client cowork`): General-purpose prompting (research, analyze, write, brainstorm)
+
 ## Installation
 
 ```bash

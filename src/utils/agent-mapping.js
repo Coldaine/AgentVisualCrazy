@@ -20,7 +20,7 @@
 /**
  * OpenCode's primary agent names (for main sessions)
  * Note: OpenCode API expects lowercase agent names
- * 'chat' is a custom sidecar agent: reads auto, writes/bash ask
+ * 'chat' is a custom sidecar agent: reads auto, writes/bash ask. When client=cowork, gets a general-purpose prompt.
  */
 const PRIMARY_AGENTS = ['chat', 'build', 'plan'];
 

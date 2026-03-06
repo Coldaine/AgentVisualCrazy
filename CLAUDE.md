@@ -171,6 +171,8 @@ sidecar/
 │   ├── drift.js                 # Context drift calculation
 │   ├── session.js               # Session file resolution
 │   ├── jsonl-parser.js          # JSONL parsing & formatting
+│   ├── prompts/                 # Prompt modules
+│   │   └── cowork-agent-prompt.js  # Cowork client agent prompt (replaces SE base)
 │   └── utils/                   # Utility modules
 │       ├── agent-mapping.js     # OpenCode agent mapping & validation
 │       ├── config.js            # Config loading, alias resolution, hash detection
@@ -261,6 +263,7 @@ sidecar/
 | `utils/agent-model-config.js` | Model config persistence | `loadConfig()`, `saveConfig()`, `getModelForAgent()`, `setAgentModel()` |
 | `utils/validators.js` | CLI input validation | `validateBriefingContent()`, `validateProjectPath()`, `validateApiKey()` |
 | `utils/logger.js` | Structured logging | `logger.info()`, `logger.warn()`, `logger.error()`, `logger.debug()` |
+| `prompts/cowork-agent-prompt.js` | Cowork agent prompt | `buildCoworkAgentPrompt()` — replaces SE-focused OpenCode base prompt when `client === 'cowork'` |
 
 ### Shared Session Utilities (`src/sidecar/session-utils.js`)
 
@@ -506,6 +509,7 @@ This section documents how sidecar integrates with OpenCode's native capabilitie
 | **Context Drift Detection** | Safety feature - detect stale context | `drift.js` calculates staleness |
 | **Session Persistence** | Custom metadata (briefing, agent, thinking) | `session-manager.js` |
 | **MCP Config Merging** | CLI overrides + file config | `opencode-client.js` |
+| **Client-aware prompt** | Cowork needs general-purpose, not SE-focused | `prompts/cowork-agent-prompt.js` sets `chat` agent `prompt` field |
 
 ### Removed Redundancies
 
