@@ -262,7 +262,8 @@ async function getSessionStatus(client, sessionId) {
 }
 
 /**
- * Start an OpenCode server and return client + server handle
+ * Build the server options object for createOpencodeServer.
+ * Extracted for testability (no SDK dependency).
  *
  * @param {object} [options] - Server options
  * @param {number} [options.port] - Port to run on
@@ -270,11 +271,10 @@ async function getSessionStatus(client, sessionId) {
  * @param {AbortSignal} [options.signal] - Abort signal to stop server
  * @param {object} [options.mcp] - MCP server configurations
  * @param {string} [options.model] - Default model
- * @returns {Promise<{client: object, server: {url: string, close: Function}}>}
+ * @param {string} [options.client] - Client type ('cowork', 'code-local', etc.)
+ * @returns {object} Server options ready for createOpencodeServer
  */
-async function startServer(options = {}) {
-  const createOpencodeServer = await getCreateOpencodeServer();
-
+function buildServerOptions(options = {}) {
   // Build config object for SDK
   const config = {};
   if (options.mcp) {
@@ -285,17 +285,25 @@ async function startServer(options = {}) {
   }
 
   // Register custom 'chat' agent: reads auto-approved, writes/bash require permission
+  const chatAgent = {
+    description: 'Conversational agent — reads are auto-approved, writes and commands require permission',
+    mode: 'primary',
+    permission: {
+      edit: 'ask',
+      bash: 'ask',
+      webfetch: 'allow'
+    }
+  };
+
+  // When launched from Cowork, replace the SE-focused base prompt with a general-purpose one
+  if (options.client === 'cowork') {
+    const { buildCoworkAgentPrompt } = require('./prompts/cowork-agent-prompt');
+    chatAgent.prompt = buildCoworkAgentPrompt();
+  }
+
   config.agent = {
     ...(config.agent || {}),
-    chat: {
-      description: 'Conversational agent — reads are auto-approved, writes and commands require permission',
-      mode: 'primary',
-      permission: {
-        edit: 'ask',
-        bash: 'ask',
-        webfetch: 'allow'
-      }
-    }
+    chat: chatAgent
   };
 
   const serverOptions = {
@@ -308,6 +316,25 @@ async function startServer(options = {}) {
   if (Object.keys(config).length > 0) {
     serverOptions.config = config;
   }
+
+  return serverOptions;
+}
+
+/**
+ * Start an OpenCode server and return client + server handle
+ *
+ * @param {object} [options] - Server options
+ * @param {number} [options.port] - Port to run on
+ * @param {string} [options.hostname='127.0.0.1'] - Hostname to bind to
+ * @param {AbortSignal} [options.signal] - Abort signal to stop server
+ * @param {object} [options.mcp] - MCP server configurations
+ * @param {string} [options.model] - Default model
+ * @param {string} [options.client] - Client type ('cowork', 'code-local', etc.)
+ * @returns {Promise<{client: object, server: {url: string, close: Function}}>}
+ */
+async function startServer(options = {}) {
+  const createOpencodeServer = await getCreateOpencodeServer();
+  const serverOptions = buildServerOptions(options);
 
   const server = await createOpencodeServer(serverOptions);
   const client = await createClient(server.url);
@@ -424,6 +451,7 @@ module.exports = {
   getSessionStatus,
   abortSession,
   checkHealth,
+  buildServerOptions,
   startServer,
   loadMcpConfig,
   parseMcpSpec
