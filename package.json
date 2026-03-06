@@ -31,7 +31,8 @@
     "bin/",
     "src/",
     "electron/",
-    "skill/"
+    "skill/",
+    "scripts/postinstall.js"
   ],
   "scripts": {
     "start": "node --experimental-top-level-await --experimental-vm-modules bin/sidecar.js",
