@@ -88,9 +88,11 @@ While Claude implements a fix, spin up a sidecar to review the test coverage, au
 npm install -g claude-sidecar
 ```
 
-On install, sidecar automatically:
-- Registers a **Skill** in `~/.claude/skills/sidecar/` so Claude Code knows how to use sidecars
-- Registers an **MCP server** for Claude Desktop and Cowork
+On install, sidecar automatically configures itself for all supported clients:
+- **Claude Code CLI**: Registers an MCP server and installs a Skill, so Claude can launch and manage sidecars on your behalf
+- **Claude Desktop & Cowork**: Registers an MCP server, so sidecar tools appear natively in the UI
+
+No manual registration needed. Just install and run setup.
 
 ### 2. Run Setup
 
@@ -190,6 +192,8 @@ Sidecar checks the npm registry for updates once every 24 hours (cached, zero-la
 
 - **CLI:** A notification box appears in your terminal after any command
 - **Electron UI:** A banner appears above the toolbar with a one-click **Update** button. No terminal commands needed.
+
+Updating installs the latest code **and** re-runs the postinstall step, so your Claude Code Skill file and MCP registrations are always kept in sync with the latest version. No manual re-registration needed.
 
 ```bash
 # Or update manually from the CLI
