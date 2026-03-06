@@ -41,5 +41,10 @@ opencode.json
 # Sidecar session data (user-specific)
 .claude/sidecar_sessions/
 
+# Agent instruction files (local development only)
+CLAUDE.md
+GEMINI.md
+AGENTS.md
+
 # Archived docs (stale/superseded, kept locally for reference)
 docs/archive/
