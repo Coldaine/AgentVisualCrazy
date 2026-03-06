@@ -138,7 +138,7 @@ async function continueSidecar(options) {
 
   // Build system prompt and user message
   const { system: systemPrompt, userMessage } = buildPrompts(
-    briefing, fullContext, project, headless, effectiveAgent
+    briefing, fullContext, project, headless, effectiveAgent, 'normal', client
   );
 
   // Generate new task ID and create session

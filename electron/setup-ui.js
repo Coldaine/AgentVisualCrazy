@@ -6,8 +6,15 @@ const { buildWizardCSS } = require('./setup-ui-styles');
 const { buildKeysScript } = require('./setup-ui-keys-script');
 const { buildAliasScript } = require('./setup-ui-alias-script');
 const { getDefaultAliases } = require('../src/utils/config');
+const { getBrandName } = require('./toolbar');
 
-function buildSetupHTML() {
+/**
+ * @param {object} [options={}]
+ * @param {string} [options.client='code-local'] - Client type for branding
+ */
+function buildSetupHTML(options = {}) {
+  const { client = 'code-local' } = options;
+  const brandName = getBrandName(client);
   const keysHtml = buildKeysStepHTML(PROVIDERS);
   const modelHtml = buildModelStepHTML(MODEL_CHOICES);
   const aliasHtml = buildAliasEditorHTML(getDefaultAliases());
@@ -19,7 +26,7 @@ function buildSetupHTML() {
   return `<!DOCTYPE html>
 <html><head><meta charset="utf-8"><title>Sidecar Setup</title>
 <style>${css}</style></head><body>
-  <div class="header"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 2v12" stroke="#D97757" stroke-width="2" stroke-linecap="round"/><path d="M10 2v5c0 2-3 3-7 5" stroke="#D97757" stroke-width="2" stroke-linecap="round" stroke-opacity="0.6"/></svg><span class="header-title">OpenCode Sidecar Setup</span></div>
+  <div class="header"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 2v12" stroke="#D97757" stroke-width="2" stroke-linecap="round"/><path d="M10 2v5c0 2-3 3-7 5" stroke="#D97757" stroke-width="2" stroke-linecap="round" stroke-opacity="0.6"/></svg><span class="header-title">${brandName} Setup</span></div>
   <div class="progress-bar"><div class="progress-step active" id="step-1"><span class="progress-dot">1</span><span>API Keys</span></div><div class="progress-connector"></div><div class="progress-step" id="step-2"><span class="progress-dot">2</span><span>Models</span></div><div class="progress-connector"></div><div class="progress-step" id="step-3"><span class="progress-dot">3</span><span>Routing</span></div><div class="progress-connector"></div><div class="progress-step" id="step-4"><span class="progress-dot">4</span><span>Review</span></div></div>
   <div class="content">
     <div class="wizard-step visible" id="wizard-step-1">${keysHtml}</div>
@@ -36,7 +43,7 @@ function buildSetupHTML() {
       </div>
     </div>
   </div>
-  <div class="footer"><div class="footer-brand"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 2v12" stroke="#D97757" stroke-width="2" stroke-linecap="round"/><path d="M10 2v5c0 2-3 3-7 5" stroke="#D97757" stroke-width="2" stroke-linecap="round" stroke-opacity="0.6"/></svg> OpenCode Sidecar</div><div class="footer-nav"><button class="nav-btn" id="back-btn" style="display:none">Back</button><button class="nav-btn primary" id="next-btn" disabled>Next</button><button class="nav-btn primary" id="finish-btn" style="display:none">Finish</button></div></div>
+  <div class="footer"><div class="footer-brand"><svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M3 2v12" stroke="#D97757" stroke-width="2" stroke-linecap="round"/><path d="M10 2v5c0 2-3 3-7 5" stroke="#D97757" stroke-width="2" stroke-linecap="round" stroke-opacity="0.6"/></svg> ${brandName}</div><div class="footer-nav"><button class="nav-btn" id="back-btn" style="display:none">Back</button><button class="nav-btn primary" id="next-btn" disabled>Next</button><button class="nav-btn primary" id="finish-btn" style="display:none">Finish</button></div></div>
 ${buildWizardScript(providersJson, modelChoicesJson, providerNamesJson, defaultAliasesJson)}
 </body></html>`;
 }

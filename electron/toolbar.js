@@ -8,19 +8,32 @@
 const TOOLBAR_H = 40;
 
 /**
+ * Get the brand name based on client type
+ * @param {string} [client='code-local'] - Client type (code-local, code-web, cowork)
+ * @returns {string} Brand name to display
+ */
+function getBrandName(client) {
+  return client === 'cowork' ? 'Openwork Sidecar' : 'OpenCode Sidecar';
+}
+
+/**
  * Build toolbar HTML string
  * @param {object} [options={}]
  * @param {string} [options.mode='sidecar'] - 'sidecar' or 'setup'
  * @param {string} [options.taskId='unknown'] - Task ID to display
  * @param {string} [options.foldShortcut='Cmd+Shift+F'] - Shortcut label
+ * @param {string} [options.client='code-local'] - Client type for branding
  * @returns {string} Complete HTML document for the toolbar
  */
 function buildToolbarHTML(options = {}) {
   const {
     mode = 'sidecar',
     taskId = 'unknown',
-    foldShortcut = 'Cmd+Shift+F'
+    foldShortcut = 'Cmd+Shift+F',
+    client = 'code-local'
   } = options;
+
+  const brandName = getBrandName(client);
 
   const baseStyles = `
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -92,7 +105,7 @@ function buildToolbarHTML(options = {}) {
 <html><head><style>${baseStyles}</style></head><body>
   <div class="info">
     ${logoSvg}
-    <span class="brand">OpenCode Sidecar</span>
+    <span class="brand">${brandName}</span>
   </div>
   <button class="action-btn" id="continue-btn" disabled>Continue</button>
 <script>
@@ -110,7 +123,7 @@ function buildToolbarHTML(options = {}) {
 <html><head><style>${baseStyles}</style></head><body>
   <div class="info">
     ${logoSvg}
-    <span class="brand">OpenCode Sidecar</span>
+    <span class="brand">${brandName}</span>
     <span class="sep">|</span>
     <span class="detail" title="Task ID — use with: sidecar resume ${taskId}">task: ${taskId}</span>
     <span class="sep">|</span>
@@ -138,4 +151,4 @@ function buildToolbarHTML(options = {}) {
 </body></html>`;
 }
 
-module.exports = { buildToolbarHTML, TOOLBAR_H };
+module.exports = { buildToolbarHTML, TOOLBAR_H, getBrandName };

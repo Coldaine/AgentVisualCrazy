@@ -15,7 +15,7 @@
 const { app, BrowserWindow, BrowserView, globalShortcut, ipcMain } = require('electron');
 const path = require('path');
 const { logger } = require('../src/utils/logger');
-const { buildToolbarHTML, TOOLBAR_H } = require('./toolbar');
+const { buildToolbarHTML, TOOLBAR_H, getBrandName } = require('./toolbar');
 const { createFoldHandler } = require('./fold');
 const { registerSetupHandlers } = require('./ipc-setup');
 
@@ -79,7 +79,7 @@ function createSidecarWindow() {
   mainWindow = new BrowserWindow({
     width: 720, height: 850, minWidth: 550, minHeight: 600,
     frame: true, backgroundColor: '#2D2B2A',
-    title: 'OpenCode Sidecar',
+    title: CLIENT === 'cowork' ? 'Openwork Sidecar' : 'OpenCode Sidecar',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true, nodeIntegration: false,
@@ -87,7 +87,7 @@ function createSidecarWindow() {
   });
 
   const toolbarHtml = buildToolbarHTML({
-    mode: 'sidecar', taskId: TASK_ID, foldShortcut: shortcutLabel
+    mode: 'sidecar', taskId: TASK_ID, foldShortcut: shortcutLabel, client: CLIENT
   });
   mainWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(toolbarHtml)}`);
   mainWindow.webContents.on('page-title-updated', (e) => e.preventDefault());
@@ -139,7 +139,7 @@ function createSetupWindow() {
   mainWindow = new BrowserWindow({
     width: 560, height: 680, minWidth: 480, minHeight: 580,
     frame: true, backgroundColor: '#2D2B2A',
-    title: 'Sidecar Setup',
+    title: `${getBrandName(CLIENT)} Setup`,
     resizable: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload-setup.js'),
@@ -147,7 +147,7 @@ function createSetupWindow() {
     }
   });
 
-  const html = buildSetupHTML();
+  const html = buildSetupHTML({ client: CLIENT });
   mainWindow.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
   mainWindow.webContents.on('page-title-updated', (e) => e.preventDefault());
 
@@ -174,7 +174,7 @@ function rebrandUI() {
   if (!contentView) { return; }
   contentView.webContents.executeJavaScript(`
     (function() {
-      document.title = 'OpenCode Sidecar';
+      document.title = '${getBrandName(CLIENT)}';
       var header = document.querySelector('#root > div > header');
       if (header) { header.style.display = 'none'; }
     })();
@@ -263,7 +263,7 @@ function createSettingsChildWindow() {
     width: 560, height: 680,
     parent: mainWindow, modal: false,
     frame: true, backgroundColor: '#2D2B2A',
-    title: 'Sidecar Settings',
+    title: `${getBrandName(CLIENT)} Settings`,
     resizable: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload-setup.js'),
@@ -271,7 +271,7 @@ function createSettingsChildWindow() {
     }
   });
 
-  const html = buildSetupHTML();
+  const html = buildSetupHTML({ client: CLIENT });
   settingsWin.loadURL(`data:text/html;charset=utf-8,${encodeURIComponent(html)}`);
   settingsWin.webContents.on('page-title-updated', (e) => e.preventDefault());
 }

@@ -50,13 +50,14 @@ Be concise but complete enough to act on immediately.`;
  * @param {string} project - Project directory path
  * @param {boolean} headless - Whether running in headless mode (no GUI)
  * @param {string} [mode='code'] - Agent mode ('code', 'ask', or 'plan')
+ * @param {string} [client='code-local'] - Client type for branding
  * @returns {string} Complete system prompt (legacy - use buildPrompts instead)
  *
  * @deprecated Use buildPrompts() instead for proper system/user separation
  */
-function buildSystemPrompt(briefing, context, project, headless, mode) {
+function buildSystemPrompt(briefing, context, project, headless, mode, client) {
   const sections = [
-    buildHeader(),
+    buildHeader(client),
     buildTaskBriefingSection(briefing),
     buildConversationContextSection(context),
     buildEnvironmentSection(project, mode),
@@ -75,6 +76,7 @@ function buildSystemPrompt(briefing, context, project, headless, mode) {
  * @param {boolean} headless - Whether running in headless mode (no GUI)
  * @param {string} [mode='code'] - Agent mode ('code', 'ask', or 'plan')
  * @param {string} [summaryLength='normal'] - Desired summary length for headless mode
+ * @param {string} [client='code-local'] - Client type for branding
  * @returns {{system: string, userMessage: string}} Separated prompts
  *
  * @example
@@ -87,9 +89,9 @@ function buildSystemPrompt(briefing, context, project, headless, mode) {
  * );
  * // Use: POST /session/:id/message { system, parts: [{ type: 'text', text: userMessage }] }
  */
-function buildPrompts(briefing, context, project, headless, mode, summaryLength = 'normal') {
+function buildPrompts(briefing, context, project, headless, mode, summaryLength = 'normal', client) {
   const systemSections = [
-    buildHeader(),
+    buildHeader(client),
     buildEnvironmentSection(project, mode),
     headless ? buildHeadlessModeSection(summaryLength) : buildInteractiveModeSection()
   ];
@@ -144,12 +146,14 @@ ${context}
 
 /**
  * Build the sidecar session header
+ * @param {string} [client='code-local'] - Client type (code-local, code-web, cowork)
  * @returns {string}
  */
-function buildHeader() {
+function buildHeader(client) {
+  const parentName = client === 'cowork' ? 'Cowork' : 'Claude Code';
   return `# SIDECAR SESSION
 
-You are a sidecar agent helping with a task from Claude Code.`;
+You are a sidecar agent helping with a task from ${parentName}.`;
 }
 
 /**

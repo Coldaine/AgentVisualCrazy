@@ -25,6 +25,12 @@ describe('setup-ui wizard', () => {
       expect(html).toContain('OpenCode Sidecar');
     });
 
+    it('should show "Openwork Sidecar" for cowork client', () => {
+      const coworkHtml = buildSetupHTML({ client: 'cowork' });
+      expect(coworkHtml).toContain('Openwork Sidecar');
+      expect(coworkHtml).not.toContain('OpenCode Sidecar');
+    });
+
     it('should use the dark theme colors', () => {
       expect(html).toContain('#2D2B2A'); // background
       expect(html).toContain('#D97757'); // accent
