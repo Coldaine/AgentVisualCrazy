@@ -307,6 +307,23 @@ ipcMain.handle('sidecar:open-settings', () => {
   createSettingsChildWindow();
 });
 
+// Update check
+ipcMain.handle('sidecar:get-update-info', () => {
+  const { getUpdateInfo, initUpdateCheck } = require('../src/utils/updater');
+  initUpdateCheck();
+  return getUpdateInfo();
+});
+
+// Perform update
+ipcMain.handle('sidecar:perform-update', async () => {
+  const { performUpdate } = require('../src/utils/updater');
+  const result = await performUpdate();
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('sidecar:update-result', result);
+  }
+  return result;
+});
+
 // Setup mode: all setup IPC handlers (extracted to ipc-setup.js)
 registerSetupHandlers(ipcMain, () => mainWindow);
 

@@ -22,4 +22,10 @@ contextBridge.exposeInMainWorld('sidecar', {
   fold: () => ipcRenderer.invoke('sidecar:fold'),
   /** Open settings wizard in a child window */
   openSettings: () => ipcRenderer.invoke('sidecar:open-settings'),
+  /** Check if an update is available */
+  getUpdateInfo: () => ipcRenderer.invoke('sidecar:get-update-info'),
+  /** Trigger the update process */
+  performUpdate: () => ipcRenderer.invoke('sidecar:perform-update'),
+  /** Listen for update result */
+  onUpdateResult: (callback) => ipcRenderer.on('sidecar:update-result', (_event, data) => callback(data)),
 });
