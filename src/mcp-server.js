@@ -174,6 +174,8 @@ const handlers = {
     if (input.model) { args.push('--model', input.model); }
     if (input.noUi) { args.push('--no-ui'); }
     if (input.timeout) { args.push('--timeout', String(input.timeout)); }
+    if (input.contextTurns)     { args.push('--context-turns', String(input.contextTurns)); }
+    if (input.contextMaxTokens) { args.push('--context-max-tokens', String(input.contextMaxTokens)); }
     try { spawnSidecarProcess(args); } catch (err) {
       return textResult(`Failed to continue: ${err.message}`, true);
     }

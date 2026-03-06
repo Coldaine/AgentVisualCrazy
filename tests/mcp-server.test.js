@@ -666,3 +666,49 @@ describe('sidecar_start context and summary args', () => {
     expect(capturedArgs).toContain('verbose');
   });
 });
+
+describe('sidecar_continue context args', () => {
+  it('passes --context-turns to CLI', async () => {
+    let capturedArgs = [];
+    await jest.isolateModulesAsync(async () => {
+      jest.doMock('child_process', () => ({
+        spawn: (_cmd, args, _opts) => {
+          capturedArgs = args;
+          return { pid: 1234, unref: jest.fn(), stdout: { on: jest.fn() }, stderr: { on: jest.fn() } };
+        }
+      }));
+      jest.doMock('fs', () => ({
+        ...jest.requireActual('fs'),
+        mkdirSync: jest.fn(),
+        writeFileSync: jest.fn(),
+        existsSync: jest.fn(() => false)
+      }));
+      const { handlers } = require('../src/mcp-server');
+      await handlers.sidecar_continue({ taskId: 'abc123', prompt: 'continue task', contextTurns: 10 }, '/tmp/proj');
+    });
+    expect(capturedArgs).toContain('--context-turns');
+    expect(capturedArgs).toContain('10');
+  });
+
+  it('passes --context-max-tokens to CLI', async () => {
+    let capturedArgs = [];
+    await jest.isolateModulesAsync(async () => {
+      jest.doMock('child_process', () => ({
+        spawn: (_cmd, args, _opts) => {
+          capturedArgs = args;
+          return { pid: 1234, unref: jest.fn(), stdout: { on: jest.fn() }, stderr: { on: jest.fn() } };
+        }
+      }));
+      jest.doMock('fs', () => ({
+        ...jest.requireActual('fs'),
+        mkdirSync: jest.fn(),
+        writeFileSync: jest.fn(),
+        existsSync: jest.fn(() => false)
+      }));
+      const { handlers } = require('../src/mcp-server');
+      await handlers.sidecar_continue({ taskId: 'abc123', prompt: 'continue task', contextMaxTokens: 20000 }, '/tmp/proj');
+    });
+    expect(capturedArgs).toContain('--context-max-tokens');
+    expect(capturedArgs).toContain('20000');
+  });
+});
