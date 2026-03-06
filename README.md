@@ -50,23 +50,7 @@ Sidecar is a **literal second window** that runs alongside your Claude Code or C
 3. **Connects to any model** — Gemini 3 Pro (1M context), GPT-5.4, DeepSeek R1, Grok — whatever's best for the job.
 4. **Folds back cleanly** — When you're done, click FOLD and a structured summary returns to your main context. No noise, just results.
 
-```
-┌─────────────────────────────────┐  ┌──────────────────────────────┐
-│  Claude Code (main session)     │  │  Sidecar (parallel window)   │
-│                                 │  │                              │
-│  You: "Implement the auth flow" │  │  Model: Gemini 3 Pro         │
-│  Claude: Working on it...       │  │  Context: Shared from main   │
-│                                 │  │                              │
-│  (keeps working while you       │  │  You: "Is this approach      │
-│   interact with the sidecar) ──────│   actually correct? What      │
-│                                 │  │   about edge cases?"         │
-│                                 │  │  Gemini: "There's a race     │
-│                                 │  │   condition when..."         │
-│  <──── FOLD ────────────────────│  │                              │
-│  Summary: Race condition found  │  │  [Click FOLD when done]      │
-│  Claude: Updating approach...   │  │                              │
-└─────────────────────────────────┘  └──────────────────────────────┘
-```
+![What Is Sidecar — Fork and Fold](./docs/what-is-sidecar.png)
 
 ---
 
