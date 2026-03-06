@@ -93,7 +93,44 @@ function buildToolbarHTML(options = {}) {
     display: flex; align-items: center;
   }
   .icon-btn:hover { border-color: #D97757; color: #D97757; }
-  .right-actions { display: flex; align-items: center; gap: 8px; }`;
+  .right-actions { display: flex; align-items: center; gap: 8px; }
+  .update-banner {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 32px;
+    background: #3D3A38;
+    border-bottom: 1px solid #4D4A48;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    font-size: 12px;
+    color: #D4D0CC;
+    z-index: 100;
+  }
+  .update-banner .update-btn {
+    padding: 2px 10px;
+    background: #D97757;
+    color: #FFF;
+    border: none;
+    border-radius: 3px;
+    font-size: 11px;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .update-banner .update-btn:hover { background: #C4623F; }
+  .update-banner .update-btn:disabled { opacity: 0.5; cursor: default; }
+  .update-banner .dismiss-btn {
+    background: none;
+    border: none;
+    color: #7A756F;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 0 4px;
+  }
+  .update-banner .dismiss-btn:hover { color: #D4D0CC; }`;
 
   const logoSvg = `<svg width="16" height="16" viewBox="0 0 16 16" fill="none">
       <path d="M3 2v12" stroke="#D97757" stroke-width="2" stroke-linecap="round"/>
@@ -121,6 +158,11 @@ function buildToolbarHTML(options = {}) {
   // Default: sidecar mode
   return `<!DOCTYPE html>
 <html><head><style>${baseStyles}</style></head><body>
+  <div class="update-banner" id="update-banner">
+    <span id="update-text"></span>
+    <button class="update-btn" id="update-btn">Update</button>
+    <button class="dismiss-btn" id="dismiss-btn">&times;</button>
+  </div>
   <div class="info">
     ${logoSvg}
     <span class="brand">${brandName}</span>
@@ -147,6 +189,57 @@ function buildToolbarHTML(options = {}) {
   document.getElementById('settings-btn').addEventListener('click', function() {
     window.sidecar && window.sidecar.openSettings();
   });
+
+  // Update banner logic
+  (function() {
+    var banner = document.getElementById('update-banner');
+    var text = document.getElementById('update-text');
+    var btn = document.getElementById('update-btn');
+    var dismiss = document.getElementById('dismiss-btn');
+
+    if (window.sidecar && window.sidecar.getUpdateInfo) {
+      window.sidecar.getUpdateInfo().then(function(info) {
+        if (info && info.hasUpdate) {
+          text.textContent = 'v' + info.latest + ' available';
+          banner.style.display = 'flex';
+        }
+      });
+    }
+
+    btn.addEventListener('click', function() {
+      btn.disabled = true;
+      btn.textContent = 'Updating...';
+      dismiss.style.display = 'none';
+      if (window.sidecar && window.sidecar.performUpdate) {
+        window.sidecar.performUpdate().then(function(result) {
+          if (result && result.success) {
+            text.textContent = 'Updated! Your next sidecar session will use the new version.';
+            btn.style.display = 'none';
+            dismiss.style.display = '';
+          } else {
+            text.textContent = 'Update failed: ' + (result && result.error || 'unknown error');
+            btn.textContent = 'Retry';
+            btn.disabled = false;
+            dismiss.style.display = '';
+          }
+        });
+      }
+    });
+
+    dismiss.addEventListener('click', function() {
+      banner.style.display = 'none';
+    });
+
+    if (window.sidecar && window.sidecar.onUpdateResult) {
+      window.sidecar.onUpdateResult(function(result) {
+        if (result && result.success) {
+          text.textContent = 'Updated! Your next sidecar session will use the new version.';
+          btn.style.display = 'none';
+          dismiss.style.display = '';
+        }
+      });
+    }
+  })();
 </script>
 </body></html>`;
 }
