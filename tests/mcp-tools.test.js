@@ -174,6 +174,16 @@ describe('MCP Tool Definitions', () => {
       const tool = TOOLS.find(t => t.name === 'sidecar_continue');
       expect(tool.inputSchema).toHaveProperty('timeout');
     });
+
+    test('has contextTurns in input schema', () => {
+      const tool = TOOLS.find(t => t.name === 'sidecar_continue');
+      expect(tool.inputSchema).toHaveProperty('contextTurns');
+    });
+
+    test('has contextMaxTokens in input schema', () => {
+      const tool = TOOLS.find(t => t.name === 'sidecar_continue');
+      expect(tool.inputSchema).toHaveProperty('contextMaxTokens');
+    });
   });
 
   describe('sidecar_setup', () => {

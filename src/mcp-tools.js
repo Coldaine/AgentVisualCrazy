@@ -158,6 +158,12 @@ const TOOLS = [
       timeout: z.number().optional().describe(
         'Headless timeout in minutes. Default: 15. Only applies when noUi is true.'
       ),
+      contextTurns: z.number().optional().describe(
+        'Max turns from the previous session\'s conversation to include as context. Default: 50.'
+      ),
+      contextMaxTokens: z.number().optional().describe(
+        'Cap on previous session context size in tokens. Default: 80000.'
+      ),
     },
   },
   {
