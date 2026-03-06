@@ -1,5 +1,5 @@
 # CLAUDE.md
-<!-- Last updated: 2026-03-04 -->
+<!-- Last updated: 2026-03-05 -->
 
 This file provides guidance to Claude Code when working with code in this repository.
 
@@ -43,6 +43,7 @@ node bin/sidecar.js read <task_id> [--summary|--conversation]
 sidecar setup                    # Configure default model and aliases
 sidecar setup --add-alias name=model  # Add a custom alias
 sidecar mcp                      # Start MCP server (stdio transport)
+sidecar update                       # Update to latest version
 ```
 
 ### MCP Server (for Cowork / Claude Desktop)
@@ -264,6 +265,7 @@ sidecar/
 | `utils/validators.js` | CLI input validation | `validateBriefingContent()`, `validateProjectPath()`, `validateApiKey()` |
 | `utils/logger.js` | Structured logging | `logger.info()`, `logger.warn()`, `logger.error()`, `logger.debug()` |
 | `prompts/cowork-agent-prompt.js` | Cowork agent prompt | `buildCoworkAgentPrompt()` — replaces SE-focused OpenCode base prompt when `client === 'cowork'` |
+| `utils/updater.js` | Update check & execute | `initUpdateCheck()`, `getUpdateInfo()`, `notifyUpdate()`, `performUpdate()` |
 
 ### Shared Session Utilities (`src/sidecar/session-utils.js`)
 
@@ -338,6 +340,7 @@ Use `src/utils/logger.js` (levels: error/warn/info/debug). Logs go to stderr to 
 | `sidecar/read.test.js` | Session reading | Listing, age formatting, output modes |
 | `sidecar/context-builder.test.js` | Context building | Session resolution, message filtering |
 | `sidecar/session-utils.test.js` | Shared utilities | Session paths, finalization, heartbeat |
+| `updater.test.js` | Update checker | Mock states, performUpdate spawn, CLI integration |
 
 ### What NOT to Unit Test (UI Code)
 
@@ -357,6 +360,16 @@ For UI changes, verify via manual testing:
 2. **Screenshot verification**: Use Chrome DevTools Protocol on port 9222 (see below)
 3. **Manual click-through**: Verify interactions work as expected
 4. **E2E tests**: Use `tests/e2e.test.js` for critical user flows
+
+### Update Banner Mock Testing
+
+Use `SIDECAR_MOCK_UPDATE` to test update UI states without real npm operations:
+
+```bash
+SIDECAR_MOCK_UPDATE=available sidecar start --model gemini --prompt "test"  # Shows banner
+SIDECAR_MOCK_UPDATE=success sidecar start --model gemini --prompt "test"    # Update succeeds
+SIDECAR_MOCK_UPDATE=error sidecar start --model gemini --prompt "test"      # Update fails
+```
 
 ### Test Commands
 
@@ -418,6 +431,7 @@ OPENCODE_COMMAND=opencode           # Override OpenCode command path
 SIDECAR_DEFAULT_MODEL=openrouter/google/gemini-2.5-flash
 SIDECAR_TIMEOUT=15                  # Headless timeout in minutes
 LOG_LEVEL=info                      # debug | info | warn | error
+SIDECAR_MOCK_UPDATE=                    # Mock update state for UI testing: available, updating, success, error
 ```
 
 ### Dependencies
