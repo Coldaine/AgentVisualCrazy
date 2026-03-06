@@ -40,7 +40,8 @@
     "test:thinking:quick": "MODELS=gemini node scripts/benchmark-thinking.js",
     "refresh-models": "node scripts/refresh-model-capabilities.js",
     "models:info": "node scripts/refresh-model-capabilities.js --info",
-    "models:check": "node scripts/refresh-model-capabilities.js --check"
+    "models:check": "node scripts/refresh-model-capabilities.js --check",
+    "generate-icon": "node scripts/generate-icon.js"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.27.0",
@@ -58,6 +59,7 @@
     "jest": "^29.0.0",
     "mocha": "^11.7.5",
     "puppeteer": "^24.36.0",
+    "sharp": "^0.33.5",
     "ws": "^8.19.0"
   },
   "engines": {
