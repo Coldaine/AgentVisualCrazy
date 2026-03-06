@@ -172,10 +172,12 @@ async function executeMode(options) {
  * Shared by headless and interactive modes.
  *
  * @param {object} [mcpConfig] - Optional MCP server configuration
+ * @param {object} [options] - Additional server options
+ * @param {string} [options.client] - Client type (e.g. 'cowork', 'code-local')
  * @returns {Promise<{client: object, server: object}>}
  * @throws {Error} If server fails to start or health check fails
  */
-async function startOpenCodeServer(mcpConfig) {
+async function startOpenCodeServer(mcpConfig, options = {}) {
   const { checkHealth, startServer } = require('../opencode-client');
   const { ensureNodeModulesBinInPath } = require('../utils/path-setup');
   const { ensurePortAvailable } = require('../utils/server-setup');
@@ -186,6 +188,7 @@ async function startOpenCodeServer(mcpConfig) {
 
   const serverOptions = {};
   if (mcpConfig) { serverOptions.mcp = mcpConfig; }
+  if (options.client) { serverOptions.client = options.client; }
 
   const { client, server } = await startServer(serverOptions);
   logger.debug('OpenCode server started', { url: server.url });

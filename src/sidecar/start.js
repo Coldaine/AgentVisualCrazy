@@ -139,14 +139,14 @@ async function runInteractive(model, systemPrompt, userMessage, taskId, project,
     };
   }
 
-  const { agent, isResume, conversation, mcp, reasoning, opencodeSessionId } = options;
+  const { agent, isResume, conversation, mcp, reasoning, opencodeSessionId, client } = options;
   const { createSession, sendPromptAsync } = require('../opencode-client');
 
   // Start OpenCode server (shared with headless mode)
-  let client, server;
+  let ocClient, server;
   try {
-    const result = await startOpenCodeServer(mcp);
-    client = result.client;
+    const result = await startOpenCodeServer(mcp, { client });
+    ocClient = result.client;
     server = result.server;
   } catch (error) {
     logger.error('Failed to start OpenCode server', { error: error.message });
@@ -165,7 +165,7 @@ async function runInteractive(model, systemPrompt, userMessage, taskId, project,
       logger.info('Reconnecting to existing session', { sessionId });
     } else {
       // New session: create and send initial prompt
-      sessionId = await createSession(client);
+      sessionId = await createSession(ocClient);
 
       const promptOptions = {
         model, system: systemPrompt,
@@ -177,7 +177,7 @@ async function runInteractive(model, systemPrompt, userMessage, taskId, project,
       promptOptions.agent = agentConfig.agent;
       if (reasoning) { promptOptions.reasoning = reasoning; }
 
-      await sendPromptAsync(client, sessionId, promptOptions);
+      await sendPromptAsync(ocClient, sessionId, promptOptions);
     }
     logger.debug('Interactive session ready', { sessionId, isResume: !!isResume });
   } catch (error) {
@@ -198,7 +198,7 @@ async function runInteractive(model, systemPrompt, userMessage, taskId, project,
     const existingPath = process.env.PATH || '';
     const env = buildElectronEnv(
       taskId, model, project, nodeModulesBin, existingPath,
-      { agent, isResume, conversation, mcp }
+      { agent, isResume, conversation, mcp, client }
     );
 
     // Pass OpenCode server info to Electron
@@ -226,7 +226,7 @@ async function runInteractive(model, systemPrompt, userMessage, taskId, project,
 
 /** Build environment variables for Electron process */
 function buildElectronEnv(taskId, model, project, nodeModulesBin, existingPath, options = {}) {
-  const { agent, isResume, conversation, mcp } = options;
+  const { agent, isResume, conversation, mcp, client } = options;
   const env = {
     ...process.env,
     PATH: `${nodeModulesBin}:${existingPath}`,
@@ -234,6 +234,8 @@ function buildElectronEnv(taskId, model, project, nodeModulesBin, existingPath, 
     SIDECAR_MODEL: model,
     SIDECAR_PROJECT: project
   };
+
+  if (client) { env.SIDECAR_CLIENT = client; }
 
   if (agent) {
     const agentConfig = mapAgentToOpenCode(agent);
@@ -314,7 +316,7 @@ async function startSidecar(options) {
 
   const context = buildContext(effectiveProject, effectiveSession, { contextTurns, contextSince, contextMaxTokens, sessionDir, client });
   const { system: systemPrompt, userMessage } = buildPrompts(
-    effectivePrompt, context, effectiveProject, effectiveHeadless, agent, summaryLength
+    effectivePrompt, context, effectiveProject, effectiveHeadless, agent, summaryLength, client
   );
 
   const sessDir = createSessionMetadata(taskId, effectiveProject, {
@@ -340,7 +342,7 @@ async function startSidecar(options) {
       logger.info('Launching interactive sidecar', { taskId, model, agent: effectiveAgent });
       result = await runInteractive(
         model, systemPrompt, userMessage, taskId, effectiveProject,
-        { agent, mcp: mcpServers, reasoning }
+        { agent, mcp: mcpServers, reasoning, client }
       );
       summary = result.summary || '';
       if (result.error) { logger.error('Interactive task error', { taskId, error: result.error }); }
