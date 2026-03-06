@@ -34,6 +34,7 @@ Sidecar opens a real UI alongside Claude Code or Cowork, pre-loaded with your co
 - [Troubleshooting](#troubleshooting)
 - [Documentation](#documentation)
 - [Contributing](#contributing)
+  - [Autonomous UI Testing via Chrome DevTools Protocol](#autonomous-ui-testing-via-chrome-devtools-protocol)
 - [License](#license)
 
 ---
@@ -447,6 +448,44 @@ cd claude-sidecar
 npm install
 npm test
 ```
+
+### Autonomous UI Testing via Chrome DevTools Protocol
+
+Sidecar uses a novel approach for testing Electron UI features: instead of fragile DOM mock tests, we verify the real UI by connecting to the running Electron app via the **Chrome DevTools Protocol** (CDP).
+
+**How it works:**
+
+1. Launch sidecar with `SIDECAR_DEBUG_PORT=9223` (avoids conflict with Chrome on 9222)
+2. Use `SIDECAR_MOCK_UPDATE=available` or other mock env vars to force specific UI states
+3. Connect to `http://127.0.0.1:9223/json` to discover debug targets
+4. Execute JavaScript in the Electron renderer via WebSocket to inspect DOM state
+5. Take a screenshot with `screencapture` to visually verify
+
+```bash
+# Launch with mock update banner and debug port
+SIDECAR_MOCK_UPDATE=available SIDECAR_DEBUG_PORT=9223 \
+  sidecar start --model gemini --prompt "test"
+
+# Find the toolbar page
+TOOLBAR_ID=$(curl -s http://127.0.0.1:9223/json | \
+  node -e "const d=require('fs').readFileSync(0,'utf8'); \
+  const p=JSON.parse(d).find(p=>p.url?.startsWith('data:')); \
+  console.log(p?.id||'NOT_FOUND')")
+
+# Inspect toolbar state (update banner, buttons, timer)
+node -e "
+const WebSocket = require('ws');
+const ws = new WebSocket('ws://127.0.0.1:9223/devtools/page/$TOOLBAR_ID');
+ws.on('open', () => ws.send(JSON.stringify({
+  id: 1, method: 'Runtime.evaluate',
+  params: { expression: '({banner: document.getElementById(\"update-banner\")?.style?.display, text: document.getElementById(\"update-text\")?.textContent})', returnByValue: true }
+})));
+ws.on('message', d => { const m=JSON.parse(d.toString()); if(m.id===1){console.log(JSON.stringify(m.result?.result?.value,null,2));ws.close();process.exit(0);} });
+setTimeout(() => { ws.close(); process.exit(0); }, 3000);
+"
+```
+
+This approach tests real rendering in a real Electron window — not mocked DOM behavior. See [docs/electron-testing.md](docs/electron-testing.md) for the full reference.
 
 ---
 
