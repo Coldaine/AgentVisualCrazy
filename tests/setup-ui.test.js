@@ -22,13 +22,13 @@ describe('setup-ui wizard', () => {
     });
 
     it('should contain the sidecar branding', () => {
-      expect(html).toContain('OpenCode Sidecar');
+      expect(html).toContain('Claude Sidecar');
     });
 
     it('should show "Openwork Sidecar" for cowork client', () => {
       const coworkHtml = buildSetupHTML({ client: 'cowork' });
       expect(coworkHtml).toContain('Openwork Sidecar');
-      expect(coworkHtml).not.toContain('OpenCode Sidecar');
+      expect(coworkHtml).not.toContain('Claude Sidecar');
     });
 
     it('should use the dark theme colors', () => {

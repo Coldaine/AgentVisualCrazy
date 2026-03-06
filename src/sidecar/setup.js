@@ -20,7 +20,7 @@ const { logger } = require('../utils/logger');
 const MODEL_CHOICES = [
   { number: 1, alias: 'gemini', label: 'Gemini 3 Flash (fast, large context)' },
   { number: 2, alias: 'gemini-pro', label: 'Gemini 3 Pro (advanced reasoning)' },
-  { number: 3, alias: 'gpt', label: 'GPT-5.2 Chat (strong coding)' },
+  { number: 3, alias: 'gpt', label: 'GPT-5.4 (strong coding)' },
   { number: 4, alias: 'opus', label: 'Claude Opus 4.6 (deep analysis)' },
   { number: 5, alias: 'deepseek', label: 'DeepSeek v3.2 (open-source)' },
 ];
