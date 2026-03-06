@@ -19,10 +19,18 @@ require('dotenv').config({ path: path.join(homeDir, '.config', 'sidecar', '.env'
 const { parseArgs, validateStartArgs, getUsage } = require('../src/cli');
 const { validateTaskId, safeSessionDir } = require('../src/utils/validators');
 
-const VERSION = '0.1.0';
+const VERSION = require('../package.json').version;
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
+  const command = args._[0];
+
+  // Non-interactive update check (skip for mcp, --version, --help)
+  if (command !== 'mcp' && !args.version && !args.help) {
+    const { initUpdateCheck, notifyUpdate } = require('../src/utils/updater');
+    initUpdateCheck();
+    process.on('exit', () => { notifyUpdate(); });
+  }
 
   // Handle --version
   if (args.version) {
@@ -35,8 +43,6 @@ async function main() {
     console.log(getUsage());
     process.exit(0);
   }
-
-  const command = args._[0];
 
   try {
     switch (command) {
@@ -63,6 +69,9 @@ async function main() {
         break;
       case 'mcp':
         await handleMcp();
+        break;
+      case 'update':
+        await handleUpdate();
         break;
       default:
         console.error(`Unknown command: ${command}`);
@@ -314,6 +323,28 @@ async function handleAbort(args) {
   meta.abortedAt = new Date().toISOString();
   fs.writeFileSync(metaPath, JSON.stringify(meta, null, 2), { mode: 0o600 });
   console.log(`Session ${taskId} marked as aborted.`);
+}
+
+/**
+ * Handle 'sidecar update' command
+ * Updates claude-sidecar to the latest version
+ */
+async function handleUpdate() {
+  const { performUpdate, getUpdateInfo, initUpdateCheck } = require('../src/utils/updater');
+  initUpdateCheck();
+  const info = getUpdateInfo();
+  if (info) {
+    console.log(`Updating claude-sidecar ${info.current} → ${info.latest}...`);
+  } else {
+    console.log('Updating claude-sidecar to latest...');
+  }
+  const result = await performUpdate();
+  if (result.success) {
+    console.log(`Updated successfully! Run 'sidecar --version' to verify.`);
+  } else {
+    console.error(`Update failed: ${result.error}`);
+    process.exit(1);
+  }
 }
 
 /**
