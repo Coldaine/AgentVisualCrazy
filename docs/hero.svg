@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 260" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1A1C29" />
+      <stop offset="100%" stop-color="#111219" />
+    </linearGradient>
+    <linearGradient id="box" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#2A2C3C" />
+      <stop offset="100%" stop-color="#232533" />
+    </linearGradient>
+    <linearGradient id="accent" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#D97757" />
+      <stop offset="100%" stop-color="#E28E73" />
+    </linearGradient>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#D97757" />
+    </marker>
+    <marker id="arr-back" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#6A6E7A" />
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="260" fill="url(#bg)" rx="12" />
+
+  <!-- ===== Left: Claude Code ===== -->
+  <rect x="40" y="80" width="160" height="100" fill="url(#box)" stroke="#3A3C4C" stroke-width="1.5" rx="8" />
+  <text x="120" y="118" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="13" font-weight="600" fill="#E8E0D8" text-anchor="middle">Claude Code</text>
+  <!-- Mini terminal lines -->
+  <rect x="58" y="130" width="60" height="3" rx="1.5" fill="#3A3C4C" />
+  <rect x="58" y="138" width="85" height="3" rx="1.5" fill="#3A3C4C" />
+  <rect x="58" y="146" width="45" height="3" rx="1.5" fill="#3A3C4C" />
+  <rect x="58" y="154" width="70" height="3" rx="1.5" fill="#D97757" opacity="0.4" />
+  <text x="120" y="172" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="9" fill="#7A7E8A" text-anchor="middle">Your main session</text>
+
+  <!-- ===== Arrow: Fork ===== -->
+  <path d="M 200 130 L 290 130" fill="none" stroke="#D97757" stroke-width="2" marker-end="url(#arr)" />
+  <text x="245" y="122" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="10" font-weight="600" fill="#D97757" text-anchor="middle">Fork</text>
+
+  <!-- ===== Center: Sidecar Window ===== -->
+  <rect x="300" y="50" width="200" height="160" fill="url(#box)" stroke="#D97757" stroke-width="2" rx="8" />
+  <!-- Window title bar -->
+  <rect x="300" y="50" width="200" height="24" fill="#D97757" opacity="0.15" rx="8" />
+  <rect x="300" y="62" width="200" height="12" fill="url(#box)" />
+  <circle cx="316" cy="62" r="4" fill="#E25555" opacity="0.7" />
+  <circle cx="328" cy="62" r="4" fill="#E2A855" opacity="0.7" />
+  <circle cx="340" cy="62" r="4" fill="#55C255" opacity="0.7" />
+  <text x="400" y="65" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="9" font-weight="600" fill="#D97757" text-anchor="middle">SIDECAR</text>
+  <!-- Model badge -->
+  <rect x="340" y="82" width="120" height="18" rx="9" fill="#D97757" opacity="0.15" />
+  <text x="400" y="94" font-family="SF Mono, Menlo, monospace" font-size="9" font-weight="600" fill="#E28E73" text-anchor="middle">Gemini 3 Pro</text>
+  <!-- Chat lines -->
+  <rect x="318" y="108" width="80" height="3" rx="1.5" fill="#4A4C5C" />
+  <rect x="318" y="116" width="110" height="3" rx="1.5" fill="#4A4C5C" />
+  <rect x="318" y="124" width="65" height="3" rx="1.5" fill="#4A4C5C" />
+  <rect x="350" y="136" width="130" height="3" rx="1.5" fill="#D97757" opacity="0.3" />
+  <rect x="370" y="144" width="110" height="3" rx="1.5" fill="#D97757" opacity="0.3" />
+  <!-- Toolbar -->
+  <rect x="300" y="168" width="200" height="28" fill="#2D2B2A" rx="0" />
+  <rect x="300" y="196" width="200" height="14" fill="#2D2B2A" rx="0 0 8 8" />
+  <rect x="300" y="168" width="200" height="1" fill="#3D3A38" />
+  <text x="330" y="182" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="7" font-weight="600" fill="#D97757" letter-spacing="0.5">SIDECAR</text>
+  <text x="370" y="182" font-family="SF Mono, Menlo, monospace" font-size="7" fill="#7A756F">2:34</text>
+  <!-- Fold button -->
+  <rect x="440" y="173" width="44" height="16" rx="3" fill="#D97757" />
+  <text x="462" y="184" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="8" font-weight="500" fill="#FFF" text-anchor="middle">Fold</text>
+
+  <!-- ===== Arrow: Fold back ===== -->
+  <path d="M 300 155 L 200 155" fill="none" stroke="#6A6E7A" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arr-back)" />
+  <text x="245" y="166" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="10" font-weight="500" fill="#6A6E7A" text-anchor="middle">Fold</text>
+
+  <!-- ===== Right: Model Options ===== -->
+  <g transform="translate(540, 60)">
+    <text x="100" y="0" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="10" font-weight="600" fill="#A5A9B5" text-anchor="middle" letter-spacing="1">ANY MODEL</text>
+
+    <rect x="20" y="14" width="160" height="26" fill="url(#box)" stroke="#3A3C4C" stroke-width="1" rx="5" />
+    <text x="100" y="31" font-family="SF Mono, Menlo, monospace" font-size="10" fill="#E8E0D8" text-anchor="middle">Gemini 3 Pro</text>
+
+    <rect x="20" y="48" width="160" height="26" fill="url(#box)" stroke="#3A3C4C" stroke-width="1" rx="5" />
+    <text x="100" y="65" font-family="SF Mono, Menlo, monospace" font-size="10" fill="#E8E0D8" text-anchor="middle">GPT-5.4</text>
+
+    <rect x="20" y="82" width="160" height="26" fill="url(#box)" stroke="#3A3C4C" stroke-width="1" rx="5" />
+    <text x="100" y="99" font-family="SF Mono, Menlo, monospace" font-size="10" fill="#E8E0D8" text-anchor="middle">DeepSeek R1</text>
+
+    <rect x="20" y="116" width="160" height="26" fill="url(#box)" stroke="#3A3C4C" stroke-width="1" rx="5" />
+    <text x="100" y="133" font-family="SF Mono, Menlo, monospace" font-size="10" fill="#E8E0D8" text-anchor="middle">Llama 4 Maverick</text>
+
+    <text x="100" y="160" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="9" fill="#6A6E7A" text-anchor="middle">via OpenRouter</text>
+  </g>
+
+  <!-- Connecting line from sidecar to model list -->
+  <line x1="500" y1="130" x2="560" y2="130" stroke="#3A3C4C" stroke-width="1" stroke-dasharray="3,3" />
+
+  <!-- ===== Bottom tagline ===== -->
+  <text x="400" y="242" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="11" fill="#6A6E7A" text-anchor="middle">Fork a conversation to any model  ·  Work in parallel  ·  Fold results back</text>
+
+</svg>

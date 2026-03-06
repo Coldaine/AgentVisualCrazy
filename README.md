@@ -4,6 +4,8 @@
 
 **A parallel AI window that shares your context — talk to any model while your main session keeps working.**
 
+![Claude Sidecar — Fork, Work, Fold](./docs/hero.png)
+
 Sidecar opens a real UI alongside Claude Code or Cowork, pre-loaded with your conversation context, connected to Gemini 3, GPT-5.4, DeepSeek, or any other model. You interact with the sidecar in parallel — fact-check Claude's work, get a second opinion, explore a tangent — then fold the results back when you're ready.
 
 > **Supported clients:** Claude Code CLI and Claude Cowork are fully tested and supported. Claude Code web and Claude Desktop are experimental.

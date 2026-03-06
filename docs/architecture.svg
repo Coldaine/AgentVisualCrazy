@@ -1,0 +1,95 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 620" width="100%" height="100%">
+  <defs>
+    <linearGradient id="bg-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#1A1C29" />
+      <stop offset="100%" stop-color="#111219" />
+    </linearGradient>
+    <linearGradient id="box-grad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#2A2C3C" />
+      <stop offset="100%" stop-color="#232533" />
+    </linearGradient>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#888C99" />
+    </marker>
+    <marker id="arrow-highlight" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#D97757" />
+    </marker>
+    <marker id="arrow-dim" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#6A6E7A" />
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="620" fill="url(#bg-grad)" rx="12" />
+
+  <!-- ===== Level 1: Parent Clients ===== -->
+  <!-- Claude Code -->
+  <rect x="140" y="30" width="210" height="56" fill="url(#box-grad)" stroke="#3A3C4C" stroke-width="1.5" rx="8" />
+  <text x="245" y="54" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="15" font-weight="600" fill="#E8E0D8" text-anchor="middle">Claude Code</text>
+  <text x="245" y="72" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="11" fill="#A5A9B5" text-anchor="middle">(Parent CLI)</text>
+
+  <!-- Claude Desktop / Cowork -->
+  <rect x="450" y="30" width="210" height="56" fill="url(#box-grad)" stroke="#3A3C4C" stroke-width="1.5" rx="8" />
+  <text x="555" y="54" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="15" font-weight="600" fill="#E8E0D8" text-anchor="middle">Claude Desktop</text>
+  <text x="555" y="72" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="11" fill="#A5A9B5" text-anchor="middle">(Cowork MCP)</text>
+
+  <!-- Arrows: Clients → Sidecar Core -->
+  <line x1="245" y1="86" x2="245" y2="140" stroke="#D97757" stroke-width="2" marker-end="url(#arrow-highlight)" />
+  <text x="245" y="122" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="10" font-weight="500" fill="#D97757" text-anchor="middle" dx="-50">sidecar start</text>
+
+  <line x1="555" y1="86" x2="555" y2="140" stroke="#D97757" stroke-width="2" marker-end="url(#arrow-highlight)" />
+  <text x="555" y="122" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="10" font-weight="500" fill="#D97757" text-anchor="middle" dx="52">sidecar_start</text>
+
+  <!-- ===== Level 2: Sidecar CLI Core ===== -->
+  <rect x="100" y="145" width="600" height="65" fill="url(#box-grad)" stroke="#D97757" stroke-width="2" rx="8" />
+  <text x="400" y="173" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="17" font-weight="600" fill="#E8E0D8" text-anchor="middle">Sidecar CLI Core</text>
+  <text x="400" y="193" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="11" fill="#E28E73" text-anchor="middle">bin/sidecar.js  ·  src/index.js</text>
+
+  <!-- Arrows: Core → Session Logs / OpenCode Server -->
+  <line x1="270" y1="210" x2="270" y2="268" stroke="#888C99" stroke-width="2" marker-end="url(#arrow)" />
+  <text x="270" y="248" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="10" font-weight="500" fill="#888C99" text-anchor="middle" dx="-68">(1) Read Context</text>
+
+  <line x1="530" y1="210" x2="530" y2="268" stroke="#888C99" stroke-width="2" marker-end="url(#arrow)" />
+  <text x="530" y="248" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="10" font-weight="500" fill="#888C99" text-anchor="middle" dx="66">(2) Spawn Server</text>
+
+  <!-- ===== Level 3: Session Logs + OpenCode Server ===== -->
+  <rect x="160" y="273" width="210" height="56" fill="url(#box-grad)" stroke="#3A3C4C" stroke-width="1.5" rx="8" />
+  <text x="265" y="297" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="14" font-weight="600" fill="#E8E0D8" text-anchor="middle">Session Logs</text>
+  <text x="265" y="315" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="11" fill="#A5A9B5" text-anchor="middle">.claude/projects/*.jsonl</text>
+
+  <rect x="430" y="273" width="210" height="56" fill="url(#box-grad)" stroke="#3A3C4C" stroke-width="1.5" rx="8" />
+  <text x="535" y="297" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="14" font-weight="600" fill="#E8E0D8" text-anchor="middle">OpenCode Server</text>
+  <text x="535" y="315" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="11" fill="#A5A9B5" text-anchor="middle">localhost:4440</text>
+
+  <!-- Arrows: OpenCode Server → fork to both modes -->
+  <line x1="535" y1="329" x2="535" y2="358" stroke="#888C99" stroke-width="2" />
+  <line x1="310" y1="358" x2="535" y2="358" stroke="#888C99" stroke-width="2" />
+  <line x1="310" y1="358" x2="310" y2="388" stroke="#888C99" stroke-width="2" marker-end="url(#arrow)" />
+  <line x1="535" y1="358" x2="535" y2="388" stroke="#888C99" stroke-width="2" marker-end="url(#arrow)" />
+
+  <!-- ===== Level 4: Execution Modes ===== -->
+  <rect x="200" y="393" width="210" height="56" fill="url(#box-grad)" stroke="#3A3C4C" stroke-width="1.5" rx="8" />
+  <text x="305" y="417" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="14" font-weight="600" fill="#E8E0D8" text-anchor="middle">Interactive Mode</text>
+  <text x="305" y="435" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="11" fill="#A5A9B5" text-anchor="middle">Electron + BrowserView</text>
+
+  <rect x="430" y="393" width="210" height="56" fill="url(#box-grad)" stroke="#3A3C4C" stroke-width="1.5" rx="8" />
+  <text x="535" y="417" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="14" font-weight="600" fill="#E8E0D8" text-anchor="middle">Headless Mode</text>
+  <text x="535" y="435" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="11" fill="#A5A9B5" text-anchor="middle">src/headless.js</text>
+
+  <!-- Arrows: Modes → LLM Providers -->
+  <line x1="305" y1="449" x2="305" y2="468" stroke="#888C99" stroke-width="2" />
+  <line x1="535" y1="449" x2="535" y2="468" stroke="#888C99" stroke-width="2" />
+  <line x1="305" y1="468" x2="535" y2="468" stroke="#888C99" stroke-width="2" />
+  <line x1="420" y1="468" x2="420" y2="498" stroke="#888C99" stroke-width="2" marker-end="url(#arrow)" />
+
+  <!-- ===== Level 5: LLM Providers ===== -->
+  <rect x="280" y="503" width="280" height="56" fill="url(#box-grad)" stroke="#4A4C5C" stroke-width="1.5" rx="8" />
+  <text x="420" y="527" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="14" font-weight="600" fill="#E8E0D8" text-anchor="middle">LLM Providers</text>
+  <text x="420" y="545" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="11" fill="#A5A9B5" text-anchor="middle">OpenRouter / Direct APIs</text>
+
+  <!-- ===== Fold Return Path ===== -->
+  <!-- Dashed line from Interactive Mode left edge, up and back to Claude Code -->
+  <path d="M 200 420 L 52 420 L 52 58 L 140 58" fill="none" stroke="#6A6E7A" stroke-width="1.5" stroke-dasharray="6,4" marker-end="url(#arrow-dim)" />
+  <text x="38" y="280" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="10" font-weight="500" fill="#6A6E7A" text-anchor="middle" transform="rotate(-90 38 280)">Fold: Return Summary to Parent</text>
+
+</svg>
