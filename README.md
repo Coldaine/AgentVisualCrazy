@@ -37,6 +37,7 @@ Sidecar opens a real UI alongside Claude Code or Cowork, pre-loaded with your co
 - [Documentation](#documentation)
 - [Contributing](#contributing)
   - [Autonomous UI Testing via Chrome DevTools Protocol](#autonomous-ui-testing-via-chrome-devtools-protocol)
+- [Built On](#built-on)
 - [License](#license)
 
 ---
@@ -471,6 +472,12 @@ setTimeout(() => { ws.close(); process.exit(0); }, 3000);
 ```
 
 This approach tests real rendering in a real Electron window — not mocked DOM behavior. See [docs/electron-testing.md](docs/electron-testing.md) for the full reference.
+
+---
+
+## Built On
+
+Sidecar is a harness built on top of [**OpenCode**](https://opencode.ai) — the open-source AI coding engine. OpenCode provides the conversation runtime, tool execution framework, agent system, and web UI. Sidecar adds context sharing from Claude Code, the Electron shell, fold/summary workflow, session persistence, and multi-client support (CLI, MCP, Cowork). We don't reinvent the wheel — OpenCode handles the hard parts of LLM interaction so Sidecar can focus on the parallel-window workflow.
 
 ---
 
