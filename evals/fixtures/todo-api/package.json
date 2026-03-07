@@ -1,0 +1,5 @@
+{
+  "name": "todo-api",
+  "version": "1.0.0",
+  "description": "Simple CRUD API with no tests"
+}

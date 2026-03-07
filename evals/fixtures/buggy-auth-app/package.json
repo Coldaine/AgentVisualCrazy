@@ -1,0 +1,5 @@
+{
+  "name": "buggy-auth-app",
+  "version": "1.0.0",
+  "description": "Test app with an auth bug for sidecar eval"
+}

@@ -48,3 +48,6 @@ AGENTS.md
 
 # Archived docs (stale/superseded, kept locally for reference)
 docs/archive/
+
+# Eval workspace (generated during eval runs)
+evals/workspace/

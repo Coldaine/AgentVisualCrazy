@@ -1,0 +1,77 @@
+[
+  {
+    "id": 1,
+    "name": "Debug Auth Bug",
+    "description": "Claude should use sidecar to find and fix a known auth bug",
+    "fixture": "buggy-auth-app",
+    "prompt": "There's a bug in this project's authentication flow causing intermittent 401 errors on the /protected endpoint. The token refresh seems to fail sometimes. Use sidecar to have a different model analyze the auth code in src/auth.js and src/server.js, find the root cause, and suggest a fix. Then apply the fix yourself.",
+    "max_budget_usd": 2.0,
+    "model": "sonnet",
+    "success_criteria": {
+      "programmatic": [
+        {"type": "tool_called", "tool": "sidecar_start"},
+        {"type": "tool_called", "tool": "sidecar_read"},
+        {"type": "file_changed", "path": "src/server.js"}
+      ],
+      "llm_judge": {
+        "rubric": [
+          "Did the LLM choose an appropriate model for code analysis? (1-5)",
+          "Was the briefing detailed enough — mentioning the specific files and the 401 symptom? (1-5)",
+          "Did the LLM act on the sidecar's findings to fix the missing await? (1-5)",
+          "Did the LLM choose an appropriate agent mode for the task? (1-5)"
+        ],
+        "pass_threshold": 3.5
+      }
+    }
+  },
+  {
+    "id": 2,
+    "name": "Generate Tests",
+    "description": "Claude should use sidecar to generate tests for a CRUD API",
+    "fixture": "todo-api",
+    "prompt": "This todo API in src/routes/todos.js has no tests. Use sidecar to have another model generate comprehensive tests for all the CRUD endpoints. The tests should be written to a tests/ directory using a standard testing framework.",
+    "max_budget_usd": 2.0,
+    "model": "sonnet",
+    "success_criteria": {
+      "programmatic": [
+        {"type": "tool_called", "tool": "sidecar_start"},
+        {"type": "tool_called", "tool": "sidecar_read"},
+        {"type": "file_created", "pattern": "tests/.*\\.js$"}
+      ],
+      "llm_judge": {
+        "rubric": [
+          "Did the LLM choose an appropriate model for test generation? (1-5)",
+          "Was the briefing specific about which files to test and what framework to use? (1-5)",
+          "Did the LLM choose Build agent or headless mode for autonomous work? (1-5)",
+          "Are the generated test files syntactically valid and cover multiple endpoints? (1-5)"
+        ],
+        "pass_threshold": 3.5
+      }
+    }
+  },
+  {
+    "id": 3,
+    "name": "Research and Document",
+    "description": "Claude should use sidecar to research and create a design document",
+    "fixture": "research-task",
+    "prompt": "This project needs a design document about JWT token rotation best practices. Use sidecar to have another model research current best practices for JWT token rotation, refresh token strategies, and security considerations. Then create a docs/jwt-rotation-design.md file with the findings.",
+    "max_budget_usd": 2.0,
+    "model": "sonnet",
+    "success_criteria": {
+      "programmatic": [
+        {"type": "tool_called", "tool": "sidecar_start"},
+        {"type": "tool_called", "tool": "sidecar_read"},
+        {"type": "file_created", "pattern": "docs/.*\\.md$"}
+      ],
+      "llm_judge": {
+        "rubric": [
+          "Did the LLM choose a model well-suited for research tasks? (1-5)",
+          "Was the briefing specific about what to research and what format to produce? (1-5)",
+          "Does the created document contain substantive, accurate information about JWT rotation? (1-5)",
+          "Did the LLM integrate the sidecar's research findings into the final document? (1-5)"
+        ],
+        "pass_threshold": 3.5
+      }
+    }
+  }
+]
