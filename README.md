@@ -423,6 +423,7 @@ LOG_LEVEL=debug sidecar start --model gemini --prompt "test" --no-ui
 |-----|-------------|
 | [SKILL.md](./skill/SKILL.md) | Complete skill reference for Claude Code |
 | [Electron Testing](./docs/electron-testing.md) | Chrome DevTools Protocol patterns for UI testing |
+| [Agentic Evals](./evals/README.md) | End-to-end eval system for testing LLM interactions with sidecar |
 
 ---
 
