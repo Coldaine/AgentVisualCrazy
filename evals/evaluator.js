@@ -74,4 +74,64 @@ function findFilesRecursive(baseDir, prefix = '') {
   return results;
 }
 
-module.exports = { runProgrammaticChecks, findFilesRecursive };
+/**
+ * Build the prompt for LLM-as-judge evaluation.
+ * @param {string[]} rubric - Rubric questions
+ * @param {object} transcript - Parsed transcript
+ * @returns {string}
+ */
+function buildJudgePrompt(rubric, transcript) {
+  const toolSummary = transcript.toolCalls.map(tc =>
+    `- ${tc.tool}(${JSON.stringify(tc.params)}) -> ${(tc.result || '').slice(0, 200)}`
+  ).join('\n');
+
+  const rubricText = rubric.map((q, i) => `${i + 1}. ${q}`).join('\n');
+
+  return `You are evaluating an LLM's use of the "sidecar" tool (a multi-model subagent system).
+
+## Tool Calls Made
+${toolSummary || '(none)'}
+
+## Errors
+${transcript.errors.length ? transcript.errors.join('\n') : '(none)'}
+
+## Rubric
+Score each item from 1 (poor) to 5 (excellent):
+${rubricText}
+
+Respond with ONLY a JSON object: {"scores": [N, N, N, ...]}
+One integer per rubric item, in order. No explanation needed.`;
+}
+
+/**
+ * Parse the LLM judge's response into structured scores.
+ * @param {string} response - Raw LLM response text
+ * @param {string[]} rubric - Original rubric questions
+ * @param {number} passThreshold - Minimum average to pass
+ * @returns {{ scores: Array<{rubric: string, score: number}>, average: number, pass_threshold: number, passed: boolean }}
+ */
+function parseJudgeResponse(response, rubric, passThreshold) {
+  const jsonMatch = response.match(/\{[^}]*"scores"\s*:\s*\[[^\]]*\][^}]*\}/);
+  if (!jsonMatch) {
+    return {
+      scores: rubric.map(r => ({ rubric: r, score: 0 })),
+      average: 0, pass_threshold: passThreshold, passed: false,
+    };
+  }
+
+  const parsed = JSON.parse(jsonMatch[0]);
+  const scores = rubric.map((r, i) => ({
+    rubric: r,
+    score: parsed.scores[i] || 0,
+  }));
+  const average = scores.reduce((s, x) => s + x.score, 0) / scores.length;
+
+  return {
+    scores,
+    average,
+    pass_threshold: passThreshold,
+    passed: average >= passThreshold,
+  };
+}
+
+module.exports = { runProgrammaticChecks, findFilesRecursive, buildJudgePrompt, parseJudgeResponse };

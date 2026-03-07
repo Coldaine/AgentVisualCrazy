@@ -94,3 +94,49 @@ describe('runProgrammaticChecks', () => {
     expect(results[0].passed).toBe(false);
   });
 });
+
+const { buildJudgePrompt, parseJudgeResponse } = require('../evaluator');
+
+describe('buildJudgePrompt', () => {
+  test('includes rubric items and transcript summary', () => {
+    const rubric = ['Was the model choice appropriate? (1-5)', 'Was the briefing good? (1-5)'];
+    const transcript = {
+      toolCalls: [{ tool: 'sidecar_start', params: { model: 'gemini' }, result: '{"taskId":"abc"}' }],
+      errors: [],
+    };
+    const prompt = buildJudgePrompt(rubric, transcript);
+    expect(prompt).toContain('model choice');
+    expect(prompt).toContain('briefing');
+    expect(prompt).toContain('sidecar_start');
+    expect(prompt).toContain('gemini');
+    expect(prompt).toContain('JSON');
+  });
+});
+
+describe('parseJudgeResponse', () => {
+  test('extracts scores from JSON response', () => {
+    const response = '{"scores": [4, 3, 5, 4]}';
+    const rubric = ['Q1', 'Q2', 'Q3', 'Q4'];
+    const result = parseJudgeResponse(response, rubric, 3.5);
+    expect(result.scores).toHaveLength(4);
+    expect(result.scores[0].score).toBe(4);
+    expect(result.average).toBe(4.0);
+    expect(result.passed).toBe(true);
+  });
+
+  test('fails when average below threshold', () => {
+    const response = '{"scores": [1, 2, 1, 2]}';
+    const rubric = ['Q1', 'Q2', 'Q3', 'Q4'];
+    const result = parseJudgeResponse(response, rubric, 3.5);
+    expect(result.passed).toBe(false);
+    expect(result.average).toBe(1.5);
+  });
+
+  test('handles JSON embedded in text', () => {
+    const response = 'Here are my scores:\n{"scores": [5, 4, 5, 4]}\nDone.';
+    const rubric = ['Q1', 'Q2', 'Q3', 'Q4'];
+    const result = parseJudgeResponse(response, rubric, 3.5);
+    expect(result.scores).toHaveLength(4);
+    expect(result.passed).toBe(true);
+  });
+});
