@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+
+# Pre-push hook: thorough checks (~30s)
+# 1. Full test suite (hard block)
+# 2. npm audit (warn only)
+
+echo "Running test suite before push..."
+npm test
+
+echo "Checking for dependency vulnerabilities..."
+npm audit --audit-level=moderate || echo "  (npm audit warnings above - review when convenient)"

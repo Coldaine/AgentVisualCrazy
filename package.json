@@ -45,6 +45,7 @@
     "models:info": "node scripts/refresh-model-capabilities.js --info",
     "models:check": "node scripts/refresh-model-capabilities.js --check",
     "generate-icon": "node scripts/generate-icon.js",
+    "validate-docs": "node scripts/validate-docs.js --full",
     "prepare": "husky"
   },
   "dependencies": {
