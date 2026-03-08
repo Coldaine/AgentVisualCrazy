@@ -41,7 +41,19 @@ function createSessionMetadata(taskId, project, options) {
   const effectiveBriefing = prompt || briefing;
   const isHeadless = noUi !== undefined ? noUi : headless;
 
+  // Preserve fields from existing metadata (e.g., pid written by MCP handler)
+  const metaPath = SessionPaths.metadataFile(sessionDir);
+  let existing = {};
+  if (fs.existsSync(metaPath)) {
+    try {
+      existing = JSON.parse(fs.readFileSync(metaPath, 'utf-8'));
+    } catch {
+      // ignore corrupt metadata
+    }
+  }
+
   const metadata = {
+    ...existing,
     taskId,
     model,
     project,
@@ -50,10 +62,10 @@ function createSessionMetadata(taskId, project, options) {
     agent: agent || (isHeadless ? 'build' : 'chat'),
     thinking: thinking || 'medium',
     status: 'running',
-    createdAt: new Date().toISOString()
+    createdAt: existing.createdAt || new Date().toISOString()
   };
 
-  fs.writeFileSync(SessionPaths.metadataFile(sessionDir), JSON.stringify(metadata, null, 2), { mode: 0o600 });
+  fs.writeFileSync(metaPath, JSON.stringify(metadata, null, 2), { mode: 0o600 });
 
   return sessionDir;
 }

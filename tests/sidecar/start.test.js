@@ -1,11 +1,13 @@
 /**
  * Sidecar Start Tests
  *
- * Tests for config change detection during sidecar start.
+ * Tests for config change detection during sidecar start,
+ * session metadata creation, and PID preservation.
  */
 
 const fs = require('fs');
 const path = require('path');
+const os = require('os');
 
 jest.mock('../../src/utils/logger', () => ({
   logger: {
@@ -163,5 +165,84 @@ describe('buildMcpConfig with MCP discovery', () => {
     // Both unique servers present
     expect(result['file-only']).toBeDefined();
     expect(result['discovery-only']).toBeDefined();
+  });
+});
+
+describe('createSessionMetadata PID preservation', () => {
+  let tmpDir;
+  const taskId = 'pid-test';
+
+  beforeEach(() => {
+    jest.resetModules();
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'start-pid-test-'));
+  });
+
+  afterEach(() => {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  it('preserves pid from existing metadata written by MCP handler', () => {
+    const { createSessionMetadata } = require('../../src/sidecar/start');
+    const { SessionPaths } = require('../../src/sidecar/session-utils');
+
+    // Use tmpDir as the project; sessionDir = tmpDir/.claude/sidecar_sessions/<taskId>
+    const sessionDir = SessionPaths.sessionDir(tmpDir, taskId);
+    fs.mkdirSync(sessionDir, { recursive: true });
+
+    // Simulate MCP handler writing initial metadata with pid before CLI runs
+    const mcpMetadata = { pid: 12345, createdAt: '2026-03-08T10:00:00.000Z' };
+    fs.writeFileSync(
+      SessionPaths.metadataFile(sessionDir),
+      JSON.stringify(mcpMetadata, null, 2)
+    );
+
+    // CLI process calls createSessionMetadata (which should merge, not overwrite)
+    createSessionMetadata(taskId, tmpDir, {
+      model: 'gemini',
+      prompt: 'do something',
+      noUi: true,
+      agent: 'build',
+      thinking: 'medium'
+    });
+
+    const result = JSON.parse(
+      fs.readFileSync(SessionPaths.metadataFile(sessionDir), 'utf-8')
+    );
+
+    // pid from MCP handler must survive
+    expect(result.pid).toBe(12345);
+    // createdAt from MCP handler must survive
+    expect(result.createdAt).toBe('2026-03-08T10:00:00.000Z');
+    // New fields must also be present
+    expect(result.taskId).toBe(taskId);
+    expect(result.model).toBe('gemini');
+    expect(result.status).toBe('running');
+  });
+
+  it('works when no existing metadata (no pid to preserve)', () => {
+    const { createSessionMetadata } = require('../../src/sidecar/start');
+    const { SessionPaths } = require('../../src/sidecar/session-utils');
+
+    // No pre-existing metadata file - fresh start
+    createSessionMetadata(taskId, tmpDir, {
+      model: 'opus',
+      prompt: 'review code',
+      noUi: false,
+      agent: null,
+      thinking: 'high'
+    });
+
+    const sessionDir = SessionPaths.sessionDir(tmpDir, taskId);
+    const result = JSON.parse(
+      fs.readFileSync(SessionPaths.metadataFile(sessionDir), 'utf-8')
+    );
+
+    // pid should not be present (no MCP handler wrote one)
+    expect(result.pid).toBeUndefined();
+    // Standard fields must be present
+    expect(result.taskId).toBe(taskId);
+    expect(result.model).toBe('opus');
+    expect(result.status).toBe('running');
+    expect(result.createdAt).toBeDefined();
   });
 });
