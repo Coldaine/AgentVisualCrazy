@@ -300,18 +300,22 @@ describe('MCP Server Handlers', () => {
   });
 
   describe('sidecar_status', () => {
-    test('returns status for existing session', async () => {
+    test('returns status for existing running session with progress', async () => {
       const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mcp-test-'));
       const sessDir = path.join(tmpDir, '.claude', 'sidecar_sessions', 'abc12345');
       fs.mkdirSync(sessDir, { recursive: true });
       fs.writeFileSync(path.join(sessDir, 'metadata.json'), JSON.stringify({
         taskId: 'abc12345',
         status: 'running',
+        pid: process.pid,
         model: 'gemini',
         agent: 'Chat',
         briefing: 'Test briefing content',
         createdAt: new Date().toISOString(),
       }));
+      // Write a conversation.jsonl so progress reader finds messages
+      fs.writeFileSync(path.join(sessDir, 'conversation.jsonl'),
+        '{"role":"user","content":"hello"}\n{"role":"assistant","content":"hi there"}\n');
 
       try {
         const result = await handlers.sidecar_status({ taskId: 'abc12345' }, tmpDir);
@@ -319,10 +323,10 @@ describe('MCP Server Handlers', () => {
         const parsed = JSON.parse(result.content[0].text);
         expect(parsed.taskId).toBe('abc12345');
         expect(parsed.status).toBe('running');
-        expect(parsed.model).toBe('gemini');
-        expect(parsed.agent).toBe('Chat');
         expect(parsed).toHaveProperty('elapsed');
-        expect(parsed.briefing).toContain('Test briefing');
+        expect(parsed).toHaveProperty('messages');
+        expect(parsed).toHaveProperty('lastActivity');
+        expect(parsed).toHaveProperty('latest');
       } finally {
         fs.rmSync(tmpDir, { recursive: true });
       }
@@ -338,22 +342,116 @@ describe('MCP Server Handlers', () => {
         fs.rmSync(tmpDir, { recursive: true });
       }
     });
+  });
 
-    test('truncates long briefings', async () => {
-      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mcp-test-'));
-      const sessDir = path.join(tmpDir, '.claude', 'sidecar_sessions', 'trunc1');
+  describe('sidecar_status enriched response', () => {
+    test('includes messages and lastActivity when running', async () => {
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mcp-status-'));
+      const sessDir = path.join(tmpDir, '.claude', 'sidecar_sessions', 'prog1');
       fs.mkdirSync(sessDir, { recursive: true });
-      const longBriefing = 'x'.repeat(200);
       fs.writeFileSync(path.join(sessDir, 'metadata.json'), JSON.stringify({
-        taskId: 'trunc1', status: 'running', model: 'a',
-        briefing: longBriefing,
+        taskId: 'prog1', status: 'running', pid: process.pid,
+        createdAt: new Date().toISOString(),
+      }));
+      fs.writeFileSync(path.join(sessDir, 'conversation.jsonl'),
+        '{"role":"user","content":"analyze auth"}\n' +
+        '{"role":"assistant","toolCall":{"name":"Read"}}\n' +
+        '{"role":"assistant","content":"Found the issue"}\n');
+
+      try {
+        const result = await handlers.sidecar_status({ taskId: 'prog1' }, tmpDir);
+        const parsed = JSON.parse(result.content[0].text);
+        expect(parsed.status).toBe('running');
+        expect(parsed.messages).toBe(2);
+        expect(parsed.lastActivity).toBeDefined();
+        expect(parsed.latest).toBeDefined();
+      } finally {
+        fs.rmSync(tmpDir, { recursive: true });
+      }
+    });
+
+    test('returns Starting up when no conversation yet', async () => {
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mcp-status-'));
+      const sessDir = path.join(tmpDir, '.claude', 'sidecar_sessions', 'noprog');
+      fs.mkdirSync(sessDir, { recursive: true });
+      fs.writeFileSync(path.join(sessDir, 'metadata.json'), JSON.stringify({
+        taskId: 'noprog', status: 'running', pid: process.pid,
         createdAt: new Date().toISOString(),
       }));
 
       try {
-        const result = await handlers.sidecar_status({ taskId: 'trunc1' }, tmpDir);
+        const result = await handlers.sidecar_status({ taskId: 'noprog' }, tmpDir);
         const parsed = JSON.parse(result.content[0].text);
-        expect(parsed.briefing.length).toBeLessThanOrEqual(100);
+        expect(parsed.messages).toBe(0);
+        expect(parsed.latest).toBe('Starting up...');
+      } finally {
+        fs.rmSync(tmpDir, { recursive: true });
+      }
+    });
+
+    test('detects crashed process and updates status', async () => {
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mcp-status-'));
+      const sessDir = path.join(tmpDir, '.claude', 'sidecar_sessions', 'dead1');
+      fs.mkdirSync(sessDir, { recursive: true });
+      // PID 2147483647 is guaranteed to not exist
+      fs.writeFileSync(path.join(sessDir, 'metadata.json'), JSON.stringify({
+        taskId: 'dead1', status: 'running', pid: 2147483647,
+        createdAt: new Date().toISOString(),
+      }));
+
+      try {
+        const result = await handlers.sidecar_status({ taskId: 'dead1' }, tmpDir);
+        const parsed = JSON.parse(result.content[0].text);
+        expect(parsed.status).toBe('crashed');
+        expect(parsed.reason).toBeDefined();
+
+        // Verify metadata on disk was updated
+        const diskMeta = JSON.parse(fs.readFileSync(
+          path.join(sessDir, 'metadata.json'), 'utf-8'));
+        expect(diskMeta.status).toBe('crashed');
+        expect(diskMeta.crashedAt).toBeDefined();
+      } finally {
+        fs.rmSync(tmpDir, { recursive: true });
+      }
+    });
+
+    test('does not include latest/messages for completed sessions', async () => {
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mcp-status-'));
+      const sessDir = path.join(tmpDir, '.claude', 'sidecar_sessions', 'done1');
+      fs.mkdirSync(sessDir, { recursive: true });
+      fs.writeFileSync(path.join(sessDir, 'metadata.json'), JSON.stringify({
+        taskId: 'done1', status: 'complete',
+        createdAt: new Date().toISOString(),
+      }));
+
+      try {
+        const result = await handlers.sidecar_status({ taskId: 'done1' }, tmpDir);
+        const parsed = JSON.parse(result.content[0].text);
+        expect(parsed.taskId).toBe('done1');
+        expect(parsed.status).toBe('complete');
+        expect(parsed).toHaveProperty('elapsed');
+        expect(parsed.latest).toBeUndefined();
+        expect(parsed.messages).toBeUndefined();
+      } finally {
+        fs.rmSync(tmpDir, { recursive: true });
+      }
+    });
+
+    test('includes reason for error/crashed sessions', async () => {
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mcp-status-'));
+      const sessDir = path.join(tmpDir, '.claude', 'sidecar_sessions', 'err1');
+      fs.mkdirSync(sessDir, { recursive: true });
+      fs.writeFileSync(path.join(sessDir, 'metadata.json'), JSON.stringify({
+        taskId: 'err1', status: 'error',
+        reason: 'API key expired',
+        createdAt: new Date().toISOString(),
+      }));
+
+      try {
+        const result = await handlers.sidecar_status({ taskId: 'err1' }, tmpDir);
+        const parsed = JSON.parse(result.content[0].text);
+        expect(parsed.status).toBe('error');
+        expect(parsed.reason).toBe('API key expired');
       } finally {
         fs.rmSync(tmpDir, { recursive: true });
       }
@@ -710,5 +808,75 @@ describe('sidecar_continue context args', () => {
     });
     expect(capturedArgs).toContain('--context-max-tokens');
     expect(capturedArgs).toContain('20000');
+  });
+});
+
+describe('sidecar_start stderr capture', () => {
+  let tmpDir;
+
+  beforeEach(() => {
+    jest.restoreAllMocks();
+    jest.resetModules();
+    tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mcp-stderr-'));
+  });
+
+  afterEach(() => {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  });
+
+  test('spawns process with stderr redirected to file', async () => {
+    let capturedOpts;
+    await jest.isolateModulesAsync(async () => {
+      jest.doMock('child_process', () => ({
+        spawn: jest.fn((_cmd, _args, opts) => {
+          capturedOpts = opts;
+          return { pid: 12345, unref: jest.fn() };
+        }),
+      }));
+      const { handlers: h } = require('../src/mcp-server');
+      await h.sidecar_start({ prompt: 'test task', noUi: true }, tmpDir);
+    });
+    // stdio[2] should be a number (file descriptor), not 'ignore'
+    expect(typeof capturedOpts.stdio[2]).toBe('number');
+  });
+
+  test('sidecar_resume passes sessionDir for stderr capture', async () => {
+    let capturedOpts;
+    // Pre-create session with metadata so resume can find it
+    const sessDir = path.join(tmpDir, '.claude', 'sidecar_sessions', 'res1');
+    fs.mkdirSync(sessDir, { recursive: true });
+    fs.writeFileSync(path.join(sessDir, 'metadata.json'), JSON.stringify({
+      taskId: 'res1', status: 'complete',
+      createdAt: new Date().toISOString(),
+    }));
+
+    await jest.isolateModulesAsync(async () => {
+      jest.doMock('child_process', () => ({
+        spawn: jest.fn((_cmd, _args, opts) => {
+          capturedOpts = opts;
+          return { pid: 12345, unref: jest.fn() };
+        }),
+      }));
+      const { handlers: h } = require('../src/mcp-server');
+      await h.sidecar_resume({ taskId: 'res1' }, tmpDir);
+    });
+    // stdio[2] should be a number (file descriptor), not 'ignore'
+    expect(typeof capturedOpts.stdio[2]).toBe('number');
+  });
+
+  test('sidecar_continue passes sessionDir for stderr capture', async () => {
+    let capturedOpts;
+    await jest.isolateModulesAsync(async () => {
+      jest.doMock('child_process', () => ({
+        spawn: jest.fn((_cmd, _args, opts) => {
+          capturedOpts = opts;
+          return { pid: 12345, unref: jest.fn() };
+        }),
+      }));
+      const { handlers: h } = require('../src/mcp-server');
+      await h.sidecar_continue({ taskId: 'old1', prompt: 'follow up' }, tmpDir);
+    });
+    // stdio[2] should be a number (file descriptor), not 'ignore'
+    expect(typeof capturedOpts.stdio[2]).toBe('number');
   });
 });

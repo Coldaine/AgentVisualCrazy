@@ -345,7 +345,7 @@ async function startSidecar(options) {
   });
   saveInitialContext(sessDir, systemPrompt, userMessage);
 
-  const heartbeat = createHeartbeat();
+  const heartbeat = createHeartbeat(HEARTBEAT_INTERVAL, sessDir);
   let summary;
   let result;
 

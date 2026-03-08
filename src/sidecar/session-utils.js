@@ -84,15 +84,29 @@ function outputSummary(summary) {
   console.log(summary);
 }
 
-/** Create a heartbeat that writes status to stderr periodically */
-function createHeartbeat(interval = HEARTBEAT_INTERVAL) {
+/**
+ * Create a heartbeat that writes status to stderr periodically.
+ * When sessionDir is provided, includes message count and latest activity.
+ *
+ * @param {number} [interval=HEARTBEAT_INTERVAL] - Interval in milliseconds
+ * @param {string} [sessionDir] - Session directory to read progress from
+ * @returns {{ stop: () => void }}
+ */
+function createHeartbeat(interval = HEARTBEAT_INTERVAL, sessionDir) {
   const startTime = Date.now();
   const intervalId = setInterval(() => {
     const elapsed = Math.round((Date.now() - startTime) / 1000);
     const mins = Math.floor(elapsed / 60);
     const secs = elapsed % 60;
     const ts = mins > 0 ? `${mins}m${secs}s` : `${secs}s`;
-    process.stderr.write(`[sidecar] still running... ${ts} elapsed\n`);
+
+    if (sessionDir) {
+      const { readProgress } = require('./progress');
+      const progress = readProgress(sessionDir);
+      process.stderr.write(`[sidecar] ${ts} | ${progress.messages} messages | ${progress.latest}\n`);
+    } else {
+      process.stderr.write(`[sidecar] still running... ${ts} elapsed\n`);
+    }
   }, interval);
 
   return {

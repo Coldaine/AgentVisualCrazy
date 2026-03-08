@@ -246,6 +246,66 @@ describe('Session Utils', () => {
     });
   });
 
+  describe('createHeartbeat with progress', () => {
+    let tmpDir;
+    let stderrSpy;
+
+    beforeEach(() => {
+      jest.useFakeTimers();
+      tmpDir = fs.mkdtempSync(path.join(require('os').tmpdir(), 'heartbeat-progress-'));
+      stderrSpy = jest.spyOn(process.stderr, 'write').mockImplementation(() => {});
+    });
+
+    afterEach(() => {
+      stderrSpy.mockRestore();
+      jest.useRealTimers();
+      fs.rmSync(tmpDir, { recursive: true, force: true });
+    });
+
+    it('includes message count and latest activity in heartbeat', () => {
+      // Write conversation.jsonl with 2 assistant entries
+      const entries = [
+        { role: 'user', content: 'Hello' },
+        { role: 'assistant', content: 'Working on it' },
+        { role: 'assistant', toolCall: { name: 'Read src/auth/token.ts' } }
+      ];
+      const convPath = path.join(tmpDir, 'conversation.jsonl');
+      fs.writeFileSync(convPath, entries.map(e => JSON.stringify(e)).join('\n'));
+
+      const heartbeat = createHeartbeat(1000, tmpDir);
+      jest.advanceTimersByTime(1000);
+
+      const output = stderrSpy.mock.calls[stderrSpy.mock.calls.length - 1][0];
+      expect(output).toContain('2 messages');
+      expect(output).toContain('Using Read src/auth/token.ts');
+      expect(output).toMatch(/\[sidecar\]/);
+
+      heartbeat.stop();
+    });
+
+    it('shows Starting up when no conversation exists', () => {
+      // tmpDir exists but no conversation.jsonl
+      const heartbeat = createHeartbeat(1000, tmpDir);
+      jest.advanceTimersByTime(1000);
+
+      const output = stderrSpy.mock.calls[stderrSpy.mock.calls.length - 1][0];
+      expect(output).toContain('Starting up...');
+      expect(output).toContain('0 messages');
+
+      heartbeat.stop();
+    });
+
+    it('falls back to basic heartbeat when no sessionDir provided', () => {
+      const heartbeat = createHeartbeat(1000);
+      jest.advanceTimersByTime(1000);
+
+      const output = stderrSpy.mock.calls[stderrSpy.mock.calls.length - 1][0];
+      expect(output).toContain('still running');
+
+      heartbeat.stop();
+    });
+  });
+
   describe('executeMode', () => {
     it('should call runHeadless in headless mode', async () => {
       const mockRunHeadless = jest.fn().mockResolvedValue({

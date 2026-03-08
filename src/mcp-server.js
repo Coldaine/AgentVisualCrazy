@@ -10,23 +10,14 @@ const { TOOLS, getGuideText } = require('./mcp-tools');
 const os = require('os');
 const { logger } = require('./utils/logger');
 const { safeSessionDir } = require('./utils/validators');
+const { readProgress } = require('./sidecar/progress');
 
-/**
- * Resolve the project directory with smart fallback.
- * @param {string} [explicitProject] - Optional explicit project path
- * @returns {string} Resolved project directory
- */
+/** Resolve the project directory with smart fallback. */
 function getProjectDir(explicitProject) {
-  if (explicitProject && fs.existsSync(explicitProject)) {
-    return explicitProject;
-  }
+  if (explicitProject && fs.existsSync(explicitProject)) { return explicitProject; }
   const cwd = process.cwd();
-  if (cwd !== '/' && fs.existsSync(cwd)) {
-    return cwd;
-  }
-  if (cwd === '/') {
-    logger.warn('process.cwd() is root (/), falling back to $HOME for session storage');
-  }
+  if (cwd !== '/' && fs.existsSync(cwd)) { return cwd; }
+  if (cwd === '/') { logger.warn('cwd is root (/), falling back to $HOME'); }
   return os.homedir();
 }
 
@@ -46,13 +37,19 @@ function textResult(text, isError) {
 }
 
 /** Spawn a sidecar CLI process (detached, fire-and-forget) */
-function spawnSidecarProcess(args) {
+function spawnSidecarProcess(args, sessionDir) {
   const sidecarBin = path.join(__dirname, '..', 'bin', 'sidecar.js');
+  let stderrFd = 'ignore';
+  if (sessionDir) {
+    try {
+      fs.mkdirSync(sessionDir, { recursive: true, mode: 0o700 });
+      stderrFd = fs.openSync(path.join(sessionDir, 'debug.log'), 'w');
+    } catch { /* fall back to ignore */ }
+  }
   const child = spawn('node', [sidecarBin, ...args], {
     cwd: getProjectDir(),
-    stdio: ['ignore', 'ignore', 'ignore'],
+    stdio: ['ignore', 'ignore', stderrFd],
     detached: true,
-    // Use port 9223 for CDP to avoid conflict with Chrome on 9222
     env: { ...process.env, SIDECAR_DEBUG_PORT: '9223' },
   });
   child.unref();
@@ -78,14 +75,14 @@ const handlers = {
     if (input.summaryLength)    { args.push('--summary-length', input.summaryLength); }
     args.push('--cwd', cwd);
 
+    const sessionDir = path.join(cwd, '.claude', 'sidecar_sessions', taskId);
     let child;
-    try { child = spawnSidecarProcess(args); } catch (err) {
+    try { child = spawnSidecarProcess(args, sessionDir); } catch (err) {
       return textResult(`Failed to start sidecar: ${err.message}`, true);
     }
 
     // Save PID so sidecar_abort can kill the process
     if (child && child.pid) {
-      const sessionDir = path.join(cwd, '.claude', 'sidecar_sessions', taskId);
       fs.mkdirSync(sessionDir, { recursive: true, mode: 0o700 });
       const metaPath = path.join(sessionDir, 'metadata.json');
       if (!fs.existsSync(metaPath)) {
@@ -103,17 +100,36 @@ const handlers = {
 
   async sidecar_status(input, project) {
     const cwd = project || getProjectDir(input.project);
+    const sessionDir = safeSessionDir(cwd, input.taskId);
     const metadata = readMetadata(input.taskId, cwd);
     if (!metadata) { return textResult(`Session ${input.taskId} not found.`, true); }
 
-    const elapsed = Date.now() - new Date(metadata.createdAt).getTime();
-    const mins = Math.floor(elapsed / 60000);
-    const secs = Math.floor((elapsed % 60000) / 1000);
-    return textResult(JSON.stringify({
-      taskId: metadata.taskId, status: metadata.status, model: metadata.model,
-      agent: metadata.agent, elapsed: `${mins}m ${secs}s`,
-      briefing: (metadata.briefing || '').slice(0, 100),
-    }));
+    // PID liveness check: detect crashed processes
+    if (metadata.status === 'running' && metadata.pid) {
+      try { process.kill(metadata.pid, 0); } catch {
+        Object.assign(metadata, {
+          status: 'crashed', crashedAt: new Date().toISOString(),
+          reason: 'Process exited unexpectedly',
+        });
+        fs.writeFileSync(path.join(sessionDir, 'metadata.json'),
+          JSON.stringify(metadata, null, 2));
+      }
+    }
+
+    const ms = Date.now() - new Date(metadata.createdAt).getTime();
+    const response = {
+      taskId: metadata.taskId, status: metadata.status,
+      elapsed: `${Math.floor(ms / 60000)}m ${Math.floor((ms % 60000) / 1000)}s`,
+    };
+
+    if (metadata.status === 'running') {
+      const progress = readProgress(sessionDir);
+      Object.assign(response, progress);
+    }
+    if (metadata.status === 'crashed' || metadata.status === 'error') {
+      response.reason = metadata.reason || 'Unknown error';
+    }
+    return textResult(JSON.stringify(response));
   },
 
   async sidecar_read(input, project) {
@@ -173,10 +189,11 @@ const handlers = {
 
   async sidecar_resume(input, project) {
     const cwd = project || getProjectDir(input.project);
+    const sessionDir = safeSessionDir(cwd, input.taskId);
     const args = ['resume', input.taskId, '--client', 'cowork', '--cwd', cwd];
     if (input.noUi) { args.push('--no-ui'); }
     if (input.timeout) { args.push('--timeout', String(input.timeout)); }
-    try { spawnSidecarProcess(args); } catch (err) {
+    try { spawnSidecarProcess(args, sessionDir); } catch (err) {
       return textResult(`Failed to resume: ${err.message}`, true);
     }
     return textResult(JSON.stringify({
@@ -189,6 +206,7 @@ const handlers = {
     const cwd = project || getProjectDir(input.project);
     const { generateTaskId } = require('./sidecar/start');
     const newTaskId = generateTaskId();
+    const sessionDir = path.join(cwd, '.claude', 'sidecar_sessions', newTaskId);
 
     const args = ['continue', input.taskId, '--prompt', input.prompt,
       '--task-id', newTaskId, '--client', 'cowork', '--cwd', cwd];
@@ -197,7 +215,7 @@ const handlers = {
     if (input.timeout) { args.push('--timeout', String(input.timeout)); }
     if (input.contextTurns)     { args.push('--context-turns', String(input.contextTurns)); }
     if (input.contextMaxTokens) { args.push('--context-max-tokens', String(input.contextMaxTokens)); }
-    try { spawnSidecarProcess(args); } catch (err) {
+    try { spawnSidecarProcess(args, sessionDir); } catch (err) {
       return textResult(`Failed to continue: ${err.message}`, true);
     }
     return textResult(JSON.stringify({
