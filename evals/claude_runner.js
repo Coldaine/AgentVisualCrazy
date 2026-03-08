@@ -69,16 +69,23 @@ function buildClaudeCommand({ prompt, model, maxBudget, mcpConfigPath, sandboxDi
     '--output-format', 'stream-json',
     '--model', model,
     '--max-budget-usd', String(maxBudget),
-    '--mcp-config', mcpConfigPath,
     '--verbose',
   ];
 
-  return {
-    command: 'claude',
-    args,
-    env: { ...process.env, CLAUDECODE: '' },
-    cwd: sandboxDir,
-  };
+  if (mcpConfigPath) {
+    args.push('--mcp-config', mcpConfigPath);
+  }
+
+  const env = { ...process.env, CLAUDECODE: '' };
+
+  // For CLI mode (no MCP config), add sidecar bin dir to PATH
+  if (!mcpConfigPath) {
+    const sidecarBinDir = path.join(EVALS_DIR, '..', 'bin');
+    const nodeModulesBin = path.join(EVALS_DIR, '..', 'node_modules', '.bin');
+    env.PATH = `${sidecarBinDir}:${nodeModulesBin}:${env.PATH || ''}`;
+  }
+
+  return { command: 'claude', args, env, cwd: sandboxDir };
 }
 
 /**

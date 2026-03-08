@@ -52,4 +52,23 @@ describe('buildClaudeCommand', () => {
     expect(cmd.args).toContain('/tmp/mcp.json');
     expect(cmd.env.CLAUDECODE).toBe('');
   });
+
+  test('MCP mode includes --mcp-config flag', () => {
+    const cmd = buildClaudeCommand({
+      prompt: 'test', model: 'sonnet', maxBudget: 2.0,
+      mcpConfigPath: '/tmp/mcp.json', sandboxDir: '/tmp/sandbox',
+    });
+    expect(cmd.args).toContain('--mcp-config');
+    expect(cmd.args).toContain('/tmp/mcp.json');
+  });
+
+  test('CLI mode omits --mcp-config and adds sidecar to PATH', () => {
+    const cmd = buildClaudeCommand({
+      prompt: 'test', model: 'sonnet', maxBudget: 2.0,
+      mcpConfigPath: null, sandboxDir: '/tmp/sandbox',
+    });
+    expect(cmd.args).not.toContain('--mcp-config');
+    expect(cmd.args).not.toContain(null);
+    expect(cmd.env.PATH).toContain('bin');
+  });
 });

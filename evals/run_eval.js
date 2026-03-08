@@ -18,6 +18,9 @@ const EVALS_DIR = __dirname;
 const TASKS_FILE = path.join(EVALS_DIR, 'eval_tasks.json');
 const WORKSPACE_DIR = path.join(EVALS_DIR, 'workspace');
 
+const MODE_PREFIX_MCP = 'You have access to sidecar MCP tools (sidecar_start, sidecar_read, sidecar_list, etc.). Use these tools to delegate work to another model.\n\n';
+const MODE_PREFIX_CLI = 'You have access to the `sidecar` CLI tool. Use bash commands like `sidecar start --model <model> --briefing "<task>"` and `sidecar read <task_id> --summary` to delegate work to another model.\n\n';
+
 /** Load eval tasks */
 function loadTasks() {
   return JSON.parse(fs.readFileSync(TASKS_FILE, 'utf-8'));
@@ -63,10 +66,11 @@ async function runJudge(rubric, transcript, passThreshold) {
 
 /** Run a single eval task */
 async function runEval(task, opts = {}) {
+  const mode = opts.mode || 'mcp';
   const timestamp = Date.now();
-  const workDir = path.join(WORKSPACE_DIR, `eval-${task.id}-${timestamp}`);
+  const workDir = path.join(WORKSPACE_DIR, `eval-${task.id}-${mode}-${timestamp}`);
 
-  console.log(`\nRunning Eval ${task.id}: ${task.name}`);
+  console.log(`\nRunning Eval ${task.id} (${mode.toUpperCase()}): ${task.name}`);
   console.log(`  Fixture: ${task.fixture}`);
   console.log(`  Model: ${opts.model || task.model}`);
 
@@ -74,16 +78,23 @@ async function runEval(task, opts = {}) {
   const sandboxDir = createSandbox(task.fixture);
   console.log(`  Sandbox: ${sandboxDir}`);
 
-  // 2. Write MCP config
-  const mcpConfig = buildMcpConfig();
-  const mcpConfigPath = path.join(sandboxDir, '.mcp-config.json');
-  fs.writeFileSync(mcpConfigPath, JSON.stringify(mcpConfig));
+  // 2. Write MCP config (MCP mode only)
+  let mcpConfigPath = null;
+  if (mode === 'mcp') {
+    const mcpConfig = buildMcpConfig();
+    mcpConfigPath = path.join(sandboxDir, '.mcp-config.json');
+    fs.writeFileSync(mcpConfigPath, JSON.stringify(mcpConfig));
+  }
 
-  // 3. Dry run?
+  // 3. Build prompt with mode prefix
+  const prefix = mode === 'cli' ? MODE_PREFIX_CLI : MODE_PREFIX_MCP;
+  const fullPrompt = prefix + task.prompt;
+
+  // 4. Dry run?
   if (opts.dryRun) {
     const { buildClaudeCommand } = require('./claude_runner');
     const cmd = buildClaudeCommand({
-      prompt: task.prompt,
+      prompt: fullPrompt,
       model: opts.model || task.model,
       maxBudget: task.max_budget_usd,
       mcpConfigPath,
@@ -94,12 +105,12 @@ async function runEval(task, opts = {}) {
     return null;
   }
 
-  // 4. Run Claude
+  // 5. Run Claude
   console.log('  Running Claude Code...');
   let runResult;
   try {
     runResult = await runClaude({
-      prompt: task.prompt,
+      prompt: fullPrompt,
       model: opts.model || task.model,
       maxBudget: task.max_budget_usd,
       mcpConfigPath,
@@ -108,10 +119,11 @@ async function runEval(task, opts = {}) {
   } catch (err) {
     console.error(`  Claude failed: ${err.message}`);
     const failResult = {
-      eval_id: task.id, eval_name: task.name, status: 'ERROR',
+      eval_id: task.id, eval_name: task.name, mode, status: 'ERROR',
       score: 0, duration_seconds: 0,
       token_usage: { claude: { input_tokens: 0, output_tokens: 0 } },
-      programmatic_results: [], judge_results: null, sidecar_calls: [],
+      programmatic_results: [], judge_results: null,
+      sidecar_calls: [], cli_commands: [],
       error: err.message,
     };
     writeResults(workDir, failResult, []);
@@ -122,27 +134,31 @@ async function runEval(task, opts = {}) {
   const durationSec = Math.round(runResult.duration / 1000);
   console.log(`  Completed in ${durationSec}s (exit code: ${runResult.exitCode})`);
 
-  // 5. Parse transcript
+  // 6. Parse transcript
   const transcript = parseTranscript(runResult.lines);
   console.log(`  Tool calls: ${transcript.toolCalls.length}, Errors: ${transcript.errors.length}`);
   console.log(`  Tokens: ${transcript.inputTokens} in, ${transcript.outputTokens} out`);
 
-  // 6. Extract sidecar calls
+  // 7. Extract sidecar calls (MCP) or CLI commands
   const sidecarCalls = transcript.toolCalls
     .filter(tc => tc.tool.startsWith('sidecar_'))
     .map(tc => ({ tool: tc.tool, params: tc.params }));
+  const cliCommands = mode === 'cli'
+    ? (transcript.bashCommands || []).filter(c => c.includes('sidecar'))
+    : [];
 
-  // 7. Programmatic checks
-  const progResults = runProgrammaticChecks(
-    task.success_criteria.programmatic, transcript, sandboxDir
-  );
+  // 8. Programmatic checks (mode-aware)
+  const criteria = mode === 'cli'
+    ? task.success_criteria.programmatic_cli
+    : task.success_criteria.programmatic;
+  const progResults = runProgrammaticChecks(criteria, transcript, sandboxDir);
   const progPassed = progResults.every(r => r.passed);
   console.log(`  Programmatic: ${progResults.filter(r => r.passed).length}/${progResults.length} passed`);
   for (const r of progResults) {
     console.log(`    ${r.passed ? 'PASS' : 'FAIL'} ${r.type}: ${r.detail}`);
   }
 
-  // 8. LLM-as-judge (only if programmatic passed)
+  // 9. LLM-as-judge (only if programmatic passed)
   let judgeResults = null;
   if (progPassed && task.success_criteria.llm_judge) {
     console.log('  Running LLM-as-judge...');
@@ -154,7 +170,7 @@ async function runEval(task, opts = {}) {
     console.log(`  Judge avg: ${judgeResults.average.toFixed(1)} (threshold: ${judgeResults.pass_threshold})`);
   }
 
-  // 9. Build result
+  // 10. Build result
   const allPassed = progPassed && (!judgeResults || judgeResults.passed);
   const score = progPassed
     ? (judgeResults ? judgeResults.average / 5 : 1.0)
@@ -163,6 +179,7 @@ async function runEval(task, opts = {}) {
   const result = {
     eval_id: task.id,
     eval_name: task.name,
+    mode,
     status: allPassed ? 'PASS' : 'FAIL',
     score,
     duration_seconds: durationSec,
@@ -172,14 +189,15 @@ async function runEval(task, opts = {}) {
     programmatic_results: progResults,
     judge_results: judgeResults,
     sidecar_calls: sidecarCalls,
+    cli_commands: cliCommands,
   };
 
-  // 10. Write results
+  // 11. Write results
   writeResults(workDir, result, runResult.lines);
   console.log(`  Result: ${result.status} (score: ${result.score.toFixed(2)})`);
   console.log(`  Output: ${workDir}`);
 
-  // 11. Cleanup sandbox
+  // 12. Cleanup sandbox
   fs.rmSync(sandboxDir, { recursive: true });
 
   return result;
@@ -192,16 +210,24 @@ async function main() {
   const runAll = args.includes('--all');
   const dryRun = args.includes('--dry-run');
   const modelOverride = args.includes('--model') ? args[args.indexOf('--model') + 1] : null;
+  const modeArg = args.includes('--mode') ? args[args.indexOf('--mode') + 1] : 'both';
 
   if (!evalId && !runAll) {
     console.log('Usage:');
     console.log('  node evals/run_eval.js --eval-id <id>');
+    console.log('  node evals/run_eval.js --eval-id <id> --mode mcp|cli|both');
     console.log('  node evals/run_eval.js --all');
     console.log('  node evals/run_eval.js --all --dry-run');
     console.log('  node evals/run_eval.js --eval-id 1 --model opus');
     process.exit(1);
   }
 
+  if (!['mcp', 'cli', 'both'].includes(modeArg)) {
+    console.error(`Invalid mode: ${modeArg}. Must be mcp, cli, or both.`);
+    process.exit(1);
+  }
+
+  const modes = modeArg === 'both' ? ['mcp', 'cli'] : [modeArg];
   const tasks = loadTasks();
   const toRun = runAll ? tasks : tasks.filter(t => t.id === evalId);
 
@@ -214,8 +240,10 @@ async function main() {
 
   const results = [];
   for (const task of toRun) {
-    const result = await runEval(task, { dryRun, model: modelOverride });
-    if (result) { results.push(result); }
+    for (const mode of modes) {
+      const result = await runEval(task, { dryRun, model: modelOverride, mode });
+      if (result) { results.push(result); }
+    }
   }
 
   if (results.length > 0) {
