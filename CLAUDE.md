@@ -506,14 +506,23 @@ See [docs/jsdoc-setup.md](docs/jsdoc-setup.md) for JSDoc patterns, `.d.ts` gener
 
 ```bash
 # Required
-OPENROUTER_API_KEY=sk-or-...        # Multi-model API access
+OPENROUTER_API_KEY=sk-or-...              # Multi-model API access
 
 # Optional
-OPENCODE_COMMAND=opencode           # Override OpenCode command path
+OPENCODE_COMMAND=opencode                 # Override OpenCode command path
 SIDECAR_DEFAULT_MODEL=openrouter/google/gemini-2.5-flash
-SIDECAR_TIMEOUT=15                  # Headless timeout in minutes
-LOG_LEVEL=info                      # debug | info | warn | error
-SIDECAR_MOCK_UPDATE=                    # Mock update state for UI testing: available, updating, success, error
+SIDECAR_TIMEOUT=15                        # Headless timeout in minutes
+LOG_LEVEL=error                           # debug | info | warn | error
+
+# Model Routing
+SIDECAR_DISABLE_MODEL_ROUTING=true        # Disable auto-routing for subagent tasks
+SIDECAR_EXPLORE_MODEL=openrouter/...      # Override model for Explore subagents
+
+# Advanced / Debug
+SIDECAR_CONFIG_DIR=/path/to/config        # Override config directory (~/.config/sidecar)
+SIDECAR_ENV_DIR=/path/to/env              # Override .env file directory
+SIDECAR_DEBUG_PORT=9223                   # CDP debug port (default: 9222)
+SIDECAR_MOCK_UPDATE=available             # Mock update UI state for testing
 ```
 
 ### Dependencies
