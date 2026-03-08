@@ -52,6 +52,17 @@ function runProgrammaticChecks(criteria, transcript, sandboxDir) {
         const passed = transcript.errors.length === 0;
         return { type: c.type, passed, detail: passed ? 'No errors' : `${transcript.errors.length} errors` };
       }
+      case 'bash_command_matches': {
+        const cmds = transcript.bashCommands || [];
+        const regex = new RegExp(c.pattern);
+        const match = cmds.find(cmd => regex.test(cmd));
+        return {
+          type: c.type,
+          pattern: c.pattern,
+          passed: !!match,
+          detail: match ? `Matched: ${match.slice(0, 100)}` : 'No matching bash command',
+        };
+      }
       default:
         return { type: c.type, passed: false, detail: `Unknown criterion type: ${c.type}` };
     }

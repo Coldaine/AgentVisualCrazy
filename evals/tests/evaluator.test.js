@@ -93,6 +93,40 @@ describe('runProgrammaticChecks', () => {
     const results = runProgrammaticChecks(criteria, transcript, '/tmp');
     expect(results[0].passed).toBe(false);
   });
+
+  test('bash_command_matches passes when command matches pattern', () => {
+    const transcript = {
+      toolCalls: [],
+      bashCommands: ['sidecar start --model gemini --briefing "debug auth"'],
+      errors: [],
+    };
+    const criteria = [{ type: 'bash_command_matches', pattern: 'sidecar\\s+start\\s+--model' }];
+    const results = runProgrammaticChecks(criteria, transcript, '/tmp');
+    expect(results[0].passed).toBe(true);
+    expect(results[0].detail).toContain('sidecar start');
+  });
+
+  test('bash_command_matches fails when no command matches', () => {
+    const transcript = {
+      toolCalls: [],
+      bashCommands: ['ls -la', 'cat foo.txt'],
+      errors: [],
+    };
+    const criteria = [{ type: 'bash_command_matches', pattern: 'sidecar\\s+start' }];
+    const results = runProgrammaticChecks(criteria, transcript, '/tmp');
+    expect(results[0].passed).toBe(false);
+  });
+
+  test('bash_command_matches fails when bashCommands is empty', () => {
+    const transcript = {
+      toolCalls: [],
+      bashCommands: [],
+      errors: [],
+    };
+    const criteria = [{ type: 'bash_command_matches', pattern: 'sidecar\\s+start' }];
+    const results = runProgrammaticChecks(criteria, transcript, '/tmp');
+    expect(results[0].passed).toBe(false);
+  });
 });
 
 const { buildJudgePrompt, parseJudgeResponse } = require('../evaluator');
