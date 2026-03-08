@@ -13,6 +13,11 @@
         {"type": "tool_called", "tool": "sidecar_read"},
         {"type": "file_changed", "path": "src/server.js"}
       ],
+      "programmatic_cli": [
+        {"type": "bash_command_matches", "pattern": "sidecar\\s+start\\s+--model"},
+        {"type": "bash_command_matches", "pattern": "sidecar\\s+(read|status)"},
+        {"type": "file_changed", "path": "src/server.js"}
+      ],
       "llm_judge": {
         "rubric": [
           "Did the LLM choose an appropriate model for code analysis? (1-5)",
@@ -38,6 +43,11 @@
         {"type": "tool_called", "tool": "sidecar_read"},
         {"type": "file_created", "pattern": "tests/.*\\.js$"}
       ],
+      "programmatic_cli": [
+        {"type": "bash_command_matches", "pattern": "sidecar\\s+start\\s+--model"},
+        {"type": "bash_command_matches", "pattern": "sidecar\\s+(read|status)"},
+        {"type": "file_created", "pattern": "tests/.*\\.js$"}
+      ],
       "llm_judge": {
         "rubric": [
           "Did the LLM choose an appropriate model for test generation? (1-5)",
@@ -61,6 +71,11 @@
       "programmatic": [
         {"type": "tool_called", "tool": "sidecar_start"},
         {"type": "tool_called", "tool": "sidecar_read"},
+        {"type": "file_created", "pattern": "docs/.*\\.md$"}
+      ],
+      "programmatic_cli": [
+        {"type": "bash_command_matches", "pattern": "sidecar\\s+start\\s+--model"},
+        {"type": "bash_command_matches", "pattern": "sidecar\\s+(read|status)"},
         {"type": "file_created", "pattern": "docs/.*\\.md$"}
       ],
       "llm_judge": {
