@@ -25,6 +25,21 @@ async function main() {
   const args = parseArgs(process.argv.slice(2));
   const command = args._[0];
 
+  // Install crash handler for MCP-spawned processes (have --task-id)
+  if (args['task-id'] && (command === 'start' || command === 'continue')) {
+    const { installCrashHandler } = require('../src/sidecar/crash-handler');
+    const project = args.cwd || process.cwd();
+    const handler = installCrashHandler(args['task-id'], project);
+    process.on('uncaughtException', (err) => {
+      handler(err);
+      process.exit(1);
+    });
+    process.on('unhandledRejection', (reason) => {
+      handler(reason instanceof Error ? reason : new Error(String(reason)));
+      process.exit(1);
+    });
+  }
+
   // Non-interactive update check (skip for mcp, --version, --help)
   if (command !== 'mcp' && !args.version && !args.help) {
     const { initUpdateCheck, notifyUpdate } = require('../src/utils/updater');
