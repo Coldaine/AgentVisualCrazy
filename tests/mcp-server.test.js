@@ -833,6 +833,8 @@ describe('sidecar_start stderr capture', () => {
           return { pid: 12345, unref: jest.fn() };
         }),
       }));
+      // Ensure real fs is used (clear any leaked mock from prior tests)
+      jest.doMock('fs', () => jest.requireActual('fs'));
       const { handlers: h } = require('../src/mcp-server');
       await h.sidecar_start({ prompt: 'test task', noUi: true }, tmpDir);
     });
@@ -857,6 +859,7 @@ describe('sidecar_start stderr capture', () => {
           return { pid: 12345, unref: jest.fn() };
         }),
       }));
+      jest.doMock('fs', () => jest.requireActual('fs'));
       const { handlers: h } = require('../src/mcp-server');
       await h.sidecar_resume({ taskId: 'res1' }, tmpDir);
     });
@@ -873,6 +876,7 @@ describe('sidecar_start stderr capture', () => {
           return { pid: 12345, unref: jest.fn() };
         }),
       }));
+      jest.doMock('fs', () => jest.requireActual('fs'));
       const { handlers: h } = require('../src/mcp-server');
       await h.sidecar_continue({ taskId: 'old1', prompt: 'follow up' }, tmpDir);
     });
