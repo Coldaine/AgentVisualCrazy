@@ -236,6 +236,10 @@ sidecar/
 │   │   ├── progress.test.js
 │   │   └── exit-handler.test.js
 │   ├── mcp-headless-lifecycle.test.js  # Full MCP headless lifecycle
+│   ├── scripts/                 # Enforcement script tests
+│   │   ├── check-secrets.test.js
+│   │   ├── check-file-sizes.test.js
+│   │   └── validate-docs.test.js
 │   └── ...
 ├── skill/
 │   └── SKILL.md                 # Claude Code skill integration
@@ -250,9 +254,18 @@ sidecar/
 │   ├── tests/                   # Eval unit tests (25 tests, 4 suites)
 │   └── workspace/               # Output (gitignored)
 ├── scripts/
+│   ├── check-secrets.js         # Pre-commit secret detection
+│   ├── check-file-sizes.js      # Pre-commit file size enforcement
+│   ├── validate-docs.js         # CLAUDE.md drift detection
 │   ├── postinstall.js           # Auto-install skill + MCP registration
 │   ├── integration-test.sh      # E2E integration tests
 │   └── sync-agent-docs.js       # Sync CLAUDE.md → GEMINI.md, AGENTS.md
+├── .husky/
+│   ├── pre-commit               # lint-staged + secrets + file size + doc drift
+│   └── pre-push                 # Full test suite + npm audit
+├── docs/
+│   ├── scaffolding/             # Portable enforcement kit (copy to new projects)
+│   └── plans/                   # Design and implementation plans
 ├── package.json
 ├── jest.config.js
 ├── .eslintrc.js
@@ -388,6 +401,9 @@ Use `src/utils/logger.js` (levels: error/warn/info/debug). Logs go to stderr to 
 | `evals/tests/evaluator.test.js` | Eval criteria | Programmatic checks (7 types), LLM-as-judge prompt/response |
 | `evals/tests/claude_runner.test.js` | Claude runner | MCP config, sandbox creation, CLI command building |
 | `evals/tests/result_writer.test.js` | Result output | Summary formatting, file writing |
+| `scripts/check-secrets.test.js` | Secret detection | Pattern matching, allowlist, multi-secret |
+| `scripts/check-file-sizes.test.js` | File size limits | Line counting, batch checking |
+| `scripts/validate-docs.test.js` | Doc drift detection | Section extraction, drift comparison, staged file check |
 
 ### What NOT to Unit Test (UI Code)
 
@@ -508,6 +524,8 @@ SIDECAR_MOCK_UPDATE=                    # Mock update state for UI testing: avai
 | `tiktoken` | ^1.0.0 | Token estimation |
 | `jest` | ^29.0.0 | Testing framework |
 | `eslint` | ^8.0.0 | Code linting |
+| `husky` | ^9.1.7 | Git hook management |
+| `lint-staged` | ^16.3.2 | Run linters on staged files |
 
 ### Bundled Dependencies
 
