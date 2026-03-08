@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+npx lint-staged
+node scripts/check-secrets.js
+node scripts/check-file-sizes.js
+node scripts/validate-docs.js

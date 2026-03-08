@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+echo "Running test suite before push..."
+npm test
+echo "Checking for dependency vulnerabilities..."
+npm audit --audit-level=moderate || echo "  (npm audit warnings above - review when convenient)"
