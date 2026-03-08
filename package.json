@@ -44,7 +44,8 @@
     "refresh-models": "node scripts/refresh-model-capabilities.js",
     "models:info": "node scripts/refresh-model-capabilities.js --info",
     "models:check": "node scripts/refresh-model-capabilities.js --check",
-    "generate-icon": "node scripts/generate-icon.js"
+    "generate-icon": "node scripts/generate-icon.js",
+    "prepare": "husky"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.27.0",
@@ -61,7 +62,9 @@
   "devDependencies": {
     "chrome-remote-interface": "^0.33.3",
     "eslint": "^8.0.0",
+    "husky": "^9.1.7",
     "jest": "^29.0.0",
+    "lint-staged": "^16.3.2",
     "mocha": "^11.7.5",
     "puppeteer": "^24.36.0",
     "sharp": "^0.33.5",
@@ -69,5 +72,10 @@
   },
   "engines": {
     "node": ">=18.0.0"
+  },
+  "lint-staged": {
+    "src/**/*.js": [
+      "eslint --fix"
+    ]
   }
 }

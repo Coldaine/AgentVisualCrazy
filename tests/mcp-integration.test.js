@@ -181,9 +181,8 @@ describe('MCP Server Integration', () => {
       const result = await handlers.sidecar_status({ taskId: sessionId }, tmpDir);
       const parsed = JSON.parse(result.content[0].text);
       expect(parsed.status).toBe('complete');
-      expect(parsed.model).toBe('gemini');
-      expect(parsed.agent).toBe('Build');
-      expect(parsed.briefing).toContain('Debug');
+      // Token-efficient response: model/agent/briefing not included in status
+      expect(parsed).toHaveProperty('elapsed');
     });
 
     test('status includes elapsed time', async () => {

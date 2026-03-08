@@ -263,7 +263,6 @@ describe('MCP Protocol: tool invocation', () => {
     });
     const status = JSON.parse(statusResult.result.content[0].text);
     expect(status.status).toBe('complete');
-    expect(status.model).toBe('opus');
 
     // Step 3: Read
     const readResult = await client.request('tools/call', {

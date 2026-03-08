@@ -95,7 +95,6 @@ describe('MCP Headless Lifecycle Integration', () => {
       const statusData = parseResult(statusResult);
       expect(statusData.taskId).toBe(taskId);
       expect(statusData.status).toBe('running');
-      expect(statusData.model).toBe('gemini');
       expect(statusData).toHaveProperty('elapsed');
       expect(statusResult.isError).toBeUndefined();
 
