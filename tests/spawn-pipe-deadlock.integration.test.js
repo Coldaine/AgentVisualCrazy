@@ -33,7 +33,7 @@ describe('spawnSidecarProcess stdio configuration (Bug #4 fix)', () => {
     expect(fnBody).not.toMatch(/stdio:.*"pipe"/);
   });
 
-  it('uses ignore for all stdio streams in detached spawn', () => {
+  it('uses ignore for stdin/stdout and file descriptor for stderr', () => {
     const spawnSrc = fs.readFileSync(
       path.join(__dirname, '..', 'src', 'mcp-server.js'), 'utf-8'
     );
@@ -42,9 +42,12 @@ describe('spawnSidecarProcess stdio configuration (Bug #4 fix)', () => {
     const stdioParts = spawnSrc.match(/stdio:\s*\[([^\]]+)\]/);
     expect(stdioParts).toBeTruthy();
 
-    // All three streams should be 'ignore' (stdin, stdout, stderr)
+    // stdin and stdout should be 'ignore', stderr redirected to debug.log (variable)
     const parts = stdioParts[1].split(',').map(s => s.trim().replace(/['"]/g, ''));
-    expect(parts).toEqual(['ignore', 'ignore', 'ignore']);
+    expect(parts[0]).toBe('ignore');
+    expect(parts[1]).toBe('ignore');
+    // stderr is a variable (stderrFd) that resolves to a file descriptor or 'ignore'
+    expect(parts[2]).toBe('stderrFd');
   });
 
   it('spawns as detached with unref for fire-and-forget behavior', () => {
