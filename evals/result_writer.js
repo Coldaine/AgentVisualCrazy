@@ -36,10 +36,14 @@ function formatSummaryLine(result) {
         + (result.token_usage.sidecar.output_tokens || 0);
       sidecarInfo += `, ${formatTokens(sTok)}`;
     }
+  } else if (result.cli_commands?.length) {
+    const cmd = result.cli_commands.find(c => c.includes('sidecar start')) || result.cli_commands[0];
+    sidecarInfo = `\n  Sidecar: ${cmd.slice(0, 80)}`;
   }
 
+  const modeLabel = result.mode ? ` (${result.mode.toUpperCase()})` : '';
   const name = result.eval_name.padEnd(30);
-  return `Eval ${result.eval_id}: ${name} ${result.status}  ${scoreStr}  (${durStr}, ${tokStr})${sidecarInfo}`;
+  return `Eval ${result.eval_id}${modeLabel}: ${name} ${result.status}  ${scoreStr}  (${durStr}, ${tokStr})${sidecarInfo}`;
 }
 
 /**

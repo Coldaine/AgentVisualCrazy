@@ -28,6 +28,29 @@ describe('formatSummaryLine', () => {
     });
     expect(line).toContain('FAIL');
   });
+
+  test('formats summary line with MCP mode label', () => {
+    const line = formatSummaryLine({
+      eval_id: 1, eval_name: 'Debug Auth Bug', mode: 'mcp', status: 'PASS', score: 0.85,
+      duration_seconds: 92,
+      token_usage: { claude: { input_tokens: 12500, output_tokens: 3200 } },
+      sidecar_calls: [{ tool: 'sidecar_start', params: { model: 'gemini', agent: 'Build' } }],
+    });
+    expect(line).toContain('(MCP)');
+    expect(line).toContain('Debug Auth Bug');
+  });
+
+  test('formats CLI mode summary with bash command', () => {
+    const line = formatSummaryLine({
+      eval_id: 1, eval_name: 'Debug Auth Bug', mode: 'cli', status: 'PASS', score: 0.80,
+      duration_seconds: 105,
+      token_usage: { claude: { input_tokens: 15000, output_tokens: 3200 } },
+      sidecar_calls: [],
+      cli_commands: ['sidecar start --model gemini --briefing "debug auth"'],
+    });
+    expect(line).toContain('(CLI)');
+    expect(line).toContain('sidecar start');
+  });
 });
 
 describe('writeResults', () => {
