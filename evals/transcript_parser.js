@@ -1,14 +1,16 @@
 /**
  * Parse Claude Code stream-json output into structured transcript.
  * @param {string[]} lines - Raw stream-json lines
- * @returns {{ toolCalls: Array, errors: string[], inputTokens: number, outputTokens: number }}
+ * @returns {{ toolCalls: Array, bashCommands: string[], errors: string[], inputTokens: number, outputTokens: number }}
  */
 function parseTranscript(lines) {
   const toolCalls = [];
+  const bashCommands = [];
   const errors = [];
   let inputTokens = 0;
   let outputTokens = 0;
   let pendingToolUse = null;
+  const BASH_TOOL_NAMES = new Set(['Bash', 'bash', 'execute_command', 'shell']);
 
   for (const line of lines) {
     let event;
@@ -23,6 +25,9 @@ function parseTranscript(lines) {
             toolUseId: block.id,
             result: null,
           };
+          if (BASH_TOOL_NAMES.has(block.name) && block.input?.command) {
+            bashCommands.push(block.input.command);
+          }
         }
       }
     }
@@ -49,7 +54,7 @@ function parseTranscript(lines) {
     }
   }
 
-  return { toolCalls, errors, inputTokens, outputTokens };
+  return { toolCalls, bashCommands, errors, inputTokens, outputTokens };
 }
 
 module.exports = { parseTranscript };

@@ -45,4 +45,33 @@ describe('parseTranscript', () => {
     const transcript = parseTranscript(lines);
     expect(transcript.inputTokens).toBe(10);
   });
+
+  test('extracts bash commands from Bash tool calls', () => {
+    const lines = [
+      '{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Bash","id":"tu1","input":{"command":"sidecar start --model gemini --briefing \\"test\\""}}]}}',
+      '{"type":"result","subtype":"tool_result","tool_use_id":"tu1","content":"Task started: abc123"}',
+    ];
+    const transcript = parseTranscript(lines);
+    expect(transcript.bashCommands).toHaveLength(1);
+    expect(transcript.bashCommands[0]).toContain('sidecar start');
+  });
+
+  test('extracts bash commands from lowercase bash tool name', () => {
+    const lines = [
+      '{"type":"assistant","message":{"content":[{"type":"tool_use","name":"bash","id":"tu2","input":{"command":"sidecar read abc123 --summary"}}]}}',
+      '{"type":"result","subtype":"tool_result","tool_use_id":"tu2","content":"Summary: ..."}',
+    ];
+    const transcript = parseTranscript(lines);
+    expect(transcript.bashCommands).toHaveLength(1);
+    expect(transcript.bashCommands[0]).toContain('sidecar read');
+  });
+
+  test('returns empty bashCommands when no bash tool calls', () => {
+    const lines = [
+      '{"type":"assistant","message":{"content":[{"type":"tool_use","name":"sidecar_start","id":"tu3","input":{"model":"gemini"}}]}}',
+      '{"type":"result","subtype":"tool_result","tool_use_id":"tu3","content":"{}"}',
+    ];
+    const transcript = parseTranscript(lines);
+    expect(transcript.bashCommands).toEqual([]);
+  });
 });
