@@ -2,28 +2,29 @@
   {
     "id": 1,
     "name": "Debug Auth Bug",
-    "description": "Claude should use sidecar to find and fix a known auth bug",
+    "description": "Tests sidecar's ability to analyze code and produce actionable bug analysis",
     "fixture": "buggy-auth-app",
-    "prompt": "There's a bug in this project's authentication flow causing intermittent 401 errors on the /protected endpoint. The token refresh seems to fail sometimes. Use sidecar to have a different model analyze the auth code in src/auth.js and src/server.js, find the root cause, and suggest a fix. Then apply the fix yourself.",
+    "prompt": "There's a bug in this project's authentication flow causing intermittent 401 errors on the /protected endpoint. Ask Gemini to analyze the auth code in src/auth.js and src/server.js, find the root cause, and suggest a fix. Wait for its analysis, then apply the fix it recommends.",
     "max_budget_usd": 2.0,
     "model": "sonnet",
     "success_criteria": {
       "programmatic": [
         {"type": "tool_called", "tool": "sidecar_start"},
-        {"type": "tool_called", "tool": "sidecar_read|sidecar_status"},
+        {"type": "tool_called", "tool": "sidecar_read"},
+        {"type": "tool_result_matches", "tool": "sidecar_read", "pattern": "(await|bug|fix|missing|refresh|verify)"},
         {"type": "file_changed", "path": "src/server.js"}
       ],
       "programmatic_cli": [
         {"type": "bash_command_matches", "pattern": "sidecar\\s+start\\s+--model"},
-        {"type": "bash_command_matches", "pattern": "sidecar\\s+(read|status)"},
+        {"type": "bash_command_matches", "pattern": "sidecar\\s+read"},
         {"type": "file_changed", "path": "src/server.js"}
       ],
       "llm_judge": {
         "rubric": [
-          "Did the LLM choose an appropriate model for code analysis? (1-5)",
-          "Was the briefing detailed enough — mentioning the specific files and the 401 symptom? (1-5)",
-          "Did the LLM act on the sidecar's findings to fix the missing await? (1-5)",
-          "Did the LLM choose an appropriate agent mode for the task? (1-5)"
+          "Did sidecar produce actionable analysis identifying the missing await and missing verifyToken import? (1-5)",
+          "Was the sidecar briefing specific enough to get a useful response — mentioning files, symptom, and expected output? (1-5)",
+          "Did the harness (Claude) faithfully apply the fix recommended by sidecar rather than solving it independently? (1-5)",
+          "Was the model and agent mode selection appropriate for code analysis? (1-5)"
         ],
         "pass_threshold": 3.5
       }
@@ -32,28 +33,29 @@
   {
     "id": 2,
     "name": "Generate Tests",
-    "description": "Claude should use sidecar to generate tests for a CRUD API",
+    "description": "Tests sidecar's ability to generate test files for a CRUD API",
     "fixture": "todo-api",
-    "prompt": "This todo API in src/routes/todos.js has no tests. Use sidecar to have another model generate comprehensive tests for all the CRUD endpoints. The tests should be written to a tests/ directory using a standard testing framework.",
+    "prompt": "This todo API in src/routes/todos.js has no tests. Ask Gemini to analyze the code and generate comprehensive tests for all the CRUD endpoints. Wait for its response, then write the test files it produces to a tests/ directory.",
     "max_budget_usd": 2.0,
     "model": "sonnet",
     "success_criteria": {
       "programmatic": [
         {"type": "tool_called", "tool": "sidecar_start"},
-        {"type": "tool_called", "tool": "sidecar_read|sidecar_status"},
+        {"type": "tool_called", "tool": "sidecar_read"},
+        {"type": "tool_result_matches", "tool": "sidecar_read", "pattern": "(test|describe|expect|assert|it\\()"},
         {"type": "file_created", "pattern": "tests/.*\\.js$"}
       ],
       "programmatic_cli": [
         {"type": "bash_command_matches", "pattern": "sidecar\\s+start\\s+--model"},
-        {"type": "bash_command_matches", "pattern": "sidecar\\s+(read|status)"},
+        {"type": "bash_command_matches", "pattern": "sidecar\\s+read"},
         {"type": "file_created", "pattern": "tests/.*\\.js$"}
       ],
       "llm_judge": {
         "rubric": [
-          "Did the LLM choose an appropriate model for test generation? (1-5)",
-          "Was the briefing specific about which files to test and what framework to use? (1-5)",
-          "Did the LLM choose Build agent or headless mode for autonomous work? (1-5)",
-          "Are the generated test files syntactically valid and cover multiple endpoints? (1-5)"
+          "Did sidecar produce test code that covers multiple CRUD endpoints (create, read, update, delete)? (1-5)",
+          "Was the sidecar briefing specific about which files to test and what framework to use? (1-5)",
+          "Did the harness (Claude) use sidecar's generated tests rather than writing tests independently? (1-5)",
+          "Are the test files written to disk syntactically valid and runnable? (1-5)"
         ],
         "pass_threshold": 3.5
       }
@@ -62,28 +64,29 @@
   {
     "id": 3,
     "name": "Research and Document",
-    "description": "Claude should use sidecar to research and create a design document",
+    "description": "Tests sidecar's ability to research a topic and produce a design document",
     "fixture": "research-task",
-    "prompt": "This project needs a design document about JWT token rotation best practices. Use sidecar to have another model research current best practices for JWT token rotation, refresh token strategies, and security considerations. Then create a docs/jwt-rotation-design.md file with the findings.",
+    "prompt": "This project needs a design document about JWT token rotation best practices. Ask Gemini to research current best practices for JWT token rotation, refresh token strategies, and security considerations. Wait for its research, then create a docs/jwt-rotation-design.md file based on its findings.",
     "max_budget_usd": 2.0,
     "model": "sonnet",
     "success_criteria": {
       "programmatic": [
         {"type": "tool_called", "tool": "sidecar_start"},
-        {"type": "tool_called", "tool": "sidecar_read|sidecar_status"},
+        {"type": "tool_called", "tool": "sidecar_read"},
+        {"type": "tool_result_matches", "tool": "sidecar_read", "pattern": "(JWT|token|rotation|refresh|security)"},
         {"type": "file_created", "pattern": "docs/.*\\.md$"}
       ],
       "programmatic_cli": [
         {"type": "bash_command_matches", "pattern": "sidecar\\s+start\\s+--model"},
-        {"type": "bash_command_matches", "pattern": "sidecar\\s+(read|status)"},
+        {"type": "bash_command_matches", "pattern": "sidecar\\s+read"},
         {"type": "file_created", "pattern": "docs/.*\\.md$"}
       ],
       "llm_judge": {
         "rubric": [
-          "Did the LLM choose a model well-suited for research tasks? (1-5)",
-          "Was the briefing specific about what to research and what format to produce? (1-5)",
-          "Does the created document contain substantive, accurate information about JWT rotation? (1-5)",
-          "Did the LLM integrate the sidecar's research findings into the final document? (1-5)"
+          "Did sidecar produce substantive research content about JWT rotation, not just generic filler? (1-5)",
+          "Was the sidecar briefing specific about what to research and what deliverable format to produce? (1-5)",
+          "Did the harness (Claude) incorporate sidecar's research findings into the final document rather than writing it independently? (1-5)",
+          "Does the final document contain accurate, actionable information about JWT rotation strategies? (1-5)"
         ],
         "pass_threshold": 3.5
       }

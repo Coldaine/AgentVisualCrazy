@@ -94,6 +94,7 @@ Run first. All must pass before LLM-as-judge runs. Criteria are mode-aware.
 | `tool_called` | Was this MCP tool invoked? |
 | `tool_param` | Did a tool call include this param with this value? |
 | `tool_param_matches` | Regex match on a param value |
+| `tool_result_matches` | Does a tool's result contain this regex pattern? |
 | `file_changed` | Was this file modified in the sandbox? |
 | `file_created` | Was a new file created matching a pattern? |
 | `file_contains` | Does the file contain this regex pattern? |

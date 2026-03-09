@@ -65,6 +65,13 @@ function runProgrammaticChecks(criteria, transcript, sandboxDir) {
         const passed = transcript.errors.length === 0;
         return { type: c.type, passed, detail: passed ? 'No errors' : `${transcript.errors.length} errors` };
       }
+      case 'tool_result_matches': {
+        const call = transcript.toolCalls.find(tc => toolMatches(tc.tool, c.tool));
+        if (!call) { return { type: c.type, passed: false, detail: `Tool ${c.tool} not called` }; }
+        const result = String(call.result || '');
+        const passed = new RegExp(c.pattern, 'i').test(result);
+        return { type: c.type, tool: c.tool, passed, detail: passed ? `Matched: ${result.slice(0, 100)}` : `No match in: ${result.slice(0, 100)}` };
+      }
       case 'bash_command_matches': {
         const cmds = transcript.bashCommands || [];
         const regex = new RegExp(c.pattern);

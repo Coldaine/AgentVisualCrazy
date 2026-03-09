@@ -168,6 +168,37 @@ describe('runProgrammaticChecks', () => {
     const results = runProgrammaticChecks(criteria, transcript, '/tmp');
     expect(results[0].passed).toBe(true);
   });
+  test('tool_result_matches passes when result contains matching pattern', () => {
+    const transcript = {
+      toolCalls: [{ tool: 'mcp__sidecar__sidecar_read', params: { taskId: 'abc' }, result: '## Summary\nFound missing await on refreshToken call' }],
+      errors: [],
+    };
+    const criteria = [{ type: 'tool_result_matches', tool: 'sidecar_read', pattern: '(await|bug|fix|issue|error|missing)' }];
+    const results = runProgrammaticChecks(criteria, transcript, '/tmp');
+    expect(results[0].passed).toBe(true);
+    expect(results[0].detail).toContain('Matched');
+  });
+
+  test('tool_result_matches fails when result is empty or no output', () => {
+    const transcript = {
+      toolCalls: [{ tool: 'mcp__sidecar__sidecar_read', params: { taskId: 'abc' }, result: '## Sidecar Results: No Output\n\nHeadless mode completed without summary.' }],
+      errors: [],
+    };
+    const criteria = [{ type: 'tool_result_matches', tool: 'sidecar_read', pattern: '(await|bug|fix|issue|error|missing)' }];
+    const results = runProgrammaticChecks(criteria, transcript, '/tmp');
+    expect(results[0].passed).toBe(false);
+  });
+
+  test('tool_result_matches fails when tool was never called', () => {
+    const transcript = {
+      toolCalls: [{ tool: 'mcp__sidecar__sidecar_status', params: {}, result: '{"status":"complete"}' }],
+      errors: [],
+    };
+    const criteria = [{ type: 'tool_result_matches', tool: 'sidecar_read', pattern: 'anything' }];
+    const results = runProgrammaticChecks(criteria, transcript, '/tmp');
+    expect(results[0].passed).toBe(false);
+    expect(results[0].detail).toContain('not called');
+  });
 });
 
 const { buildJudgePrompt, parseJudgeResponse } = require('../evaluator');
