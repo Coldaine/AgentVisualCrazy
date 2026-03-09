@@ -36,11 +36,11 @@ function getTools() {
       '(Gemini, GPT, etc.). Returns a task ID immediately. ' +
       'Mode selection: use INTERACTIVE (default, noUi: false) for research, ' +
       'exploration, analysis, and any task where the user benefits from watching ' +
-      'progress live \u2014 it eliminates the polling problem entirely. ' +
+      'progress live. It eliminates the polling problem entirely. ' +
       'Use HEADLESS (noUi: true) only for background automation the user does NOT ' +
       'need to monitor. When in doubt, use interactive. ' +
       'For headless mode, estimate task complexity and poll sidecar_status ' +
-      'accordingly \u2014 sidecar_status responses include next_poll timing hints. ' +
+      'accordingly. sidecar_status responses include next_poll timing hints. ' +
       'For interactive mode, do not poll \u2014 wait for the user to tell you ' +
       'they\'ve clicked Fold, then use sidecar_read. ' +
       'Call sidecar_guide first if you need help choosing models or writing a good briefing.' +
