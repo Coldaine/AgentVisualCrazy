@@ -76,6 +76,7 @@ const handlers = {
     if (input.contextSince)     { args.push('--context-since', input.contextSince); }
     if (input.contextMaxTokens) { args.push('--context-max-tokens', String(input.contextMaxTokens)); }
     if (input.summaryLength)    { args.push('--summary-length', input.summaryLength); }
+    if (input.includeContext === false) { args.push('--no-context'); }
     if (input.coworkProcess)    { args.push('--cowork-process', input.coworkProcess); }
     if (input.parentSession)    { args.push('--session-id', input.parentSession); }
     args.push('--cwd', cwd);
@@ -96,10 +97,19 @@ const handlers = {
       }
     }
 
-    return textResult(JSON.stringify({
-      taskId, status: 'running',
-      message: 'Sidecar started. Use sidecar_status to check progress, sidecar_read to get results.',
-    }));
+    const isHeadless = !!input.noUi;
+    const mode = isHeadless ? 'headless' : 'interactive';
+    const message = isHeadless
+      ? 'Sidecar started in headless mode. Estimate task complexity before polling: ' +
+        'quick tasks (questions, lookups) - first poll at 20s, then every 15-20s. ' +
+        'Medium tasks (code review, debugging) - first poll at 30s, then every 30s. ' +
+        'Heavy tasks (implementation, test generation, large refactors) - first poll at 45s, then every 45s. ' +
+        'Use sidecar_status to check progress.'
+      : 'Sidecar opened in interactive mode. Do NOT poll for status. ' +
+        "Tell the user: 'Let me know when you're done with the sidecar and have clicked Fold.' " +
+        'Then wait for the user to tell you. Use sidecar_read to get results once they confirm.';
+
+    return textResult(JSON.stringify({ taskId, status: 'running', mode, message }));
   },
 
   async sidecar_status(input, project) {

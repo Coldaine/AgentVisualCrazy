@@ -569,6 +569,44 @@ describe('MCP Server Handlers', () => {
     test('handler is an async function', () => {
       expect(typeof handlers.sidecar_start).toBe('function');
     });
+
+    test('returns interactive mode message when noUi is false', async () => {
+      let _capturedArgs;
+      await jest.isolateModulesAsync(async () => {
+        jest.doMock('child_process', () => ({
+          spawn: jest.fn((_cmd, args) => {
+            _capturedArgs = args;
+            return { pid: 12345, unref: jest.fn() };
+          }),
+        }));
+        const { handlers: h } = require('../src/mcp-server');
+        const result = await h.sidecar_start({ prompt: 'analyze auth', noUi: false }, '/tmp');
+        const parsed = JSON.parse(result.content[0].text);
+        expect(parsed.mode).toBe('interactive');
+        expect(parsed.message).toContain('Do NOT poll');
+        expect(parsed.message).toContain('clicked Fold');
+      });
+    });
+
+    test('returns headless mode message with complexity tiers when noUi is true', async () => {
+      let _capturedArgs;
+      await jest.isolateModulesAsync(async () => {
+        jest.doMock('child_process', () => ({
+          spawn: jest.fn((_cmd, args) => {
+            _capturedArgs = args;
+            return { pid: 12345, unref: jest.fn() };
+          }),
+        }));
+        const { handlers: h } = require('../src/mcp-server');
+        const result = await h.sidecar_start({ prompt: 'implement feature', noUi: true }, '/tmp');
+        const parsed = JSON.parse(result.content[0].text);
+        expect(parsed.mode).toBe('headless');
+        expect(parsed.message).toContain('complexity');
+        expect(parsed.message).toContain('20s');
+        expect(parsed.message).toContain('30s');
+        expect(parsed.message).toContain('45s');
+      });
+    });
   });
 
   describe('sidecar_resume', () => {
@@ -779,6 +817,69 @@ describe('sidecar_start context and summary args', () => {
     });
     expect(capturedArgs).toContain('--summary-length');
     expect(capturedArgs).toContain('verbose');
+  });
+
+  it('passes --no-context to CLI when includeContext is false', async () => {
+    let capturedArgs = [];
+    await jest.isolateModulesAsync(async () => {
+      jest.doMock('child_process', () => ({
+        spawn: (_cmd, args, _opts) => {
+          capturedArgs = args;
+          return { pid: 1234, unref: jest.fn(), stdout: { on: jest.fn() }, stderr: { on: jest.fn() } };
+        }
+      }));
+      jest.doMock('fs', () => ({
+        ...jest.requireActual('fs'),
+        mkdirSync: jest.fn(),
+        writeFileSync: jest.fn(),
+        existsSync: jest.fn(() => false)
+      }));
+      const { handlers } = require('../src/mcp-server');
+      await handlers.sidecar_start({ prompt: 'self-contained task', model: 'openrouter/test/model', includeContext: false }, '/tmp/proj');
+    });
+    expect(capturedArgs).toContain('--no-context');
+  });
+
+  it('does NOT pass --no-context when includeContext is true', async () => {
+    let capturedArgs = [];
+    await jest.isolateModulesAsync(async () => {
+      jest.doMock('child_process', () => ({
+        spawn: (_cmd, args, _opts) => {
+          capturedArgs = args;
+          return { pid: 1234, unref: jest.fn(), stdout: { on: jest.fn() }, stderr: { on: jest.fn() } };
+        }
+      }));
+      jest.doMock('fs', () => ({
+        ...jest.requireActual('fs'),
+        mkdirSync: jest.fn(),
+        writeFileSync: jest.fn(),
+        existsSync: jest.fn(() => false)
+      }));
+      const { handlers } = require('../src/mcp-server');
+      await handlers.sidecar_start({ prompt: 'needs context', model: 'openrouter/test/model', includeContext: true }, '/tmp/proj');
+    });
+    expect(capturedArgs).not.toContain('--no-context');
+  });
+
+  it('does NOT pass --no-context when includeContext is omitted', async () => {
+    let capturedArgs = [];
+    await jest.isolateModulesAsync(async () => {
+      jest.doMock('child_process', () => ({
+        spawn: (_cmd, args, _opts) => {
+          capturedArgs = args;
+          return { pid: 1234, unref: jest.fn(), stdout: { on: jest.fn() }, stderr: { on: jest.fn() } };
+        }
+      }));
+      jest.doMock('fs', () => ({
+        ...jest.requireActual('fs'),
+        mkdirSync: jest.fn(),
+        writeFileSync: jest.fn(),
+        existsSync: jest.fn(() => false)
+      }));
+      const { handlers } = require('../src/mcp-server');
+      await handlers.sidecar_start({ prompt: 'default behavior', model: 'openrouter/test/model' }, '/tmp/proj');
+    });
+    expect(capturedArgs).not.toContain('--no-context');
   });
 });
 
