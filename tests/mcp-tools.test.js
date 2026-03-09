@@ -128,6 +128,12 @@ describe('MCP Tool Definitions', () => {
     test('has parentSession in input schema', () => {
       expect(startTool.inputSchema).toHaveProperty('parentSession');
     });
+
+    test('description contains mode routing guidance', () => {
+      const tool = getTools().find(t => t.name === 'sidecar_start');
+      expect(tool.description).toContain('When in doubt, use interactive');
+      expect(tool.description).toContain('does NOT need to monitor');
+    });
   });
 
   describe('sidecar_status', () => {
