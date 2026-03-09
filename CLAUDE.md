@@ -271,7 +271,7 @@ sidecar/
 │   └── sync-agent-docs.js       # Sync CLAUDE.md → GEMINI.md, AGENTS.md
 ├── .husky/
 │   ├── pre-commit               # lint-staged + secrets + file size + doc drift
-│   └── pre-push                 # Full test suite + npm audit
+│   └── pre-push                 # Full test suite (cached by SHA) + npm audit
 ├── docs/
 │   ├── scaffolding/             # Portable enforcement kit (copy to new projects)
 │   └── plans/                   # Design and implementation plans
