@@ -174,6 +174,7 @@ sidecar start \
 
 **Optional:**
 - `--no-ui`: Run autonomously without GUI (for bulk tasks)
+- `--no-context`: Skip parent conversation history. Use when the briefing is self-contained and includes all necessary file paths, code snippets, and criteria. Default: context is included.
 - `--timeout <min>`: Headless timeout (default: 15)
 - `--context-turns <N>`: Max conversation turns to include (default: 50)
 - `--context-since <duration>`: Time filter for context (e.g., `2h`, `30m`, `1d`). Overrides `--context-turns`.
@@ -478,6 +479,47 @@ token refresh race conditions. I suspect TokenManager.ts.
 **Success criteria:** Identify root cause and propose fix
 
 **Constraints:** Focus on auth flow only, don't refactor unrelated code"
+```
+
+---
+
+## Context Control
+
+By default, sidecar includes your parent conversation history (up to 80k tokens). Skip this with `--no-context` when the task is self-contained.
+
+### When You MUST Include Context
+- Task references something from the current conversation ("that bug", "the approach you suggested")
+- Fact checking, second opinions, or code review of recent work
+- "Does this look right?" or validation requests
+- Continuing a debugging thread
+
+### When You Can Skip Context
+- Greenfield tasks with explicit file paths and instructions
+- General knowledge or research questions
+- Tasks fully described in the briefing (files, criteria, constraints all specified)
+- Independent analysis unrelated to current conversation
+
+### Self-Contained Briefing Example
+
+```bash
+sidecar start \
+  --model gemini \
+  --no-context \
+  --prompt "## Task Briefing
+
+**Objective:** Add retry logic with exponential backoff to the HTTP client
+
+**Files to read:**
+- src/api/client.ts (current implementation)
+- src/utils/retry.ts (existing retry utility, if any)
+
+**Success criteria:**
+- Retries up to 3 times on 5xx errors
+- Exponential backoff: 1s, 2s, 4s
+- No retry on 4xx errors
+- Add unit tests
+
+**Constraints:** Don't modify the public API surface"
 ```
 
 ---
