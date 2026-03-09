@@ -286,6 +286,8 @@ async function getSessionStatus(client, sessionId) {
  * @param {object} [options.mcp] - MCP server configurations
  * @param {string} [options.model] - Default model
  * @param {string} [options.client] - Client type ('cowork', 'code-local', etc.)
+ * @param {string} [options.systemPrompt] - System prompt to set on agent config (hidden from UI)
+ * @param {string} [options.agentName] - Agent to set systemPrompt on (default: 'chat')
  * @returns {object} Server options ready for createOpencodeServer
  */
 function buildServerOptions(options = {}) {
@@ -345,6 +347,25 @@ function buildServerOptions(options = {}) {
     ...(config.agent || {}),
     chat: chatAgent
   };
+
+  // Set system prompt on the target agent's config (hidden from UI).
+  // The promptAsync `system` field is rendered as a visible chat message,
+  // but agent.prompt is injected as the system instruction invisibly.
+  if (options.systemPrompt) {
+    const targetName = (options.agentName || 'chat').toLowerCase();
+    if (targetName === 'chat') {
+      // Chat is our custom agent — append to existing prompt (e.g., cowork)
+      chatAgent.prompt = chatAgent.prompt
+        ? `${chatAgent.prompt}\n\n${options.systemPrompt}`
+        : options.systemPrompt;
+    } else {
+      // Built-in agents (build, plan, etc.) — register with system prompt
+      config.agent[targetName] = {
+        ...(config.agent[targetName] || {}),
+        prompt: options.systemPrompt
+      };
+    }
+  }
 
   const serverOptions = {
     hostname: options.hostname || '127.0.0.1',

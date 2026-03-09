@@ -48,6 +48,78 @@ describe('buildServerOptions client-aware prompt', () => {
   });
 });
 
+describe('buildServerOptions systemPrompt on agent config', () => {
+  it('sets systemPrompt on the target agent (chat)', () => {
+    const opts = buildServerOptions({
+      systemPrompt: '# SIDECAR SESSION\nYou are a sidecar agent.',
+      agentName: 'chat'
+    });
+    const chatAgent = opts.config.agent.chat;
+
+    expect(chatAgent.prompt).toBe('# SIDECAR SESSION\nYou are a sidecar agent.');
+  });
+
+  it('sets systemPrompt on build agent when agentName is build', () => {
+    const opts = buildServerOptions({
+      systemPrompt: '# SIDECAR SESSION\nBuild agent prompt.',
+      agentName: 'build'
+    });
+
+    expect(opts.config.agent.build).toBeDefined();
+    expect(opts.config.agent.build.prompt).toBe('# SIDECAR SESSION\nBuild agent prompt.');
+  });
+
+  it('sets systemPrompt on plan agent when agentName is plan', () => {
+    const opts = buildServerOptions({
+      systemPrompt: '# SIDECAR SESSION\nPlan agent prompt.',
+      agentName: 'plan'
+    });
+
+    expect(opts.config.agent.plan).toBeDefined();
+    expect(opts.config.agent.plan.prompt).toBe('# SIDECAR SESSION\nPlan agent prompt.');
+  });
+
+  it('defaults to chat agent when agentName is not specified', () => {
+    const opts = buildServerOptions({
+      systemPrompt: '# SIDECAR SESSION\nDefault agent.'
+    });
+    const chatAgent = opts.config.agent.chat;
+
+    expect(chatAgent.prompt).toBe('# SIDECAR SESSION\nDefault agent.');
+  });
+
+  it('appends systemPrompt to existing cowork prompt', () => {
+    const opts = buildServerOptions({
+      client: 'cowork',
+      systemPrompt: '# SIDECAR SESSION\nContext here.',
+      agentName: 'chat'
+    });
+    const chatAgent = opts.config.agent.chat;
+
+    // Should contain both cowork prompt and system prompt
+    expect(chatAgent.prompt).toContain('Sidecar');
+    expect(chatAgent.prompt).toContain('# SIDECAR SESSION');
+    expect(chatAgent.prompt).toContain('Context here.');
+  });
+
+  it('does not set systemPrompt when not provided', () => {
+    const opts = buildServerOptions({});
+    const chatAgent = opts.config.agent.chat;
+
+    expect(chatAgent.prompt).toBeUndefined();
+  });
+
+  it('handles case-insensitive agent names', () => {
+    const opts = buildServerOptions({
+      systemPrompt: 'test prompt',
+      agentName: 'Build'
+    });
+
+    expect(opts.config.agent.build).toBeDefined();
+    expect(opts.config.agent.build.prompt).toBe('test prompt');
+  });
+});
+
 describe('buildServerOptions port handling', () => {
   it('does not include port key when port is not specified', () => {
     const opts = buildServerOptions({});

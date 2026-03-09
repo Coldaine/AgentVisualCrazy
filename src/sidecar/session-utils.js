@@ -188,6 +188,8 @@ async function executeMode(options) {
  * @param {object} [mcpConfig] - Optional MCP server configuration
  * @param {object} [options] - Additional server options
  * @param {string} [options.client] - Client type (e.g. 'cowork', 'code-local')
+ * @param {string} [options.systemPrompt] - System prompt to set on agent config (hidden from UI)
+ * @param {string} [options.agentName] - Agent to set systemPrompt on (default: 'chat')
  * @returns {Promise<{client: object, server: object}>}
  * @throws {Error} If server fails to start or health check fails
  */
@@ -208,6 +210,8 @@ async function startOpenCodeServer(mcpConfig, options = {}) {
   const serverOptions = { port };
   if (mcpConfig) { serverOptions.mcp = mcpConfig; }
   if (options.client) { serverOptions.client = options.client; }
+  if (options.systemPrompt) { serverOptions.systemPrompt = options.systemPrompt; }
+  if (options.agentName) { serverOptions.agentName = options.agentName; }
 
   const { client, server } = await startServer(serverOptions);
   logger.debug('OpenCode server started', { url: server.url });

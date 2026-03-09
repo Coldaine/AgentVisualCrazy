@@ -90,10 +90,14 @@ async function runInteractive(model, systemPrompt, userMessage, taskId, project,
 
   const { agent, isResume, conversation, mcp, reasoning, opencodeSessionId, client } = options;
 
-  // Start OpenCode server (shared with headless mode)
+  // Start OpenCode server with system prompt baked into agent config.
+  // Agent config prompts are hidden from the UI, unlike promptAsync's system field.
+  const agentConfig = mapAgentToOpenCode(agent);
   let ocClient, server;
   try {
-    const result = await startOpenCodeServer(mcp, { client });
+    const result = await startOpenCodeServer(mcp, {
+      client, systemPrompt, agentName: agentConfig.agent
+    });
     ocClient = result.client;
     server = result.server;
   } catch (error) {
@@ -115,13 +119,14 @@ async function runInteractive(model, systemPrompt, userMessage, taskId, project,
       // New session: create and send initial prompt
       sessionId = await createSession(ocClient);
 
+      // System prompt is set on agent config (hidden from UI).
+      // Do NOT pass system here — promptAsync's system field is visible in the UI.
       const promptOptions = {
-        model, system: systemPrompt,
+        model,
         parts: [{ type: 'text', text: userMessage }]
       };
 
       // Always set agent — defaults to 'chat' when not specified
-      const agentConfig = mapAgentToOpenCode(agent);
       promptOptions.agent = agentConfig.agent;
       if (reasoning) { promptOptions.reasoning = reasoning; }
 
