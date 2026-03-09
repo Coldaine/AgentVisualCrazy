@@ -443,6 +443,8 @@ Use `src/utils/logger.js` (levels: error/warn/info/debug). Logs go to stderr to 
 | `sidecar/progress.test.js` | Progress reader | Message counts, latest activity, last activity |
 | `sidecar/exit-handler.test.js` | Crash handler | Metadata update on crash, status transitions |
 | `mcp-headless-lifecycle.test.js` | MCP headless lifecycle | Start, poll, progress, crash, abort, read |
+| `mcp-discovery.test.js` | MCP discovery | Plugin chain, `~/.claude.json` mcpServers, merge priority, sidecar exclusion |
+| `mcp-repomix-e2e.integration.test.js` | MCP E2E (real LLM + repomix) | Real discovery → headless sidecar → repomix tool call |
 | `updater.test.js` | Update checker | Mock states, performUpdate spawn, CLI integration |
 | `evals/tests/transcript_parser.test.js` | Stream-json parsing | Tool call extraction, token usage, error capture |
 | `evals/tests/evaluator.test.js` | Eval criteria | Programmatic checks (7 types), LLM-as-judge prompt/response |
