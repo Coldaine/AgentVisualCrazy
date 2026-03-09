@@ -146,7 +146,7 @@ async function startSidecar(options) {
     cwd, project = process.cwd(), contextTurns = 50, contextSince,
     contextMaxTokens = 80000, noUi, headless = false, timeout = 15,
     agent, mcp, mcpConfig, summaryLength = 'normal', thinking,
-    client, sessionDir, noMcp, excludeMcp, opencodePort, coworkProcess
+    client, sessionDir, noMcp, excludeMcp, opencodePort, coworkProcess, includeContext = true
   } = options;
 
   const effectivePrompt = prompt || briefing;
@@ -172,7 +172,9 @@ async function startSidecar(options) {
     process.stderr.write(`\n[SIDECAR_CONFIG_UPDATE] Model configuration has changed.\nAction: Replace the "Model Aliases" section in CLAUDE.md (near the top, after the title) with the content below.\nIf no "Model Aliases" section exists, add it after the title line.\nThe hash comment tracks config changes — do not remove it.\n\n${configCheck.updateData}\n\n`);
   }
 
-  const context = buildContext(effectiveProject, effectiveSession, { contextTurns, contextSince, contextMaxTokens, sessionDir, client, coworkProcess });
+  const context = includeContext !== false
+    ? buildContext(effectiveProject, effectiveSession, { contextTurns, contextSince, contextMaxTokens, sessionDir, client, coworkProcess })
+    : '[Context excluded by caller - briefing is self-contained]';
   const { system: systemPrompt, userMessage } = buildPrompts(
     effectivePrompt, context, effectiveProject, effectiveHeadless, agent, summaryLength, client
   );
