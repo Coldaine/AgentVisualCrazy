@@ -136,7 +136,12 @@ function createSidecarWindow() {
     `).catch(() => {});
   });
 
-  contentView.webContents.loadURL(OPENCODE_URL);
+  // Navigate directly to the session URL to bypass the project selection screen.
+  // OpenCode's router format: /<base64url(projectPath)>/session/<sessionId>
+  const contentUrl = OPENCODE_SESSION_ID
+    ? `${OPENCODE_URL}/${Buffer.from(CWD).toString('base64url')}/session/${OPENCODE_SESSION_ID}`
+    : OPENCODE_URL;
+  contentView.webContents.loadURL(contentUrl);
 
   contentView.webContents.on('did-finish-load', () => {
     // Wait for React to render, then rebrand and show window
@@ -147,7 +152,6 @@ function createSidecarWindow() {
         if (!process.env.SIDECAR_HEADLESS_TEST) {
           mainWindow.show();
         }
-        if (OPENCODE_SESSION_ID) { navigateToSession(OPENCODE_SESSION_ID); }
       });
     }, 500);
   });
@@ -330,65 +334,6 @@ function rebrandUI() {
       });
     })();
   `).catch(() => {});
-}
-
-function navigateToSession(sessionId, retries = 8) {
-  if (!contentView || retries <= 0) { return; }
-
-  const safeId = JSON.stringify(sessionId);
-  const js = `
-    (function() {
-      const targetId = ${safeId};
-
-      // Strategy 1: Find a link whose href contains the session ID (most reliable)
-      const links = [...document.querySelectorAll('a')];
-      for (const el of links) {
-        const href = el.href || '';
-        if (href.includes(targetId)) {
-          el.click();
-          return 'clicked session';
-        }
-      }
-
-      // Strategy 2: Find a link whose href contains 'ses_' (any session link)
-      for (const el of links) {
-        const href = el.href || '';
-        if (href.includes('ses_')) {
-          el.click();
-          return 'clicked first session';
-        }
-      }
-
-      // Strategy 3: Find the project button in the sidebar by aria-label.
-      // Avoid matching the search bar (which also contains the project name).
-      const sidebarProjectBtn = document.querySelector(
-        'button[aria-label="sidecar"], button[aria-label="' + document.title.replace(/\\s+sidecar$/i, '').replace(/ /g, '') + '"]'
-      );
-      if (sidebarProjectBtn) {
-        sidebarProjectBtn.click();
-        return 'clicked project';
-      }
-
-      return null;
-    })();
-  `;
-
-  setTimeout(() => {
-    if (!contentView) { return; }
-    contentView.webContents.executeJavaScript(js).then(result => {
-      logger.debug('Session navigation', { result, sessionId, retries });
-      if (result) {
-        if (result === 'clicked project') {
-          navigateToSession(sessionId, retries - 1);
-        }
-      } else {
-        navigateToSession(sessionId, retries - 1);
-      }
-    }).catch(() => {
-      if (!contentView) { return; }
-      navigateToSession(sessionId, retries - 1);
-    });
-  }, 1500);
 }
 
 // ============================================================================

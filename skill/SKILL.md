@@ -1,6 +1,25 @@
+---
+name: sidecar
+description: >
+  Spawn conversations with other LLMs (Gemini, GPT, ChatGPT, Codex, o3, DeepSeek, Qwen,
+  Grok, Mistral, etc.) and fold results back into your context. TRIGGER when: user asks to
+  talk to, chat with, use, call, or spawn another LLM or model; user mentions Gemini, GPT,
+  ChatGPT, Codex, o3, DeepSeek, Claude (as a sidecar target), Qwen, Grok, Mistral, or any
+  non-current model by name; user asks to get a second opinion from another model; user
+  wants parallel exploration with a different model; user says "sidecar", "fork", or "fold".
+  CRITICAL RULES: (1) ALWAYS launch sidecar CLI commands with Bash tool's
+  run_in_background: true. Never run sidecar start/resume/continue in the foreground.
+  (2) The fold summary returns on stdout when the user clicks Fold in the GUI or the
+  headless agent finishes. Use TaskOutput to read it when the background task completes.
+  (3) Use --prompt for the start command (NOT --briefing). --briefing is only for
+  subagent spawn. (4) NEVER use o3 or o3-pro unless the user explicitly asks for it by
+  name. These models are extremely expensive ($10-60+ per request). If the user asks for
+  o3, warn them about the cost before proceeding. Default to gemini for most tasks.
+---
+
 # Sidecar: Multi-Model Subagent Tool
 
-Spawn parallel conversations with different LLMs (Gemini, GPT-4, o3, etc.) and fold results back into your context.
+Spawn parallel conversations with different LLMs (Gemini, GPT, ChatGPT, Codex, o3, etc.) and fold results back into your context.
 
 ## Installation
 

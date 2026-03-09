@@ -19,7 +19,7 @@ const { logger } = require('../src/utils/logger');
 function apiRequest(method, urlPath, port, body) {
   return new Promise((resolve, reject) => {
     const options = {
-      hostname: 'localhost',
+      hostname: '127.0.0.1',
       port,
       path: urlPath,
       method,

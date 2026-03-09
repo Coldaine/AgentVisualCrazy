@@ -35,7 +35,7 @@ npm run lint                 # Run ESLint
 
 ### CLI Usage
 ```bash
-node bin/sidecar.js start --model <model> --briefing "<task>" [--agent <agent>]
+node bin/sidecar.js start --model <model> --prompt "<task>" [--agent <agent>]
 node bin/sidecar.js list [--status <filter>] [--all]
 node bin/sidecar.js resume <task_id>
 node bin/sidecar.js continue <task_id> --briefing "..."
