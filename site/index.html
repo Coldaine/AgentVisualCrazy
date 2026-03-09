@@ -36,7 +36,8 @@ a{color:inherit;text-decoration:none}
 code{font-family:'IBM Plex Mono',monospace}
 
 /* NAV */
-nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(10,10,10,.85);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid var(--border)}
+nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(10,10,10,.92);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid var(--border);transform:translateY(-100%);transition:transform .35s cubic-bezier(.16,1,.3,1)}
+nav.nav-vis{transform:none}
 .nav-i{max-width:var(--mw);margin:0 auto;padding:0 2.5rem;height:56px;display:flex;align-items:center;justify-content:space-between}
 .logo{font-weight:700;font-size:1rem;letter-spacing:-.03em;display:flex;align-items:center;gap:.5rem}
 .logo svg{width:22px;height:22px;flex-shrink:0}
@@ -47,6 +48,18 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(10,10,10,.85
 .nav-pill:hover{color:var(--bg);opacity:.85}
 .nav-ghost{padding:.35rem .85rem;border-radius:6px;border:1px solid var(--border2);font-weight:500;font-size:.78rem;transition:border-color .15s}
 .nav-ghost:hover{border-color:var(--t3)}
+/* Hamburger */
+.ham{display:none;flex-direction:column;justify-content:center;gap:5px;background:none;border:none;cursor:pointer;padding:.5rem;margin-right:-.5rem;flex-shrink:0}
+.ham span{display:block;width:18px;height:1.5px;background:var(--t2);border-radius:2px;transition:transform .22s ease,opacity .22s ease}
+.ham.open span:nth-child(1){transform:translateY(6.5px) rotate(45deg)}
+.ham.open span:nth-child(2){opacity:0;transform:scaleX(0)}
+.ham.open span:nth-child(3){transform:translateY(-6.5px) rotate(-45deg)}
+/* Mobile dropdown */
+.mob-menu{display:none;flex-direction:column;border-top:1px solid var(--border);padding:.25rem 0 .5rem}
+.mob-menu a{padding:.8rem 2rem;font-size:.9rem;font-weight:500;color:var(--t2);border-bottom:1px solid var(--border);transition:color .15s}
+.mob-menu a:last-child{border-bottom:none}
+.mob-menu a:hover{color:var(--t1)}
+.mob-menu.open{display:flex}
 
 /* HERO - split layout like Daytona */
 /* grain SVG: feTurbulence fractalNoise tiled 200×200, opacity .06 */
@@ -55,12 +68,13 @@ nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(10,10,10,.85
 .hero-wrap::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 65% 90% at 18% 58%,rgba(217,119,87,.13) 0%,transparent 55%),radial-gradient(ellipse 60% 80% at 82% 40%,rgba(66,133,244,.16) 0%,transparent 55%),radial-gradient(ellipse 45% 55% at 52% 108%,rgba(74,222,128,.06) 0%,transparent 50%);pointer-events:none}
 /* vignette: top warm gradient + edge darkening + bottom fade to black */
 .hero-wrap::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(217,119,87,.05) 0%,transparent 35%,transparent 65%,#0a0a0a 100%),radial-gradient(ellipse 120% 100% at 50% 50%,transparent 52%,rgba(0,0,0,.22) 100%);pointer-events:none}
-.hero{position:relative;z-index:1;max-width:var(--mw);margin:0 auto;padding:9rem 2.5rem 5rem;display:grid;grid-template-columns:1fr 1fr;gap:4rem;align-items:center}
+.hero{position:relative;z-index:1;max-width:var(--mw);margin:0 auto;padding:5rem 2.5rem 5rem;display:grid;grid-template-columns:1fr 1fr;gap:4rem;align-items:center}
 .hero-text{max-width:480px}
 .hero-tag{display:inline-flex;align-items:center;gap:.45rem;font-family:'IBM Plex Mono',monospace;font-size:.7rem;color:var(--t3);margin-bottom:1.8rem;letter-spacing:.03em}
 .hero-tag::before{display:none}
 h1{font-weight:800;font-size:clamp(3.4rem,5.5vw,5.2rem);line-height:.92;letter-spacing:-.05em;margin-bottom:1.4rem}
 h1 em{font-style:normal;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero-sub{font-size:clamp(1.5rem,2.8vw,2.1rem);font-weight:700;letter-spacing:-.03em;line-height:1;margin-bottom:1.4rem;color:var(--t1)}
 .hero-desc{font-size:1.05rem;color:#c5c5c3;line-height:1.65;margin-bottom:2.2rem}
 .hero-btns{display:flex;gap:.6rem;flex-wrap:wrap}
 .cmd{display:flex;align-items:center;gap:.5rem;padding:.55rem .9rem;border-radius:7px;background:var(--s1);border:1px solid var(--border2);font-family:'IBM Plex Mono',monospace;font-size:.82rem;color:var(--t1);cursor:pointer;transition:border-color .15s}
@@ -135,13 +149,17 @@ h2 span{color:#b5b5b3}
 .api-opt p{font-size:.78rem;color:var(--t3);line-height:1.6}
 /* SWARM */
 .swarm-wrap{display:grid;grid-template-columns:1fr 1fr;gap:3rem;align-items:center;margin-top:2.5rem}
+/* Swarm SVG animations: initial states set via JS (getTotalLength), classes trigger end state */
+.swarm-svg .farrow,.swarm-svg .darrow{opacity:0}
+@keyframes pulse-run{0%,100%{opacity:.08}50%{opacity:.28}}
+@keyframes pulse-results{0%,100%{opacity:.04}60%{opacity:.14}}
 .swarm-desc h3{font-weight:600;font-size:1.05rem;margin-bottom:.4rem}
 .swarm-desc p{color:#c5c5c3;font-size:.88rem;line-height:1.7;margin-bottom:1rem}
 .swarm-desc code{font-size:.8rem;color:var(--accent);background:var(--asoft);padding:.15rem .4rem;border-radius:4px}
 .swarm-feats{display:flex;flex-direction:column;gap:.6rem;margin-top:1rem}
 .swarm-feat{display:flex;align-items:center;gap:.5rem;font-size:.82rem;color:#c5c5c3}
 .swarm-feat::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--green);flex-shrink:0}
-@media(max-width:960px){.prov-grid{grid-template-columns:repeat(2,1fr)}.swarm-wrap{grid-template-columns:1fr}}
+@media(max-width:960px){.prov-grid{grid-template-columns:repeat(2,1fr)}.swarm-wrap{grid-template-columns:1fr}.ctx-grid{grid-template-columns:1fr!important}}
 @media(max-width:600px){.prov-grid{grid-template-columns:1fr}.api-note{flex-direction:column;gap:.8rem}}
 
 /* CTA */
@@ -153,6 +171,20 @@ h2 span{color:#b5b5b3}
 .btn-f{display:inline-flex;align-items:center;gap:.4rem;padding:.65rem 1.5rem;border-radius:7px;background:var(--t1);color:var(--bg);font-weight:700;font-size:.9rem;border:none;cursor:pointer;transition:opacity .15s}
 .btn-f:hover{opacity:.85}
 .btn-f svg{width:14px;height:14px}
+
+/* BUILT ON OPENCODE */
+.built-on-wrap{display:flex;align-items:center;gap:2rem;padding:1.8rem 2.2rem;border:1px solid var(--border);border-radius:12px;background:var(--s1)}
+.built-on-logo{display:flex;align-items:center;gap:.75rem;flex-shrink:0}
+.built-on-logo svg{width:38px;height:38px;flex-shrink:0}
+.built-on-name{font-weight:700;font-size:1.05rem;letter-spacing:-.02em;color:var(--t1)}
+.built-on-name em{font-style:normal;color:#7dd3fc}
+.built-on-desc{flex:1;font-size:.85rem;color:var(--t2);line-height:1.65}
+.built-on-desc a{color:#7dd3fc;text-decoration:underline;text-decoration-color:rgba(125,211,252,.3);text-underline-offset:2px;transition:color .15s}
+.built-on-desc a:hover{color:#bae6fd}
+.built-on-link{display:inline-flex;align-items:center;gap:.4rem;padding:.5rem 1rem;border-radius:7px;border:1px solid rgba(125,211,252,.2);font-size:.8rem;font-weight:600;color:#7dd3fc;white-space:nowrap;flex-shrink:0;transition:background .15s,border-color .15s}
+.built-on-link:hover{background:rgba(125,211,252,.07);border-color:rgba(125,211,252,.4)}
+.built-on-link svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:2}
+@media(max-width:960px){.built-on-wrap{flex-direction:column;align-items:flex-start;gap:1.2rem}}
 
 /* FOOTER */
 footer{border-top:1px solid var(--border);padding:2rem 2.5rem}
@@ -177,7 +209,7 @@ h2.v .w-anim{opacity:1;transform:none}
 
 /* RESPONSIVE */
 @media(max-width:960px){
-  .hero{grid-template-columns:1fr;gap:2rem;padding:7rem 1.5rem 3rem}
+  .hero{grid-template-columns:1fr;gap:2rem;padding:4rem 1.5rem 3rem}
   h1{font-size:clamp(4rem,12vw,6rem);line-height:.9}
   .hero-visual{max-width:500px}
   /* Cap SVG illustrations so stacked cards don't balloon */
@@ -186,11 +218,12 @@ h2.v .w-anim{opacity:1;transform:none}
   .g-cell{border-right:none!important;border-bottom:1px solid var(--border)}
   .g-cell:last-child{border-bottom:none}
   .g2-cell{border-right:none!important;padding:1.8rem!important}
-  /* Remove bottom-border exception — all cells have dividers in 1-col layout */
+  /* Remove bottom-border exception, all cells have dividers in 1-col layout */
   .g2-cell:nth-last-child(-n+2){border-bottom:1px solid var(--border)}
   .g2-cell:last-child{border-bottom:none}
   .case-r{grid-template-columns:1fr;gap:.2rem}
-  .nav-r a:not(.nav-pill){display:none}
+  .nav-r a{display:none}
+  .ham{display:flex}
   .ft-i{flex-direction:column;gap:.8rem;text-align:center}
   #context .w{grid-template-columns:1fr}
   /* Badges: smaller on mobile so they stay single-line */
@@ -207,7 +240,7 @@ h2.v .w-anim{opacity:1;transform:none}
 @media(max-width:600px){
   h1{font-size:clamp(3.6rem,14vw,5rem);line-height:.9}
   section{padding:3.5rem 1.2rem}
-  .hero{padding:6rem 1.2rem 2.5rem}
+  .hero{padding:3rem 1.2rem 2.5rem}
   .grid3 .g-cell{padding:1.5rem}
   .g2-cell{padding:1.4rem!important}
   /* Slightly smaller SVG cap on very small screens */
@@ -226,7 +259,17 @@ h2.v .w-anim{opacity:1;transform:none}
       <a href="#features">Features</a>
       <a href="https://www.npmjs.com/package/claude-sidecar" class="nav-ghost">npm</a>
       <a href="https://github.com/jrenaldi79/sidecar" class="nav-pill">GitHub</a>
+      <button class="ham" aria-label="Menu" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
     </div>
+  </div>
+  <div class="mob-menu">
+    <a href="#how">How It Works</a>
+    <a href="#cases">Use Cases</a>
+    <a href="#features">Features</a>
+    <a href="https://www.npmjs.com/package/claude-sidecar">npm</a>
+    <a href="https://github.com/jrenaldi79/sidecar">GitHub →</a>
   </div>
 </nav>
 
@@ -245,8 +288,9 @@ h2.v .w-anim{opacity:1;transform:none}
         Windows soon
       </span>
     </div>
-    <h1 class="rv">Fork. Work.<br><em>Fold.</em></h1>
-    <p class="hero-desc rv">A second AI window that opens alongside Claude, already knowing everything you're working on. No copy-pasting between windows. No re-explaining your codebase. Just a smarter model sitting right next to you, ready to help.</p>
+    <h1 class="rv">Claude <em>Sidecar</em></h1>
+    <p class="hero-sub rv">Fork. Work. <span style="background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Fold.</span></p>
+    <p class="hero-desc rv">Great teams don't rely on a single voice. Neither should your AI. Sidecar opens alongside Claude Code and Cowork, giving any model the full context of your session. Keep working while it thinks. Fold the best results back.</p>
     <div class="hero-btns rv">
       <div class="cmd" onclick="copyCmd(this)" style="background:rgba(74,222,128,.07);border-color:rgba(74,222,128,.25)">
         <span class="d" style="color:#4ade80">$</span><span style="color:#4ade80;font-weight:600">npm install -g claude-sidecar</span><span class="cp" style="border-color:rgba(74,222,128,.3);color:rgba(74,222,128,.6)">copy</span>
@@ -385,7 +429,7 @@ h2.v .w-anim{opacity:1;transform:none}
           <text x="210" y="78" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="7" fill="#555">auto-shared</text>
         </svg>
         <h3>01 &middot; Fork</h3>
-        <p>Your conversation history is automatically extracted and passed to the sidecar model. No copy-pasting.</p>
+        <p>Your conversation history is automatically passed to the new model. It starts with everything Claude already knows — no setup required.</p>
       </div>
       <div class="g-cell rv r2">
         <!-- Work illustration -->
@@ -426,14 +470,104 @@ h2.v .w-anim{opacity:1;transform:none}
 
 <hr class="sep">
 
+<!-- SWARM / PARALLEL SUBAGENTS -->
+<section id="swarm" style="background:var(--s1);border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
+  <div class="w">
+    <div class="tag rv">Parallel Subagents</div>
+    <h2 class="rv">Spawn Subagents.<br><span>Claude Orchestrates.</span></h2>
+    <p class="lead rv">Sidecar can also run headlessly as parallel subagents inside Claude Code or Cowork. Spawn multiple models at once. Each runs independently on its task. All results fold back into Claude.</p>
+    <div class="swarm-wrap">
+      <div class="rv">
+        <!-- Swarm SVG diagram -->
+        <svg class="swarm-svg" viewBox="0 0 460 340" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto">
+          <!-- Claude Code / Cowork - orchestrator at top -->
+          <rect x="130" y="0" width="200" height="60" rx="8" fill="#111113" stroke="#f5f5f3" stroke-width="1.5"/>
+          <circle cx="145" cy="14" r="3" fill="#e25555" opacity=".6"/><circle cx="154" cy="14" r="3" fill="#e2a855" opacity=".6"/><circle cx="163" cy="14" r="3" fill="#55c255" opacity=".6"/>
+          <text x="230" y="17" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="7" font-weight="600" fill="#a1a1a0">Claude Code / Cowork</text>
+          <text x="230" y="38" text-anchor="middle" font-family="Outfit,sans-serif" font-size="9.5" font-weight="600" fill="#f5f5f3">Orchestrator</text>
+          <text x="230" y="52" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="7" fill="#555">spawns headless sidecars</text>
+
+          <!-- Fork arrows down -->
+          <path class="fork1" d="M180 60 L60 110" stroke="#d97757" stroke-width="1.2"/><polygon class="farrow" points="62,107 56,113 65,113" fill="#d97757"/>
+          <path class="fork2" d="M230 60 L230 110" stroke="#d97757" stroke-width="1.2"/><polygon class="farrow" points="226,108 230,116 234,108" fill="#d97757"/>
+          <path class="fork3" d="M280 60 L400 110" stroke="#d97757" stroke-width="1.2"/><polygon class="farrow" points="395,107 404,113 398,107" fill="#d97757"/>
+
+          <!-- Sidecar 1: Gemini -->
+          <rect x="0" y="116" width="120" height="90" rx="8" fill="#111113" stroke="#4285F4" stroke-width="1.2"/>
+          <rect x="0" y="116" width="120" height="18" rx="8" fill="#4285F4" opacity=".08"/>
+          <rect x="0" y="128" width="120" height="6" fill="#111113"/>
+          <text x="60" y="130" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="7" font-weight="600" fill="#4285F4">Gemini 3 Pro</text>
+          <rect x="10" y="142" width="100" height="18" rx="4" fill="#161618"/>
+          <text x="60" y="154" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="6.5" fill="#a1a1a0">"Review architecture"</text>
+          <rect class="run-badge" x="10" y="166" width="58" height="12" rx="6" fill="#4ade80" opacity=".1"/><text x="39" y="175" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="6.5" fill="#4ade80">running...</text>
+          <rect x="72" y="166" width="38" height="12" rx="6" fill="#161618"/><text x="91" y="175" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="6.5" fill="#555">--no-ui</text>
+          <text x="60" y="199" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="6.5" fill="#444">headless</text>
+
+          <!-- Sidecar 2: GPT -->
+          <rect x="170" y="116" width="120" height="90" rx="8" fill="#111113" stroke="#10a37f" stroke-width="1.2"/>
+          <rect x="170" y="116" width="120" height="18" rx="8" fill="#10a37f" opacity=".08"/>
+          <rect x="170" y="128" width="120" height="6" fill="#111113"/>
+          <text x="230" y="130" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="7" font-weight="600" fill="#10a37f">GPT-5</text>
+          <rect x="180" y="142" width="100" height="18" rx="4" fill="#161618"/>
+          <text x="230" y="154" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="6.5" fill="#a1a1a0">"Audit security"</text>
+          <rect class="run-badge" x="180" y="166" width="58" height="12" rx="6" fill="#4ade80" opacity=".1"/><text x="209" y="175" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="6.5" fill="#4ade80">running...</text>
+          <rect x="242" y="166" width="38" height="12" rx="6" fill="#161618"/><text x="261" y="175" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="6.5" fill="#555">--no-ui</text>
+          <text x="230" y="199" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="6.5" fill="#444">headless</text>
+
+          <!-- Sidecar 3: DeepSeek -->
+          <rect x="340" y="116" width="120" height="90" rx="8" fill="#111113" stroke="#738ADB" stroke-width="1.2"/>
+          <rect x="340" y="116" width="120" height="18" rx="8" fill="#738ADB" opacity=".08"/>
+          <rect x="340" y="128" width="120" height="6" fill="#111113"/>
+          <text x="400" y="130" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="7" font-weight="600" fill="#738ADB">DeepSeek R1</text>
+          <rect x="350" y="142" width="100" height="18" rx="4" fill="#161618"/>
+          <text x="400" y="154" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="6.5" fill="#a1a1a0">"Generate tests"</text>
+          <rect class="run-badge" x="350" y="166" width="58" height="12" rx="6" fill="#4ade80" opacity=".1"/><text x="379" y="175" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="6.5" fill="#4ade80">running...</text>
+          <rect x="412" y="166" width="38" height="12" rx="6" fill="#161618"/><text x="431" y="175" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="6.5" fill="#555">--no-ui</text>
+          <text x="400" y="199" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="6.5" fill="#444">headless</text>
+
+          <!-- Fold arrows back up to results -->
+          <path class="fold1" d="M60 210 L120 250" stroke="#666" stroke-width="1"/><polygon class="darrow" points="117,247 124,253 120,246" fill="#666"/>
+          <path class="fold2" d="M230 210 L230 250" stroke="#666" stroke-width="1"/><polygon class="darrow" points="226,248 230,256 234,248" fill="#666"/>
+          <path class="fold3" d="M400 210 L340 250" stroke="#666" stroke-width="1"/><polygon class="darrow" points="343,247 336,253 340,246" fill="#666"/>
+
+          <!-- Results collected -->
+          <rect class="results-glow" x="80" y="256" width="300" height="60" rx="8" fill="#111113" stroke="#d97757" stroke-width="1" stroke-dasharray="4,2"/>
+          <text x="230" y="275" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="8" font-weight="600" fill="#d97757">3 FOLD Summaries Received</text>
+          <text x="230" y="290" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="7" fill="#e8a07c">Architecture verified. 2 vulnerabilities found. 47 tests generated.</text>
+          <text x="230" y="305" text-anchor="middle" font-family="Outfit,sans-serif" font-size="7.5" fill="#555">All results flow back into Claude's context</text>
+
+          <!-- Fold labels -->
+          <text x="82" y="238" font-family="IBM Plex Mono,monospace" font-size="6.5" fill="#555">fold</text>
+          <text x="222" y="238" font-family="IBM Plex Mono,monospace" font-size="6.5" fill="#555">fold</text>
+          <text x="345" y="238" font-family="IBM Plex Mono,monospace" font-size="6.5" fill="#555">fold</text>
+        </svg>
+      </div>
+      <div class="swarm-desc rv">
+        <h3>Claude as orchestrator. Any model as a specialist.</h3>
+        <p>From inside Claude Code or Cowork, ask Claude to spawn headless sidecars using the MCP tool. Each subagent gets your full session context, works autonomously on its assigned task, and returns a structured summary. No window switching, no prompting each model yourself.</p>
+        <p>Run multiple sidecars simultaneously to split work across specialized models. One reviews architecture. Another audits security. A third generates tests. Claude collects every summary and synthesizes the results back into your main context.</p>
+        <div class="swarm-feats">
+          <div class="swarm-feat">Native MCP tool works inside Claude Code and Cowork</div>
+          <div class="swarm-feat">Each subagent gets full conversation context automatically</div>
+          <div class="swarm-feat">Runs autonomously with a configurable timeout</div>
+          <div class="swarm-feat">Structured summaries fold back into Claude's context</div>
+          <div class="swarm-feat">Conflict detection prevents subagents from overwriting each other</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="sep">
+
 <!-- CONTEXT SHARING - key differentiator -->
 <section id="context" style="background:var(--s1);border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
-  <div class="w" style="display:grid;grid-template-columns:1fr 1fr;gap:3.5rem;align-items:center">
+  <div class="w ctx-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:3.5rem;align-items:center">
     <div>
       <div class="tag rv">Automatic Context Sharing</div>
       <h2 class="rv">Your Claude Context.<br><span>Any Model.</span></h2>
-      <p class="lead rv" style="max-width:420px">Sidecar reads your active Claude Code session and automatically shares the full conversation context with whatever model you choose. No export, no copy-paste, no re-explaining what you're working on.</p>
-      <p class="lead rv" style="max-width:420px;margin-top:.8rem">This is the only tool that bridges Claude Code's context to other LLMs. Every sidecar starts with everything Claude knows.</p>
+      <p class="lead rv" style="max-width:420px">Sidecar reads your active Claude Code session and passes it to whichever model you choose. No export, no copy-paste, no starting from scratch.</p>
+      <p class="lead rv" style="max-width:420px;margin-top:.8rem">The only tool that bridges Claude Code sessions to other AI models. Every sidecar starts with everything Claude already knows.</p>
       <div class="rv" style="margin-top:1.4rem;display:flex;gap:1rem;flex-wrap:wrap">
         <span style="display:inline-flex;align-items:center;gap:.35rem;font-size:.78rem;color:var(--t2)"><span style="width:5px;height:5px;border-radius:50%;background:var(--green);flex-shrink:0"></span>Conversation history</span>
         <span style="display:inline-flex;align-items:center;gap:.35rem;font-size:.78rem;color:var(--t2)"><span style="width:5px;height:5px;border-radius:50%;background:var(--green);flex-shrink:0"></span>File changes</span>
@@ -580,7 +714,7 @@ h2.v .w-anim{opacity:1;transform:none}
   <div class="w">
     <div class="tag rv">Use Cases</div>
     <h2 class="rv">Built for How<br><span>You Actually Work.</span></h2>
-    <p class="lead rv">Every sidecar shares your context automatically. No re-explaining, no copy-pasting.</p>
+    <p class="lead rv">Every sidecar shares your context automatically. Just pick a model and get to work.</p>
     <div class="vig-grid">
       <!-- Fact Check -->
       <div class="vig-card rv r1">
@@ -616,7 +750,7 @@ h2.v .w-anim{opacity:1;transform:none}
         </svg>
         <div class="vig-body">
           <h3>Fact-Check</h3>
-          <p>Claude proposed an architecture? Fork to Gemini with full context and verify. Catch assumptions before they become bugs.</p>
+          <p>Claude proposed an architecture? Send it to Gemini for a second opinion. Catch bad assumptions before they become bugs.</p>
         </div>
       </div>
       <!-- Debug -->
@@ -653,7 +787,7 @@ h2.v .w-anim{opacity:1;transform:none}
         </svg>
         <div class="vig-body">
           <h3>Debug</h3>
-          <p>Stuck on a bug? Fork the full error context to a different model. Fresh eyes often spot what familiarity misses.</p>
+          <p>Stuck on a bug? Bring in a different model for a second look. Fresh eyes often spot what familiarity misses.</p>
         </div>
       </div>
       <!-- Brainstorm -->
@@ -741,104 +875,12 @@ h2.v .w-anim{opacity:1;transform:none}
         </svg>
         <div class="vig-body">
           <h3>Fresh Eyes</h3>
-          <p>Deep in a session and losing perspective? Fork to a new model that sees your full context without the tunnel vision.</p>
+          <p>Deep in a session and losing perspective? Bring in a fresh model. It sees everything you've built, without the tunnel vision.</p>
         </div>
       </div>
     </div>
   </div>
 </section>
-
-<hr class="sep">
-
-<!-- SWARM / PARALLEL -->
-<section id="swarm" style="background:var(--s1);border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
-  <div class="w">
-    <div class="tag rv">Multi-Model Swarm</div>
-    <h2 class="rv">Run a Swarm.<br><span>Claude Orchestrates.</span></h2>
-    <p class="lead rv">Spawn multiple headless sidecars in parallel. Each talks to a different model. Claude collects every perspective.</p>
-    <div class="swarm-wrap">
-      <div class="rv">
-        <!-- Swarm SVG diagram -->
-        <svg viewBox="0 0 460 340" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto">
-          <!-- Claude Code - orchestrator at top -->
-          <rect x="130" y="0" width="200" height="60" rx="8" fill="#111113" stroke="#f5f5f3" stroke-width="1.5"/>
-          <circle cx="145" cy="14" r="3" fill="#e25555" opacity=".6"/><circle cx="154" cy="14" r="3" fill="#e2a855" opacity=".6"/><circle cx="163" cy="14" r="3" fill="#55c255" opacity=".6"/>
-          <text x="230" y="17" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="8" font-weight="600" fill="#a1a1a0">Claude Code</text>
-          <text x="230" y="38" text-anchor="middle" font-family="Outfit,sans-serif" font-size="9.5" font-weight="600" fill="#f5f5f3">Orchestrator</text>
-          <text x="230" y="52" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="7" fill="#555">spawns headless sidecars</text>
-
-          <!-- Fork arrows down -->
-          <path d="M180 60 L60 110" stroke="#d97757" stroke-width="1.2" stroke-dasharray="4,3"/><polygon points="62,107 56,113 65,113" fill="#d97757"/>
-          <path d="M230 60 L230 110" stroke="#d97757" stroke-width="1.2" stroke-dasharray="4,3"/><polygon points="226,108 230,116 234,108" fill="#d97757"/>
-          <path d="M280 60 L400 110" stroke="#d97757" stroke-width="1.2" stroke-dasharray="4,3"/><polygon points="395,107 404,113 398,107" fill="#d97757"/>
-
-          <!-- Sidecar 1: Gemini -->
-          <rect x="0" y="116" width="120" height="90" rx="8" fill="#111113" stroke="#4285F4" stroke-width="1.2"/>
-          <rect x="0" y="116" width="120" height="18" rx="8" fill="#4285F4" opacity=".08"/>
-          <rect x="0" y="128" width="120" height="6" fill="#111113"/>
-          <text x="60" y="130" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="7" font-weight="600" fill="#4285F4">Gemini 3 Pro</text>
-          <rect x="10" y="142" width="100" height="18" rx="4" fill="#161618"/>
-          <text x="60" y="154" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="6.5" fill="#a1a1a0">"Review architecture"</text>
-          <rect x="10" y="166" width="58" height="12" rx="6" fill="#4ade80" opacity=".1"/><text x="39" y="175" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="6.5" fill="#4ade80">running...</text>
-          <rect x="72" y="166" width="38" height="12" rx="6" fill="#161618"/><text x="91" y="175" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="6.5" fill="#555">--no-ui</text>
-          <text x="60" y="199" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="6.5" fill="#444">headless</text>
-
-          <!-- Sidecar 2: GPT -->
-          <rect x="170" y="116" width="120" height="90" rx="8" fill="#111113" stroke="#10a37f" stroke-width="1.2"/>
-          <rect x="170" y="116" width="120" height="18" rx="8" fill="#10a37f" opacity=".08"/>
-          <rect x="170" y="128" width="120" height="6" fill="#111113"/>
-          <text x="230" y="130" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="7" font-weight="600" fill="#10a37f">GPT-5</text>
-          <rect x="180" y="142" width="100" height="18" rx="4" fill="#161618"/>
-          <text x="230" y="154" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="6.5" fill="#a1a1a0">"Audit security"</text>
-          <rect x="180" y="166" width="58" height="12" rx="6" fill="#4ade80" opacity=".1"/><text x="209" y="175" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="6.5" fill="#4ade80">running...</text>
-          <rect x="242" y="166" width="38" height="12" rx="6" fill="#161618"/><text x="261" y="175" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="6.5" fill="#555">--no-ui</text>
-          <text x="230" y="199" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="6.5" fill="#444">headless</text>
-
-          <!-- Sidecar 3: DeepSeek -->
-          <rect x="340" y="116" width="120" height="90" rx="8" fill="#111113" stroke="#738ADB" stroke-width="1.2"/>
-          <rect x="340" y="116" width="120" height="18" rx="8" fill="#738ADB" opacity=".08"/>
-          <rect x="340" y="128" width="120" height="6" fill="#111113"/>
-          <text x="400" y="130" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="7" font-weight="600" fill="#738ADB">DeepSeek R1</text>
-          <rect x="350" y="142" width="100" height="18" rx="4" fill="#161618"/>
-          <text x="400" y="154" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="6.5" fill="#a1a1a0">"Generate tests"</text>
-          <rect x="350" y="166" width="58" height="12" rx="6" fill="#4ade80" opacity=".1"/><text x="379" y="175" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="6.5" fill="#4ade80">running...</text>
-          <rect x="412" y="166" width="38" height="12" rx="6" fill="#161618"/><text x="431" y="175" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="6.5" fill="#555">--no-ui</text>
-          <text x="400" y="199" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="6.5" fill="#444">headless</text>
-
-          <!-- Fold arrows back up to results -->
-          <path d="M60 210 L120 250" stroke="#666" stroke-width="1" stroke-dasharray="3,2"/><polygon points="117,247 124,253 120,246" fill="#666"/>
-          <path d="M230 210 L230 250" stroke="#666" stroke-width="1" stroke-dasharray="3,2"/><polygon points="226,248 230,256 234,248" fill="#666"/>
-          <path d="M400 210 L340 250" stroke="#666" stroke-width="1" stroke-dasharray="3,2"/><polygon points="343,247 336,253 340,246" fill="#666"/>
-
-          <!-- Results collected -->
-          <rect x="80" y="256" width="300" height="60" rx="8" fill="#111113" stroke="#d97757" stroke-width="1" stroke-dasharray="4,2"/>
-          <text x="230" y="275" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="8" font-weight="600" fill="#d97757">3 FOLD Summaries Received</text>
-          <text x="230" y="290" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="7" fill="#e8a07c">Architecture verified. 2 vulnerabilities found. 47 tests generated.</text>
-          <text x="230" y="305" text-anchor="middle" font-family="Outfit,sans-serif" font-size="7.5" fill="#555">All results flow back into Claude's context</text>
-
-          <!-- Fold labels -->
-          <text x="82" y="238" font-family="IBM Plex Mono,monospace" font-size="6.5" fill="#555">fold</text>
-          <text x="222" y="238" font-family="IBM Plex Mono,monospace" font-size="6.5" fill="#555">fold</text>
-          <text x="345" y="238" font-family="IBM Plex Mono,monospace" font-size="6.5" fill="#555">fold</text>
-        </svg>
-      </div>
-      <div class="swarm-desc rv">
-        <h3>Claude as the orchestrator. Every other model as a specialist.</h3>
-        <p>Run <code>sidecar start --no-ui</code> multiple times to spawn headless sidecars in parallel. Each one runs autonomously with a different model and task. Claude collects the structured summaries and synthesizes the results.</p>
-        <p>Use background execution (<code>Ctrl+B</code> in Claude Code) to launch sidecars without blocking your main session. It's a multi-model swarm with Claude directing traffic.</p>
-        <div class="swarm-feats">
-          <div class="swarm-feat">Each sidecar gets full conversation context automatically</div>
-          <div class="swarm-feat">Headless mode runs autonomously with a 15-minute timeout</div>
-          <div class="swarm-feat">Structured FOLD summaries flow back to Claude</div>
-          <div class="swarm-feat">Different models bring different strengths to each task</div>
-          <div class="swarm-feat">Conflict detection prevents sidecars from overwriting each other</div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<hr class="sep">
 
 <!-- MODELS -->
 <section id="models">
@@ -846,33 +888,33 @@ h2.v .w-anim{opacity:1;transform:none}
     <div class="tag rv">Compatible Models</div>
     <h2 class="rv">Any Model.<br><span>Your Keys.</span></h2>
     <p class="lead rv">Use your existing API keys directly, or connect everything through OpenRouter with a single key.</p>
-    <div class="prov-grid rv">
-      <div class="prov-card">
+    <div class="prov-grid">
+      <div class="prov-card rv" style="transition-delay:0s">
         <svg viewBox="0 0 24 24" fill="#8E75B2"><path d="M11.04 19.32Q12 21.51 12 24q0-2.49.93-4.68.96-2.19 2.58-3.81t3.81-2.55Q21.51 12 24 12q-2.49 0-4.68-.93a12.3 12.3 0 0 1-3.81-2.58 12.3 12.3 0 0 1-2.58-3.81Q12 2.49 12 0q0 2.49-.96 4.68-.93 2.19-2.55 3.81a12.3 12.3 0 0 1-3.81 2.58Q2.49 12 0 12q2.49 0 4.68.96 2.19.93 3.81 2.55t2.55 3.81"/></svg>
         <span class="prov-name">Google Gemini</span>
         <span class="prov-models">Flash, Pro, Ultra</span>
       </div>
-      <div class="prov-card">
+      <div class="prov-card rv" style="transition-delay:.07s">
         <svg viewBox="0 0 24 24" fill="#fff"><path d="M22.2819 9.8211a5.9847 5.9847 0 0 0-.5157-4.9108 6.0462 6.0462 0 0 0-6.5098-2.9A6.0651 6.0651 0 0 0 4.9807 4.1818a5.9847 5.9847 0 0 0-3.9977 2.9 6.0462 6.0462 0 0 0 .7427 7.0966 5.98 5.98 0 0 0 .511 4.9107 6.051 6.051 0 0 0 6.5146 2.9001A5.9847 5.9847 0 0 0 13.2599 24a6.0557 6.0557 0 0 0 5.7718-4.2058 5.9894 5.9894 0 0 0 3.9977-2.9001 6.0557 6.0557 0 0 0-.7475-7.0729zm-9.022 12.6081a4.4755 4.4755 0 0 1-2.8764-1.0408l.1419-.0804 4.7783-2.7582a.7948.7948 0 0 0 .3927-.6813v-6.7369l2.02 1.1686a.071.071 0 0 1 .038.052v5.5826a4.504 4.504 0 0 1-4.4945 4.4944zm-9.6607-4.1254a4.4708 4.4708 0 0 1-.5346-3.0137l.142.0852 4.783 2.7582a.7712.7712 0 0 0 .7806 0l5.8428-3.3685v2.3324a.0804.0804 0 0 1-.0332.0615L9.74 19.9502a4.4992 4.4992 0 0 1-6.1408-1.6464zM2.3408 7.8956a4.485 4.485 0 0 1 2.3655-1.9728V11.6a.7664.7664 0 0 0 .3879.6765l5.8144 3.3543-2.0201 1.1685a.0757.0757 0 0 1-.071 0l-4.8303-2.7865A4.504 4.504 0 0 1 2.3408 7.872zm16.5963 3.8558L13.1038 8.364 15.1192 7.2a.0757.0757 0 0 1 .071 0l4.8303 2.7913a4.4944 4.4944 0 0 1-.6765 8.1042v-5.6772a.79.79 0 0 0-.407-.667zm2.0107-3.0231l-.142-.0852-4.7735-2.7818a.7759.7759 0 0 0-.7854 0L9.409 9.2297V6.8974a.0662.0662 0 0 1 .0284-.0615l4.8303-2.7866a4.4992 4.4992 0 0 1 6.6802 4.66zM8.3065 12.863l-2.02-1.1638a.0804.0804 0 0 1-.038-.0567V6.0742a4.4992 4.4992 0 0 1 7.3757-3.4537l-.142.0805L8.704 5.459a.7948.7948 0 0 0-.3927.6813zm1.0976-2.3654l2.602-1.4998 2.6069 1.4998v2.9994l-2.5974 1.4997-2.6067-1.4997Z"/></svg>
         <span class="prov-name">OpenAI</span>
         <span class="prov-models">GPT-5, o3, o4-mini</span>
       </div>
-      <div class="prov-card">
+      <div class="prov-card rv" style="transition-delay:.14s">
         <svg viewBox="0 0 24 24" fill="#D97757"><path d="M17.3041 3.541h-3.6718l6.696 16.918H24Zm-10.6082 0L0 20.459h3.7442l1.3693-3.5527h7.0052l1.3693 3.5528h3.7442L10.5363 3.5409Zm-.3712 10.2232 2.2914-5.9456 2.2914 5.9456Z"/></svg>
         <span class="prov-name">Anthropic</span>
         <span class="prov-models">Claude Opus, Sonnet, Haiku</span>
       </div>
-      <div class="prov-card">
+      <div class="prov-card rv" style="transition-delay:.21s">
         <svg viewBox="0 0 24 24" fill="#fff"><path d="M14.234 10.162 22.977 0h-2.072l-7.591 8.824L7.251 0H.258l9.168 13.343L.258 24H2.33l8.016-9.318L16.749 24h6.993zm-2.837 3.299-.929-1.329L3.076 1.56h3.182l5.965 8.532.929 1.329 7.754 11.09h-3.182z"/></svg>
         <span class="prov-name">xAI</span>
         <span class="prov-models">Grok 3, Grok 3 Mini</span>
       </div>
-      <div class="prov-card">
+      <div class="prov-card rv" style="transition-delay:.28s">
         <svg viewBox="0 0 24 24" fill="#0081FB"><path d="M6.915 4.03c-1.968 0-3.683 1.28-4.871 3.113C.704 9.208 0 11.883 0 14.449c0 .706.07 1.369.21 1.973a6.624 6.624 0 0 0 .265.86 5.297 5.297 0 0 0 .371.761c.696 1.159 1.818 1.927 3.593 1.927 1.497 0 2.633-.671 3.965-2.444.76-1.012 1.144-1.626 2.663-4.32l.756-1.339.186-.325c.061.1.121.196.183.3l2.152 3.595c.724 1.21 1.665 2.556 2.47 3.314 1.046.987 1.992 1.22 3.06 1.22 1.075 0 1.876-.355 2.455-.843a3.743 3.743 0 0 0 .81-.973c.542-.939.861-2.127.861-3.745 0-2.72-.681-5.357-2.084-7.45-1.282-1.912-2.957-2.93-4.716-2.93-1.047 0-2.088.467-3.053 1.308-.652.57-1.257 1.29-1.82 2.05-.69-.875-1.335-1.547-1.958-2.056-1.182-.966-2.315-1.303-3.454-1.303zm10.16 2.053c1.147 0 2.188.758 2.992 1.999 1.132 1.748 1.647 4.195 1.647 6.4 0 1.548-.368 2.9-1.839 2.9-.58 0-1.027-.23-1.664-1.004-.496-.601-1.343-1.878-2.832-4.358l-.617-1.028a44.908 44.908 0 0 0-1.255-1.98c.07-.109.141-.224.211-.327 1.12-1.667 2.118-2.602 3.358-2.602zm-10.201.553c1.265 0 2.058.791 2.675 1.446.307.327.737.871 1.234 1.579l-1.02 1.566c-.757 1.163-1.882 3.017-2.837 4.338-1.191 1.649-1.81 1.817-2.486 1.817-.524 0-1.038-.237-1.383-.794-.263-.426-.464-1.13-.464-2.046 0-2.221.63-4.535 1.66-6.088.454-.687.964-1.226 1.533-1.533a2.264 2.264 0 0 1 1.088-.285z"/></svg>
         <span class="prov-name">Meta</span>
         <span class="prov-models">Llama 4 Scout, Maverick</span>
       </div>
-      <div class="prov-card">
+      <div class="prov-card rv" style="transition-delay:.35s">
         <img src="https://avatars.githubusercontent.com/u/148330874?s=64" alt="DeepSeek" width="32" height="32" style="border-radius:50%">
         <span class="prov-name">DeepSeek</span>
         <span class="prov-models">R1, V3, Coder</span>
@@ -911,9 +953,43 @@ h2.v .w-anim{opacity:1;transform:none}
       <div class="g2-cell rv r1"><h4>Session Persistence</h4><p>Every sidecar is saved. List past sessions, resume them, or chain new investigations on previous findings.</p></div>
       <div class="g2-cell rv r2"><h4>Context Filtering</h4><p>Filter by turns, time window, or token budget. Skip context entirely for standalone tasks.</p></div>
       <div class="g2-cell rv r1"><h4>MCP Integration</h4><p>Full MCP server for Claude Desktop and Cowork. Sidecar tools appear natively in Cowork's sandbox.</p></div>
-      <div class="g2-cell rv r2"><h4>Agent Modes</h4><p>Chat, Plan, or Build. Match the agent to the task for the right level of autonomous control.</p></div>
+      <div class="g2-cell rv r2"><h4>Agent Modes</h4><p>Choose the mode that fits the task — from quick conversation to fully autonomous work.</p></div>
       <div class="g2-cell rv r1"><h4>Mid-Session Model Switching</h4><p>Switch models without restarting. Start fast with Flash, then switch to Pro for complex analysis.</p></div>
       <div class="g2-cell rv r2"><h4>Auto-Update</h4><p>Background update checks with zero latency. One-click updates from the toolbar or CLI.</p></div>
+    </div>
+  </div>
+</section>
+
+<hr class="sep">
+
+<!-- BUILT ON OPENCODE -->
+<section id="built-on">
+  <div class="w">
+    <div class="tag rv">Foundation</div>
+    <h2 class="rv">Built on <em style="font-style:normal;background:linear-gradient(135deg,#7dd3fc,#a5f3fc);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">OpenCode.</em></h2>
+    <p class="lead rv" style="margin-bottom:2.5rem">Sidecar builds on OpenCode, not around it. OpenCode does the heavy lifting.</p>
+    <div class="built-on-wrap rv">
+      <div class="built-on-logo">
+        <!-- OpenCode logomark: the arrow/forward-slash mark from their brand -->
+        <svg viewBox="0 0 38 38" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="38" height="38" rx="9" fill="#0f1117"/>
+          <rect width="38" height="38" rx="9" fill="url(#oc-grad)" opacity=".12"/>
+          <path d="M10 14l6 5-6 5" stroke="#7dd3fc" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M19 24h9" stroke="#7dd3fc" stroke-width="2.2" stroke-linecap="round"/>
+          <defs><linearGradient id="oc-grad" x1="0" y1="0" x2="38" y2="38" gradientUnits="userSpaceOnUse"><stop stop-color="#7dd3fc"/><stop offset="1" stop-color="#a5f3fc"/></linearGradient></defs>
+        </svg>
+        <div>
+          <div class="built-on-name"><em>OpenCode</em></div>
+          <div style="font-size:.72rem;color:var(--t3);font-family:'IBM Plex Mono',monospace;letter-spacing:.04em">opencode.ai</div>
+        </div>
+      </div>
+      <div class="built-on-desc">
+        <a href="https://opencode.ai" target="_blank" rel="noopener">OpenCode</a> is the open-source AI coding engine that powers every sidecar session. It handles the conversation, tool use, native agent types, and the web UI. Sidecar adds context sharing from Claude Code, session history, the fold workflow, MCP support, and the Electron shell. We don't reinvent the wheel.
+      </div>
+      <a href="https://opencode.ai" target="_blank" rel="noopener" class="built-on-link">
+        opencode.ai
+        <svg viewBox="0 0 16 16"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
+      </a>
     </div>
   </div>
 </section>
@@ -947,12 +1023,45 @@ h2.v .w-anim{opacity:1;transform:none}
       <a href="https://github.com/jrenaldi79/sidecar/issues">Issues</a>
       <a href="https://github.com/jrenaldi79/sidecar/blob/main/LICENSE">License</a>
     </div>
-    <div class="ft-r">An experimental project by <a href="https://www.linkedin.com/in/renaldi/">John Renaldi</a> · Product executive, advisor, and educator</div>
+    <div class="ft-r">Built on <a href="https://opencode.ai" target="_blank" rel="noopener" style="color:#7dd3fc">OpenCode</a> · An experiment by <a href="https://www.linkedin.com/in/renaldi/">John Renaldi</a></div>
   </div>
 </footer>
 
 <script>
 function copyCmd(e){navigator.clipboard.writeText('npm install -g claude-sidecar').then(()=>{const t=e.querySelector('.cp');t.textContent='copied!';setTimeout(()=>t.textContent='copy',2e3)})}
+/* Nav scroll reveal */
+const navEl=document.querySelector('nav');
+window.addEventListener('scroll',()=>{navEl.classList.toggle('nav-vis',window.scrollY>80)},{passive:true});
+/* Hamburger / mobile menu */
+const hamBtn=document.querySelector('.ham');
+const mobMenu=document.querySelector('.mob-menu');
+hamBtn.addEventListener('click',e=>{e.stopPropagation();const open=hamBtn.classList.toggle('open');mobMenu.classList.toggle('open',open);hamBtn.setAttribute('aria-expanded',open)});
+mobMenu.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>{hamBtn.classList.remove('open');mobMenu.classList.remove('open');hamBtn.setAttribute('aria-expanded','false')}));
+document.addEventListener('click',e=>{if(!navEl.contains(e.target)){hamBtn.classList.remove('open');mobMenu.classList.remove('open');hamBtn.setAttribute('aria-expanded','false')}});
+/* Swarm SVG draw-on animation via JS (CSS stroke-dashoffset initial values unreliable on SVG) */
+(function(){
+  const forks=['.fork1','.fork2','.fork3'].map(s=>document.querySelector('.swarm-svg '+s));
+  const folds=['.fold1','.fold2','.fold3'].map(s=>document.querySelector('.swarm-svg '+s));
+  const farrows=document.querySelectorAll('.swarm-svg .farrow');
+  const darrows=document.querySelectorAll('.swarm-svg .darrow');
+  const runBadges=document.querySelectorAll('.swarm-svg .run-badge');
+  const resultsGlow=document.querySelector('.swarm-svg .results-glow');
+  // Set initial hidden state using actual path length
+  forks.forEach((p,i)=>{if(!p)return;const l=Math.ceil(p.getTotalLength());p.style.strokeDasharray=l;p.style.strokeDashoffset=l;p.style.transition=`stroke-dashoffset .65s cubic-bezier(.4,0,.2,1) ${i*.13}s`;});
+  folds.forEach((p,i)=>{if(!p)return;const l=Math.ceil(p.getTotalLength());p.style.strokeDasharray=l;p.style.strokeDashoffset=l;p.style.transition=`stroke-dashoffset .55s cubic-bezier(.4,0,.2,1) ${1.2+i*.12}s`;});
+  // Trigger on intersection
+  const target=document.querySelector('#swarm .rv');
+  if(!target)return;
+  new IntersectionObserver(entries=>{
+    if(!entries[0].isIntersecting)return;
+    forks.forEach(p=>{if(p)p.style.strokeDashoffset=0;});
+    folds.forEach(p=>{if(p)p.style.strokeDashoffset=0;});
+    setTimeout(()=>farrows.forEach(a=>{a.style.transition='opacity .25s ease';a.style.opacity=1;}),580);
+    setTimeout(()=>darrows.forEach(a=>{a.style.transition='opacity .25s ease';a.style.opacity=1;}),1700);
+    setTimeout(()=>{runBadges.forEach((b,i)=>{b.style.animation=`pulse-run 1.6s ease-in-out ${i*.35}s infinite`;});},400);
+    setTimeout(()=>{if(resultsGlow)resultsGlow.style.animation='pulse-results 3s ease-in-out infinite';},1800);
+  },{threshold:.1}).observe(target);
+})();
 const io=new IntersectionObserver(e=>{e.forEach(e=>{if(e.isIntersecting){e.target.classList.add('v');io.unobserve(e.target)}})},{threshold:0,rootMargin:'0px 0px 40px 0px'});
 document.querySelectorAll('.rv').forEach((e,i)=>{const r=e.getBoundingClientRect();if(r.top<window.innerHeight+50){e.style.transitionDelay=(i*.06)+'s';e.classList.add('v')}else{io.observe(e)}});
 document.querySelectorAll('a[href^="#"]').forEach(a=>{a.addEventListener('click',e=>{e.preventDefault();document.querySelector(a.getAttribute('href'))?.scrollIntoView({behavior:'smooth'})})});
