@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Claude Sidecar - Multi-Model AI for Claude Code & Cowork</title>
+<meta name="description" content="Fork conversations to Gemini, GPT, DeepSeek, or any model. Works with Claude Code and Cowork. Fork, Work, Fold.">
+<meta property="og:title" content="Claude Sidecar">
+<meta property="og:description" content="Multi-model AI for Claude Code and Cowork. Fork, Work, Fold.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0a0a0a;
+  --s1:#111113;
+  --s2:#161618;
+  --s3:#1c1c1f;
+  --border:#222225;
+  --border2:#2c2c30;
+  --t1:#f5f5f3;
+  --t2:#a1a1a0;
+  --t3:#666;
+  --accent:#d97757;
+  --accent2:#e8a07c;
+  --asoft:rgba(217,119,87,.10);
+  --aglow:rgba(217,119,87,.05);
+  --green:#4ade80;
+  --mw:1200px;
+}
+html{scroll-behavior:smooth}
+body{font-family:'Outfit',system-ui,sans-serif;color:var(--t1);background:var(--bg);-webkit-font-smoothing:antialiased;line-height:1.6;overflow-x:hidden}
+::selection{background:var(--accent);color:#fff}
+a{color:inherit;text-decoration:none}
+code{font-family:'IBM Plex Mono',monospace}
+
+/* NAV */
+nav{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(10,10,10,.85);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid var(--border)}
+.nav-i{max-width:var(--mw);margin:0 auto;padding:0 2.5rem;height:56px;display:flex;align-items:center;justify-content:space-between}
+.logo{font-weight:700;font-size:1rem;letter-spacing:-.03em;display:flex;align-items:center;gap:.5rem}
+.logo svg{width:22px;height:22px;flex-shrink:0}
+.nav-r{display:flex;align-items:center;gap:1.6rem}
+.nav-r a{font-size:.82rem;color:var(--t3);font-weight:500;transition:color .15s}
+.nav-r a:hover{color:var(--t1)}
+.nav-pill{padding:.35rem .85rem;border-radius:6px;background:var(--t1);color:var(--bg);font-weight:600;font-size:.78rem}
+.nav-pill:hover{color:var(--bg);opacity:.85}
+.nav-ghost{padding:.35rem .85rem;border-radius:6px;border:1px solid var(--border2);font-weight:500;font-size:.78rem;transition:border-color .15s}
+.nav-ghost:hover{border-color:var(--t3)}
+
+/* HERO - split layout like Daytona */
+/* grain SVG: feTurbulence fractalNoise tiled 200×200, opacity .06 */
+.hero-wrap{position:relative;overflow:hidden;background-color:#0a0a0a;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='200' height='200' filter='url(%23n)' opacity='0.06'/%3E%3C/svg%3E"),radial-gradient(circle,rgba(255,255,255,.16) 1px,transparent 1px);background-size:200px 200px,28px 28px}
+/* 3-point color lighting: orange left, blue right, green bottom */
+.hero-wrap::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 65% 90% at 18% 58%,rgba(217,119,87,.13) 0%,transparent 55%),radial-gradient(ellipse 60% 80% at 82% 40%,rgba(66,133,244,.16) 0%,transparent 55%),radial-gradient(ellipse 45% 55% at 52% 108%,rgba(74,222,128,.06) 0%,transparent 50%);pointer-events:none}
+/* vignette: top warm gradient + edge darkening + bottom fade to black */
+.hero-wrap::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(217,119,87,.05) 0%,transparent 35%,transparent 65%,#0a0a0a 100%),radial-gradient(ellipse 120% 100% at 50% 50%,transparent 52%,rgba(0,0,0,.22) 100%);pointer-events:none}
+.hero{position:relative;z-index:1;max-width:var(--mw);margin:0 auto;padding:9rem 2.5rem 5rem;display:grid;grid-template-columns:1fr 1fr;gap:4rem;align-items:center}
+.hero-text{max-width:480px}
+.hero-tag{display:inline-flex;align-items:center;gap:.45rem;font-family:'IBM Plex Mono',monospace;font-size:.7rem;color:var(--t3);margin-bottom:1.8rem;letter-spacing:.03em}
+.hero-tag::before{display:none}
+h1{font-weight:800;font-size:clamp(3.4rem,5.5vw,5.2rem);line-height:.92;letter-spacing:-.05em;margin-bottom:1.4rem}
+h1 em{font-style:normal;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.hero-desc{font-size:1.05rem;color:#c5c5c3;line-height:1.65;margin-bottom:2.2rem}
+.hero-btns{display:flex;gap:.6rem;flex-wrap:wrap}
+.cmd{display:flex;align-items:center;gap:.5rem;padding:.55rem .9rem;border-radius:7px;background:var(--s1);border:1px solid var(--border2);font-family:'IBM Plex Mono',monospace;font-size:.82rem;color:var(--t1);cursor:pointer;transition:border-color .15s}
+.cmd:hover{border-color:var(--t3)}
+.cmd .d{color:var(--t3);user-select:none}
+.cmd .cp{font-size:.6rem;color:var(--t3);padding:.12rem .35rem;border:1px solid var(--border);border-radius:3px;font-family:'IBM Plex Mono',monospace;transition:color .15s}
+.cmd:hover .cp{color:var(--t2)}
+.btn-o{display:inline-flex;align-items:center;gap:.4rem;padding:.55rem 1rem;border-radius:7px;border:1px solid var(--border2);font-size:.82rem;font-weight:600;transition:background .15s}
+.btn-o:hover{background:var(--s1)}
+.btn-o svg{width:15px;height:15px;fill:currentColor}
+
+/* Hero SVG area */
+.hero-visual{position:relative}
+.hero-svg{width:100%;height:auto;display:block}
+
+/* SECTIONS */
+section{padding:5rem 2.5rem}
+.w{max-width:var(--mw);margin:0 auto}
+.sep{border:none;border-top:1px solid var(--border);max-width:var(--mw);margin:0 auto}
+.tag{font-family:'IBM Plex Mono',monospace;font-size:.68rem;text-transform:uppercase;letter-spacing:.14em;color:var(--accent);font-weight:500;margin-bottom:.6rem}
+h2{font-weight:700;font-size:clamp(1.9rem,3.5vw,2.6rem);letter-spacing:-.04em;line-height:1.08}
+h2 span{color:#b5b5b3}
+.lead{color:#c5c5c3;font-size:1rem;max-width:480px;line-height:1.7;margin-top:.5rem}
+
+/* BORDERED CONTAINER (Daytona-style) */
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);margin-top:3.5rem;border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.g-cell{padding:2rem 2.2rem;border-right:1px solid var(--border)}
+.g-cell:nth-child(3n){border-right:none}
+.g-cell h3{font-family:'IBM Plex Mono',monospace;font-weight:600;font-size:.92rem;margin-bottom:.35rem;letter-spacing:-.01em}
+.g-cell p{color:#c5c5c3;font-size:.85rem;line-height:1.6}
+.g-cell svg{display:block;width:100%;height:auto;margin-bottom:1.2rem}
+
+/* 2-col feature rows (Daytona pattern) */
+.grid2{display:grid;grid-template-columns:1fr 1fr;margin-top:3.5rem;border:1px solid var(--border);border-radius:12px;overflow:hidden}
+.g2-cell{padding:2.5rem;border-bottom:1px solid var(--border);border-right:1px solid var(--border)}
+.g2-cell:nth-child(even){border-right:none}
+.g2-cell:nth-last-child(-n+2){border-bottom:none}
+.g2-cell h4{font-weight:600;font-size:.95rem;margin-bottom:.2rem;letter-spacing:-.01em}
+.g2-cell p{color:#c5c5c3;font-size:.84rem;line-height:1.6}
+
+/* USE CASES - vignette cards */
+.cases{margin-top:3rem}
+.case-r{display:grid;grid-template-columns:160px 1fr;gap:2rem;align-items:baseline;padding:1.4rem 0;border-bottom:1px solid var(--border)}
+.case-r:first-child{border-top:1px solid var(--border)}
+.case-k{font-family:'IBM Plex Mono',monospace;font-size:.72rem;color:var(--accent);font-weight:500}
+.case-r h3{font-weight:600;font-size:.98rem;margin-bottom:.15rem}
+.case-r p{color:#c5c5c3;font-size:.86rem;line-height:1.6}
+.vig-grid{display:grid;grid-template-columns:1fr 1fr;gap:2rem;margin-top:3rem}
+.vig-card{border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--s1);transition:border-color .25s}
+.vig-card:hover{border-color:var(--border2)}
+.vig-card svg{display:block;width:100%;height:auto;border-bottom:1px solid var(--border)}
+.vig-body{padding:1.5rem 1.6rem}
+.vig-body h3{font-weight:600;font-size:1rem;margin-bottom:.25rem}
+.vig-body p{color:#c5c5c3;font-size:.84rem;line-height:1.65}
+@media(max-width:700px){.vig-grid{grid-template-columns:1fr}}
+
+/* MODELS - provider grid */
+.prov-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;margin-top:2.5rem;border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--border)}
+.prov-card{background:var(--bg);padding:1.8rem 1.6rem;display:flex;flex-direction:column;align-items:center;text-align:center;gap:.6rem;transition:background .2s}
+.prov-card:hover{background:var(--s1)}
+.prov-card svg{width:32px;height:32px;flex-shrink:0}
+.prov-name{font-weight:600;font-size:.88rem;letter-spacing:-.01em}
+.prov-models{font-size:.72rem;color:var(--t3);font-family:'IBM Plex Mono',monospace;line-height:1.5}
+.prov-or{grid-column:1/-1;display:flex;align-items:center;justify-content:center;gap:1.2rem;padding:1.6rem;background:var(--s1)}
+.prov-or svg{width:28px;height:28px;flex-shrink:0}
+.prov-or-text{text-align:left}
+.prov-or-text .prov-name{font-size:.95rem}
+.prov-or-text p{font-size:.78rem;color:var(--t3);margin-top:.1rem}
+.api-note{margin-top:1.8rem;display:flex;gap:2rem;flex-wrap:wrap}
+.api-opt{flex:1;min-width:200px;padding:1.2rem 1.4rem;border:1px solid var(--border);border-radius:8px;background:var(--s1)}
+.api-opt h4{font-size:.82rem;font-weight:600;margin-bottom:.2rem}
+.api-opt p{font-size:.78rem;color:var(--t3);line-height:1.6}
+/* SWARM */
+.swarm-wrap{display:grid;grid-template-columns:1fr 1fr;gap:3rem;align-items:center;margin-top:2.5rem}
+.swarm-desc h3{font-weight:600;font-size:1.05rem;margin-bottom:.4rem}
+.swarm-desc p{color:#c5c5c3;font-size:.88rem;line-height:1.7;margin-bottom:1rem}
+.swarm-desc code{font-size:.8rem;color:var(--accent);background:var(--asoft);padding:.15rem .4rem;border-radius:4px}
+.swarm-feats{display:flex;flex-direction:column;gap:.6rem;margin-top:1rem}
+.swarm-feat{display:flex;align-items:center;gap:.5rem;font-size:.82rem;color:#c5c5c3}
+.swarm-feat::before{content:'';width:5px;height:5px;border-radius:50%;background:var(--green);flex-shrink:0}
+@media(max-width:960px){.prov-grid{grid-template-columns:repeat(2,1fr)}.swarm-wrap{grid-template-columns:1fr}}
+@media(max-width:600px){.prov-grid{grid-template-columns:1fr}.api-note{flex-direction:column;gap:.8rem}}
+
+/* CTA */
+.cta{text-align:center;padding:6rem 2.5rem;position:relative;overflow:hidden}
+.cta-glow{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:500px;height:300px;background:radial-gradient(ellipse,var(--aglow),transparent 60%);pointer-events:none}
+.cta-i{position:relative;z-index:1}
+.cta h2{margin-bottom:.4rem}
+.cta .lead{margin:.4rem auto 2rem;text-align:center;max-width:400px}
+.btn-f{display:inline-flex;align-items:center;gap:.4rem;padding:.65rem 1.5rem;border-radius:7px;background:var(--t1);color:var(--bg);font-weight:700;font-size:.9rem;border:none;cursor:pointer;transition:opacity .15s}
+.btn-f:hover{opacity:.85}
+.btn-f svg{width:14px;height:14px}
+
+/* FOOTER */
+footer{border-top:1px solid var(--border);padding:2rem 2.5rem}
+.ft-i{max-width:var(--mw);margin:0 auto;display:flex;justify-content:space-between;align-items:center}
+.ft-l{display:flex;gap:1.6rem}
+.ft-l a{font-size:.78rem;color:var(--t3);transition:color .15s}
+.ft-l a:hover{color:var(--t1)}
+.ft-r{font-size:.75rem;color:var(--t3)}
+.ft-r a{transition:color .15s}
+.ft-r a:hover{color:var(--accent)}
+
+/* REVEALS */
+.rv{opacity:0;transform:translateY(24px);transition:opacity .7s cubic-bezier(.16,1,.3,1),transform .7s cubic-bezier(.16,1,.3,1)}
+.rv.v{opacity:1;transform:none}
+.r1{transition-delay:.08s}.r2{transition-delay:.16s}.r3{transition-delay:.24s}.r4{transition-delay:.32s}
+/* Heading word split animation */
+h2 .w-anim{display:inline-block;opacity:0;transform:translateY(20px);transition:opacity .6s cubic-bezier(.16,1,.3,1),transform .6s cubic-bezier(.16,1,.3,1)}
+h2.v .w-anim{opacity:1;transform:none}
+/* Smooth parallax shift for section tags */
+.tag{transition:opacity .6s ease,transform .6s ease}
+.tag.v{opacity:1;transform:none}
+
+/* RESPONSIVE */
+@media(max-width:960px){
+  .hero{grid-template-columns:1fr;gap:2rem;padding:7rem 1.5rem 3rem}
+  h1{font-size:clamp(4rem,12vw,6rem);line-height:.9}
+  .hero-visual{max-width:500px}
+  /* Cap SVG illustrations so stacked cards don't balloon */
+  .g-cell svg{max-height:140px;object-fit:contain}
+  .grid3,.grid2{grid-template-columns:1fr}
+  .g-cell{border-right:none!important;border-bottom:1px solid var(--border)}
+  .g-cell:last-child{border-bottom:none}
+  .g2-cell{border-right:none!important;padding:1.8rem!important}
+  /* Remove bottom-border exception — all cells have dividers in 1-col layout */
+  .g2-cell:nth-last-child(-n+2){border-bottom:1px solid var(--border)}
+  .g2-cell:last-child{border-bottom:none}
+  .case-r{grid-template-columns:1fr;gap:.2rem}
+  .nav-r a:not(.nav-pill){display:none}
+  .ft-i{flex-direction:column;gap:.8rem;text-align:center}
+  #context .w{grid-template-columns:1fr}
+  /* Badges: smaller on mobile so they stay single-line */
+  .hero-tag span{font-size:.65rem!important;padding:.25rem .55rem!important}
+  /* Keep npm + Docs on same row */
+  .hero-btns{flex-wrap:nowrap;align-items:center}
+  .hero-btns .cmd{flex:1;min-width:0}
+  /* Code blocks: scroll instead of overflow, smaller font on mobile */
+  pre,code,[style*="font-family:'IBM Plex Mono'"]{overflow-x:auto;max-width:100%}
+  pre{font-size:.68rem!important;padding:1rem 1.1rem!important}
+  /* Swarm code terminal: constrain width */
+  .swarm-wrap pre,.api-opt pre{overflow-x:auto}
+}
+@media(max-width:600px){
+  h1{font-size:clamp(3.6rem,14vw,5rem);line-height:.9}
+  section{padding:3.5rem 1.2rem}
+  .hero{padding:6rem 1.2rem 2.5rem}
+  .grid3 .g-cell{padding:1.5rem}
+  .g2-cell{padding:1.4rem!important}
+  /* Slightly smaller SVG cap on very small screens */
+  .g-cell svg{max-height:120px}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-i">
+    <a href="#" class="logo"><svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="16" height="16" rx="3" fill="#2D2B2A"/><path d="M3 2v12" stroke="#D97757" stroke-width="2" stroke-linecap="round"/><path d="M10 2v5c0 2-3 3-7 5" stroke="#D97757" stroke-width="2" stroke-linecap="round" stroke-opacity="0.6"/></svg>sidecar</a>
+    <div class="nav-r">
+      <a href="#how">How It Works</a>
+      <a href="#cases">Use Cases</a>
+      <a href="#features">Features</a>
+      <a href="https://www.npmjs.com/package/claude-sidecar" class="nav-ghost">npm</a>
+      <a href="https://github.com/jrenaldi79/sidecar" class="nav-pill">GitHub</a>
+    </div>
+  </div>
+</nav>
+
+<!-- HERO: split layout -->
+<div class="hero-wrap">
+<div class="hero">
+  <div class="hero-text">
+    <div class="hero-tag rv" style="gap:.6rem">
+      <span style="display:inline-flex;align-items:center;gap:.35rem;background:rgba(251,191,36,.18);color:#fbbf24;padding:.3rem .7rem;border-radius:5px;font-weight:700;font-size:.72rem;letter-spacing:.06em;border:1px solid rgba(251,191,36,.25)">Open Beta</span>
+      <span style="display:inline-flex;align-items:center;gap:.4rem;background:rgba(255,255,255,.08);padding:.3rem .7rem;border-radius:5px;font-weight:600;font-size:.72rem;border:1px solid rgba(255,255,255,.1)">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="#e5e5e3"><path d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701"/></svg>
+        macOS only
+      </span>
+      <span style="display:inline-flex;align-items:center;gap:.4rem;background:rgba(255,255,255,.03);padding:.3rem .7rem;border-radius:5px;font-weight:500;font-size:.72rem;border:1px dashed rgba(255,255,255,.12);color:#555">
+        <svg width="11" height="11" viewBox="0 0 12 12" fill="currentColor"><rect x="0" y="0" width="5.2" height="5.2" rx=".4"/><rect x="6.8" y="0" width="5.2" height="5.2" rx=".4"/><rect x="0" y="6.8" width="5.2" height="5.2" rx=".4"/><rect x="6.8" y="6.8" width="5.2" height="5.2" rx=".4"/></svg>
+        Windows soon
+      </span>
+    </div>
+    <h1 class="rv">Fork. Work.<br><em>Fold.</em></h1>
+    <p class="hero-desc rv">A second AI window that opens alongside Claude, already knowing everything you're working on. No copy-pasting between windows. No re-explaining your codebase. Just a smarter model sitting right next to you, ready to help.</p>
+    <div class="hero-btns rv">
+      <div class="cmd" onclick="copyCmd(this)" style="background:rgba(74,222,128,.07);border-color:rgba(74,222,128,.25)">
+        <span class="d" style="color:#4ade80">$</span><span style="color:#4ade80;font-weight:600">npm install -g claude-sidecar</span><span class="cp" style="border-color:rgba(74,222,128,.3);color:rgba(74,222,128,.6)">copy</span>
+      </div>
+      <a href="https://github.com/jrenaldi79/sidecar" class="btn-o">
+        <svg viewBox="0 0 24 24"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.3 3.44 9.8 8.21 11.39.6.11.82-.26.82-.58v-2.03c-3.34.73-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.09-.74.08-.73.08-.73 1.21.09 1.84 1.24 1.84 1.24 1.07 1.84 2.81 1.31 3.5 1 .11-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.13-.3-.54-1.52.12-3.18 0 0 1.01-.32 3.3 1.23a11.5 11.5 0 016.02 0c2.28-1.55 3.29-1.23 3.29-1.23.66 1.66.25 2.88.12 3.18.77.84 1.24 1.91 1.24 3.22 0 4.61-2.81 5.63-5.48 5.92.43.37.81 1.1.81 2.22v3.29c0 .32.22.7.82.58A12.01 12.01 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+        Docs
+      </a>
+    </div>
+  </div>
+  <div class="hero-visual rv">
+    <!-- Inline SVG: fork-fold diagram with animations -->
+    <svg class="hero-svg" viewBox="0 0 520 245" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <clipPath id="tbclip"><rect x="296" y="0" width="220" height="240" rx="8"/></clipPath>
+        <filter id="glow-orange" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="2.5" result="blur"/>
+          <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+        </filter>
+      </defs>
+
+      <!-- Claude Code window -->
+      <rect x="0" y="20" width="220" height="200" rx="8" fill="#111113" stroke="#222225" stroke-width="1.2"/>
+      <rect x="0" y="20" width="220" height="22" rx="8" fill="#161618"/>
+      <rect x="0" y="34" width="220" height="8" fill="#111113"/>
+      <circle cx="14" cy="31" r="3.5" fill="#e25555" opacity=".6"/><circle cx="25" cy="31" r="3.5" fill="#e2a855" opacity=".6"/><circle cx="36" cy="31" r="3.5" fill="#55c255" opacity=".6"/>
+      <text x="110" y="35" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="8" font-weight="600" fill="#a1a1a0">Claude Code</text>
+      <!-- Chat lines -->
+      <rect x="14" y="52" width="70" height="2.5" rx="1" fill="#2c2c30"/>
+      <rect x="14" y="60" width="110" height="2.5" rx="1" fill="#2c2c30"/>
+      <rect x="14" y="68" width="55" height="2.5" rx="1" fill="#2c2c30"/>
+      <rect x="14" y="82" width="90" height="2.5" rx="1" fill="#d97757" opacity=".25"/>
+      <rect x="14" y="90" width="130" height="2.5" rx="1" fill="#d97757" opacity=".25"/>
+      <text x="14" y="115" font-family="IBM Plex Mono,monospace" font-size="7.5" fill="#555" font-style="italic">(keeps working...)</text>
+      <!-- Fold result box - pulses in after delay -->
+      <rect x="14" y="130" width="190" height="42" rx="5" fill="#d97757" opacity=".08" stroke="#d97757" stroke-width=".8" stroke-dasharray="3,2">
+        <animate attributeName="opacity" values=".04;.12;.04" dur="4s" repeatCount="indefinite"/>
+      </rect>
+      <text x="22" y="146" font-family="IBM Plex Mono,monospace" font-size="7" font-weight="600" fill="#d97757">FOLD Summary received</text>
+      <text x="22" y="158" font-family="IBM Plex Mono,monospace" font-size="7" fill="#e8a07c">Race condition found. Recommend mutex.</text>
+      <text x="14" y="190" font-family="Outfit,sans-serif" font-size="8" fill="#555">Your main session</text>
+
+      <!-- Fork arrow - animated flowing dash -->
+      <path d="M 220 90 C 260 90, 260 80, 290 80" stroke="#d97757" stroke-width="1.5" stroke-dasharray="4,3">
+        <animate attributeName="stroke-dashoffset" values="14;0" dur="1.1s" repeatCount="indefinite"/>
+      </path>
+      <polygon points="288,76 296,80 288,84" fill="#d97757"/>
+      <text x="252" y="74" font-family="IBM Plex Mono,monospace" font-size="7.5" font-weight="600" fill="#d97757">Fork</text>
+
+      <!-- Fold arrow - animated flowing dash, slower distinct rhythm -->
+      <path d="M 290 180 C 260 180, 260 160, 220 160" stroke="#888" stroke-width="1.2" stroke-dasharray="4,3">
+        <animate attributeName="stroke-dashoffset" values="14;0" dur="1.8s" repeatCount="indefinite"/>
+      </path>
+      <polygon points="222,156 214,160 222,164" fill="#888"/>
+      <text x="252" y="197" font-family="IBM Plex Mono,monospace" font-size="7.5" fill="#888">Fold</text>
+
+      <!-- Sidecar window - border pulses subtly -->
+      <rect x="296" y="0" width="220" height="240" rx="8" fill="#111113" stroke="#d97757" stroke-width="1.5">
+        <animate attributeName="stroke-opacity" values="1;0.45;1" dur="3s" repeatCount="indefinite"/>
+      </rect>
+      <g clip-path="url(#tbclip)">
+        <rect x="296" y="0" width="220" height="22" fill="#d97757" opacity=".08"/>
+      </g>
+      <circle cx="310" cy="11" r="3.5" fill="#e25555" opacity=".6"/><circle cx="321" cy="11" r="3.5" fill="#e2a855" opacity=".6"/><circle cx="332" cy="11" r="3.5" fill="#55c255" opacity=".6"/>
+      <text x="406" y="15" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="8" font-weight="600" fill="#d97757">Sidecar</text>
+      <!-- Model badge -->
+      <rect x="344" y="28" width="90" height="16" rx="8" fill="#4285F4" opacity=".18"/>
+      <text x="389" y="39" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="7.5" font-weight="600" fill="#7aafff">Gemini 3 Pro</text>
+      <!-- Chat -->
+      <rect x="310" y="52" width="190" height="30" rx="5" fill="#1c1c1f"/>
+      <text x="318" y="64" font-family="Outfit,sans-serif" font-size="7.5" font-weight="600" fill="#a1a1a0">You</text>
+      <text x="318" y="76" font-family="IBM Plex Mono,monospace" font-size="7" fill="#ddd">"Is this approach correct?"</text>
+      <rect x="310" y="90" width="190" height="58" rx="5" fill="#161618"/>
+      <text x="318" y="103" font-family="Outfit,sans-serif" font-size="7.5" font-weight="600" fill="#7aafff">Gemini</text>
+      <text x="318" y="115" font-family="IBM Plex Mono,monospace" font-size="7" fill="#ccc">"There's a race condition when</text>
+      <text x="318" y="126" font-family="IBM Plex Mono,monospace" font-size="7" fill="#ccc"> multiple requests hit token</text>
+      <text x="318" y="137" font-family="IBM Plex Mono,monospace" font-size="7" fill="#ccc"> refresh. Use a mutex..."</text>
+      <!-- Blinking cursor after last Gemini line -->
+      <rect x="374" y="130" width="1.5" height="9" rx=".5" fill="#7aafff">
+        <animate attributeName="opacity" values="1;0;1" dur="1.1s" repeatCount="indefinite"/>
+      </rect>
+      <!-- Thinking dots below response, suggesting model is still active -->
+      <circle cx="326" cy="163" r="2.2" fill="#7aafff">
+        <animate attributeName="opacity" values="0.2;0.9;0.2" dur="1.4s" begin="0s" repeatCount="indefinite"/>
+      </circle>
+      <circle cx="335" cy="163" r="2.2" fill="#7aafff">
+        <animate attributeName="opacity" values="0.2;0.9;0.2" dur="1.4s" begin="0.35s" repeatCount="indefinite"/>
+      </circle>
+      <circle cx="344" cy="163" r="2.2" fill="#7aafff">
+        <animate attributeName="opacity" values="0.2;0.9;0.2" dur="1.4s" begin="0.7s" repeatCount="indefinite"/>
+      </circle>
+      <!-- Toolbar - clipped to stay inside rounded window -->
+      <g clip-path="url(#tbclip)">
+        <rect x="296" y="200" width="220" height="40" fill="#1a1917"/>
+        <rect x="296" y="200" width="220" height="1" fill="#2a2825"/>
+      </g>
+      <text x="316" y="218" font-family="IBM Plex Mono,monospace" font-size="7" font-weight="600" fill="#d97757" letter-spacing=".5">SIDECAR</text>
+      <text x="362" y="218" font-family="IBM Plex Mono,monospace" font-size="7" fill="#666">3:42</text>
+      <rect x="460" y="208" width="38" height="16" rx="3" fill="#d97757"/>
+      <text x="479" y="219" text-anchor="middle" font-family="Outfit,sans-serif" font-size="8" font-weight="600" fill="#fff">Fold</text>
+    </svg>
+    <!-- Provider logos (real Simple Icons SVGs) - aligned under sidecar window -->
+    <div style="display:flex;align-items:center;justify-content:flex-end;gap:1rem;margin-top:.7rem;padding-right:1rem;opacity:.55">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="#8E75B2"><path d="M11.04 19.32Q12 21.51 12 24q0-2.49.93-4.68.96-2.19 2.58-3.81t3.81-2.55Q21.51 12 24 12q-2.49 0-4.68-.93a12.3 12.3 0 0 1-3.81-2.58 12.3 12.3 0 0 1-2.58-3.81Q12 2.49 12 0q0 2.49-.96 4.68-.93 2.19-2.55 3.81a12.3 12.3 0 0 1-3.81 2.58Q2.49 12 0 12q2.49 0 4.68.96 2.19.93 3.81 2.55t2.55 3.81"/></svg>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff"><path d="M22.2819 9.8211a5.9847 5.9847 0 0 0-.5157-4.9108 6.0462 6.0462 0 0 0-6.5098-2.9A6.0651 6.0651 0 0 0 4.9807 4.1818a5.9847 5.9847 0 0 0-3.9977 2.9 6.0462 6.0462 0 0 0 .7427 7.0966 5.98 5.98 0 0 0 .511 4.9107 6.051 6.051 0 0 0 6.5146 2.9001A5.9847 5.9847 0 0 0 13.2599 24a6.0557 6.0557 0 0 0 5.7718-4.2058 5.9894 5.9894 0 0 0 3.9977-2.9001 6.0557 6.0557 0 0 0-.7475-7.0729zm-9.022 12.6081a4.4755 4.4755 0 0 1-2.8764-1.0408l.1419-.0804 4.7783-2.7582a.7948.7948 0 0 0 .3927-.6813v-6.7369l2.02 1.1686a.071.071 0 0 1 .038.052v5.5826a4.504 4.504 0 0 1-4.4945 4.4944zm-9.6607-4.1254a4.4708 4.4708 0 0 1-.5346-3.0137l.142.0852 4.783 2.7582a.7712.7712 0 0 0 .7806 0l5.8428-3.3685v2.3324a.0804.0804 0 0 1-.0332.0615L9.74 19.9502a4.4992 4.4992 0 0 1-6.1408-1.6464zM2.3408 7.8956a4.485 4.485 0 0 1 2.3655-1.9728V11.6a.7664.7664 0 0 0 .3879.6765l5.8144 3.3543-2.0201 1.1685a.0757.0757 0 0 1-.071 0l-4.8303-2.7865A4.504 4.504 0 0 1 2.3408 7.872zm16.5963 3.8558L13.1038 8.364 15.1192 7.2a.0757.0757 0 0 1 .071 0l4.8303 2.7913a4.4944 4.4944 0 0 1-.6765 8.1042v-5.6772a.79.79 0 0 0-.407-.667zm2.0107-3.0231l-.142-.0852-4.7735-2.7818a.7759.7759 0 0 0-.7854 0L9.409 9.2297V6.8974a.0662.0662 0 0 1 .0284-.0615l4.8303-2.7866a4.4992 4.4992 0 0 1 6.6802 4.66zM8.3065 12.863l-2.02-1.1638a.0804.0804 0 0 1-.038-.0567V6.0742a4.4992 4.4992 0 0 1 7.3757-3.4537l-.142.0805L8.704 5.459a.7948.7948 0 0 0-.3927.6813zm1.0976-2.3654l2.602-1.4998 2.6069 1.4998v2.9994l-2.5974 1.4997-2.6067-1.4997Z"/></svg>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="#D97757"><path d="M17.3041 3.541h-3.6718l6.696 16.918H24Zm-10.6082 0L0 20.459h3.7442l1.3693-3.5527h7.0052l1.3693 3.5528h3.7442L10.5363 3.5409Zm-.3712 10.2232 2.2914-5.9456 2.2914 5.9456Z"/></svg>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="#fff"><path d="M14.234 10.162 22.977 0h-2.072l-7.591 8.824L7.251 0H.258l9.168 13.343L.258 24H2.33l8.016-9.318L16.749 24h6.993zm-2.837 3.299-.929-1.329L3.076 1.56h3.182l5.965 8.532.929 1.329 7.754 11.09h-3.182z"/></svg>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="#0081FB"><path d="M6.915 4.03c-1.968 0-3.683 1.28-4.871 3.113C.704 9.208 0 11.883 0 14.449c0 .706.07 1.369.21 1.973a6.624 6.624 0 0 0 .265.86 5.297 5.297 0 0 0 .371.761c.696 1.159 1.818 1.927 3.593 1.927 1.497 0 2.633-.671 3.965-2.444.76-1.012 1.144-1.626 2.663-4.32l.756-1.339.186-.325c.061.1.121.196.183.3l2.152 3.595c.724 1.21 1.665 2.556 2.47 3.314 1.046.987 1.992 1.22 3.06 1.22 1.075 0 1.876-.355 2.455-.843a3.743 3.743 0 0 0 .81-.973c.542-.939.861-2.127.861-3.745 0-2.72-.681-5.357-2.084-7.45-1.282-1.912-2.957-2.93-4.716-2.93-1.047 0-2.088.467-3.053 1.308-.652.57-1.257 1.29-1.82 2.05-.69-.875-1.335-1.547-1.958-2.056-1.182-.966-2.315-1.303-3.454-1.303zm10.16 2.053c1.147 0 2.188.758 2.992 1.999 1.132 1.748 1.647 4.195 1.647 6.4 0 1.548-.368 2.9-1.839 2.9-.58 0-1.027-.23-1.664-1.004-.496-.601-1.343-1.878-2.832-4.358l-.617-1.028a44.908 44.908 0 0 0-1.255-1.98c.07-.109.141-.224.211-.327 1.12-1.667 2.118-2.602 3.358-2.602zm-10.201.553c1.265 0 2.058.791 2.675 1.446.307.327.737.871 1.234 1.579l-1.02 1.566c-.757 1.163-1.882 3.017-2.837 4.338-1.191 1.649-1.81 1.817-2.486 1.817-.524 0-1.038-.237-1.383-.794-.263-.426-.464-1.13-.464-2.046 0-2.221.63-4.535 1.66-6.088.454-.687.964-1.226 1.533-1.533a2.264 2.264 0 0 1 1.088-.285z"/></svg>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="#6366F1"><path d="M16.778 1.844v1.919q-.569-.026-1.138-.032-.708-.008-1.415.037c-1.93.126-4.023.728-6.149 2.237-2.911 2.066-2.731 1.95-4.14 2.75-.396.223-1.342.574-2.185.798-.841.225-1.753.333-1.751.333v4.229s.768.108 1.61.333c.842.224 1.789.575 2.185.799 1.41.798 1.228.683 4.14 2.75 2.126 1.509 4.22 2.11 6.148 2.236.88.058 1.716.041 2.555.005v1.918l7.222-4.168-7.222-4.17v2.176c-.86.038-1.611.065-2.278.021-1.364-.09-2.417-.357-3.979-1.465-2.244-1.593-2.866-2.027-3.68-2.508.889-.518 1.449-.906 3.822-2.59 1.56-1.109 2.614-1.377 3.978-1.466.667-.044 1.418-.017 2.278.02v2.176L24 6.014Z"/></svg>
+    </div>
+    <p style="text-align:right;font-family:'IBM Plex Mono',monospace;font-size:.68rem;color:var(--t3);margin-top:.3rem;padding-right:1rem">Any model via OpenRouter</p>
+  </div>
+</div>
+</div>
+
+<hr class="sep">
+
+<!-- HOW IT WORKS -->
+<section id="how">
+  <div class="w">
+    <div class="tag rv">How It Works</div>
+    <h2 class="rv">Three Steps.<br><span>Zero Friction.</span></h2>
+    <p class="lead rv">Launch a sidecar, do your work, fold the results back. Context is shared automatically.</p>
+    <div class="grid3">
+      <div class="g-cell rv r1">
+        <!-- Fork illustration -->
+        <svg viewBox="0 0 280 120" fill="none">
+          <rect x="10" y="30" width="80" height="60" rx="6" fill="#161618" stroke="#222225"/>
+          <text x="50" y="55" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="8" fill="#a1a1a0">Claude</text>
+          <text x="50" y="67" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="7" fill="#555">session</text>
+          <path d="M 90 60 L 140 60" stroke="#d97757" stroke-width="1.5" stroke-dasharray="4,3"/>
+          <polygon points="138,56 146,60 138,64" fill="#d97757"/>
+          <rect x="150" y="20" width="120" height="80" rx="6" fill="#161618" stroke="#d97757" stroke-width="1.2"/>
+          <text x="210" y="50" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="8" fill="#d97757">Sidecar</text>
+          <text x="210" y="62" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="7" fill="#555">full context</text>
+          <text x="210" y="78" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="7" fill="#555">auto-shared</text>
+        </svg>
+        <h3>01 &middot; Fork</h3>
+        <p>Your conversation history is automatically extracted and passed to the sidecar model. No copy-pasting.</p>
+      </div>
+      <div class="g-cell rv r2">
+        <!-- Work illustration -->
+        <svg viewBox="0 0 280 120" fill="none">
+          <rect x="10" y="25" width="90" height="70" rx="6" fill="#161618" stroke="#222225"/>
+          <text x="55" y="50" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="8" fill="#555">Claude</text>
+          <text x="55" y="65" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="7" fill="#4ade80">working...</text>
+          <rect x="130" y="25" width="140" height="70" rx="6" fill="#161618" stroke="#d97757" stroke-width="1.2"/>
+          <text x="200" y="48" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="8" fill="#d97757">Sidecar</text>
+          <text x="200" y="62" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="7" fill="#a1a1a0">Exploring...</text>
+          <text x="200" y="74" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="7" fill="#a1a1a0">in parallel</text>
+          <text x="140" y="112" font-family="IBM Plex Mono,monospace" font-size="7" fill="#444" text-anchor="middle">simultaneous</text>
+        </svg>
+        <h3>02 &middot; Work</h3>
+        <p>Interact with the sidecar in a real window alongside Claude Code. Explore, debug, get a second opinion.</p>
+      </div>
+      <div class="g-cell rv r3">
+        <!-- Fold illustration -->
+        <svg viewBox="0 0 280 120" fill="none">
+          <rect x="10" y="25" width="120" height="70" rx="6" fill="#161618" stroke="#222225"/>
+          <text x="70" y="48" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="8" fill="#a1a1a0">Claude</text>
+          <rect x="22" y="56" width="96" height="28" rx="4" fill="#d97757" opacity=".08" stroke="#d97757" stroke-width=".8"/>
+          <text x="70" y="68" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="6.5" fill="#d97757">FOLD summary</text>
+          <text x="70" y="78" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="6.5" fill="#e8a07c">received</text>
+          <path d="M 210 60 L 140 60" stroke="#666" stroke-width="1.2" stroke-dasharray="4,3"/>
+          <polygon points="142,56 134,60 142,64" fill="#666"/>
+          <rect x="220" y="35" width="50" height="50" rx="6" fill="#161618" stroke="#222225"/>
+          <rect x="228" y="47" width="34" height="14" rx="3" fill="#d97757"/>
+          <text x="245" y="57" text-anchor="middle" font-family="Outfit,sans-serif" font-size="7.5" font-weight="600" fill="#fff">Fold</text>
+          <text x="245" y="74" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="6" fill="#555">click</text>
+        </svg>
+        <h3>03 &middot; Fold</h3>
+        <p>Click Fold and a structured summary flows back. Findings, recommendations, and code changes. No noise.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="sep">
+
+<!-- CONTEXT SHARING - key differentiator -->
+<section id="context" style="background:var(--s1);border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
+  <div class="w" style="display:grid;grid-template-columns:1fr 1fr;gap:3.5rem;align-items:center">
+    <div>
+      <div class="tag rv">Automatic Context Sharing</div>
+      <h2 class="rv">Your Claude Context.<br><span>Any Model.</span></h2>
+      <p class="lead rv" style="max-width:420px">Sidecar reads your active Claude Code session and automatically shares the full conversation context with whatever model you choose. No export, no copy-paste, no re-explaining what you're working on.</p>
+      <p class="lead rv" style="max-width:420px;margin-top:.8rem">This is the only tool that bridges Claude Code's context to other LLMs. Every sidecar starts with everything Claude knows.</p>
+      <div class="rv" style="margin-top:1.4rem;display:flex;gap:1rem;flex-wrap:wrap">
+        <span style="display:inline-flex;align-items:center;gap:.35rem;font-size:.78rem;color:var(--t2)"><span style="width:5px;height:5px;border-radius:50%;background:var(--green);flex-shrink:0"></span>Conversation history</span>
+        <span style="display:inline-flex;align-items:center;gap:.35rem;font-size:.78rem;color:var(--t2)"><span style="width:5px;height:5px;border-radius:50%;background:var(--green);flex-shrink:0"></span>File changes</span>
+        <span style="display:inline-flex;align-items:center;gap:.35rem;font-size:.78rem;color:var(--t2)"><span style="width:5px;height:5px;border-radius:50%;background:var(--green);flex-shrink:0"></span>Tool calls</span>
+        <span style="display:inline-flex;align-items:center;gap:.35rem;font-size:.78rem;color:var(--t2)"><span style="width:5px;height:5px;border-radius:50%;background:var(--green);flex-shrink:0"></span>Error output</span>
+      </div>
+    </div>
+    <div class="rv">
+      <!-- Context flow SVG -->
+      <svg viewBox="0 0 420 280" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto">
+        <!-- Claude Code session -->
+        <rect x="10" y="30" width="180" height="220" rx="8" fill="#111113" stroke="#f5f5f3" stroke-width="1.2"/>
+        <rect x="10" y="30" width="180" height="20" rx="8" fill="#161618"/><rect x="10" y="44" width="180" height="6" fill="#111113"/>
+        <circle cx="24" cy="40" r="3" fill="#e25555" opacity=".6"/><circle cx="33" cy="40" r="3" fill="#e2a855" opacity=".6"/><circle cx="42" cy="40" r="3" fill="#55c255" opacity=".6"/>
+        <text x="100" y="44" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="7" font-weight="600" fill="#a1a1a0">Claude Code</text>
+        <!-- Session content -->
+        <text x="22" y="66" font-family="IBM Plex Mono,monospace" font-size="6" font-weight="600" fill="#4ade80">You</text>
+        <rect x="22" y="70" width="100" height="2" rx="1" fill="#2c2c30"/>
+        <rect x="22" y="76" width="80" height="2" rx="1" fill="#2c2c30"/>
+        <text x="22" y="92" font-family="IBM Plex Mono,monospace" font-size="6" font-weight="600" fill="#d97757">Claude</text>
+        <rect x="22" y="96" width="140" height="2" rx="1" fill="#d97757" opacity=".2"/>
+        <rect x="22" y="102" width="120" height="2" rx="1" fill="#d97757" opacity=".2"/>
+        <rect x="22" y="108" width="90" height="2" rx="1" fill="#d97757" opacity=".2"/>
+        <text x="22" y="124" font-family="IBM Plex Mono,monospace" font-size="6" font-weight="600" fill="#4ade80">You</text>
+        <rect x="22" y="128" width="110" height="2" rx="1" fill="#2c2c30"/>
+        <text x="22" y="144" font-family="IBM Plex Mono,monospace" font-size="6" font-weight="600" fill="#d97757">Claude</text>
+        <rect x="22" y="148" width="130" height="2" rx="1" fill="#d97757" opacity=".2"/>
+        <rect x="22" y="154" width="100" height="2" rx="1" fill="#d97757" opacity=".2"/>
+        <!-- Tool call -->
+        <rect x="22" y="166" width="148" height="20" rx="3" fill="#161618" stroke="#222225"/>
+        <text x="30" y="179" font-family="IBM Plex Mono,monospace" font-size="5.5" fill="#555">Read src/auth.js</text>
+        <text x="130" y="179" font-family="IBM Plex Mono,monospace" font-size="5.5" fill="#4ade80">done</text>
+        <!-- More content -->
+        <rect x="22" y="194" width="120" height="2" rx="1" fill="#d97757" opacity=".2"/>
+        <rect x="22" y="200" width="90" height="2" rx="1" fill="#d97757" opacity=".2"/>
+        <!-- Token count -->
+        <text x="100" y="230" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="6.5" fill="#555">42 turns, 18.2k tokens</text>
+
+        <!-- Context extraction arrows - animated dashes -->
+        <path d="M190 140 C 215 140, 235 80, 260 80" stroke="#d97757" stroke-width="1.5" stroke-dasharray="5,3">
+          <animate attributeName="stroke-dashoffset" values="16;0" dur="1.5s" repeatCount="indefinite"/>
+        </path>
+        <polygon points="258,75 266,80 258,85" fill="#d97757"/>
+
+        <path d="M190 140 C 215 140, 235 140, 260 140" stroke="#d97757" stroke-width="1.5" stroke-dasharray="5,3">
+          <animate attributeName="stroke-dashoffset" values="16;0" dur="1.5s" repeatCount="indefinite"/>
+        </path>
+        <polygon points="258,135 266,140 258,145" fill="#d97757"/>
+
+        <path d="M190 140 C 215 140, 235 200, 260 200" stroke="#d97757" stroke-width="1.5" stroke-dasharray="5,3">
+          <animate attributeName="stroke-dashoffset" values="16;0" dur="1.5s" repeatCount="indefinite"/>
+        </path>
+        <polygon points="258,195 266,200 258,205" fill="#d97757"/>
+
+
+        <!-- Target models -->
+        <rect x="270" y="56" width="140" height="44" rx="6" fill="#111113" stroke="#4285F4" stroke-width="1"/>
+        <text x="340" y="75" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="7" font-weight="600" fill="#4285F4">Gemini 3 Pro</text>
+        <text x="340" y="89" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="6" fill="#555">full context loaded</text>
+
+        <rect x="270" y="118" width="140" height="44" rx="6" fill="#111113" stroke="#10a37f" stroke-width="1"/>
+        <text x="340" y="137" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="7" font-weight="600" fill="#10a37f">GPT-5</text>
+        <text x="340" y="151" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="6" fill="#555">full context loaded</text>
+
+        <rect x="270" y="180" width="140" height="44" rx="6" fill="#111113" stroke="#738ADB" stroke-width="1"/>
+        <text x="340" y="199" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="7" font-weight="600" fill="#738ADB">DeepSeek R1</text>
+        <text x="340" y="213" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="6" fill="#555">full context loaded</text>
+
+        <!-- Bottom label -->
+        <text x="210" y="270" text-anchor="middle" font-family="Outfit,sans-serif" font-size="9" fill="#555">Every model gets your full Claude session automatically</text>
+      </svg>
+    </div>
+  </div>
+</section>
+
+<hr class="sep">
+
+<!-- WORKS WITH -->
+<section id="works-with">
+  <div class="w">
+    <div class="tag rv">Works With</div>
+    <h2 class="rv">Claude Code & Cowork.<br><span>Two Interfaces, One Tool.</span></h2>
+    <p class="lead rv">Sidecar integrates natively with both Claude Code and Claude Cowork. Install once, use everywhere.</p>
+    <div class="grid2" style="margin-top:2.5rem">
+      <div class="g2-cell rv r1" style="padding:2.5rem">
+        <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:1.2rem">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--t1)" stroke-width="2" stroke-linecap="round"><polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/></svg>
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:.75rem;color:var(--accent);font-weight:600;letter-spacing:.08em;text-transform:uppercase">CLI</span>
+        </div>
+        <h4 style="font-size:1.15rem;margin-bottom:.35rem">Claude Code</h4>
+        <p style="color:var(--t2);font-size:.88rem;line-height:1.7;margin-bottom:1.2rem">Use the <code style="color:var(--accent);font-size:.82rem">sidecar</code> command directly in your terminal alongside Claude Code. Desktop app and CLI both supported.</p>
+        <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.7rem .9rem;font-family:'IBM Plex Mono',monospace;font-size:.76rem">
+          <span style="color:var(--green)">sidecar start</span> <span style="color:var(--accent)">--model</span> <span style="color:var(--t2)">gemini</span> <span style="color:var(--accent)">--prompt</span> <span style="color:#c4a4dc">"Review auth"</span>
+        </div>
+      </div>
+      <div class="g2-cell rv r2" style="padding:2.5rem">
+        <div style="display:flex;align-items:center;gap:.6rem;margin-bottom:1.2rem">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--t1)" stroke-width="2" stroke-linecap="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          <span style="font-family:'IBM Plex Mono',monospace;font-size:.75rem;color:var(--accent);font-weight:600;letter-spacing:.08em;text-transform:uppercase">MCP Server</span>
+        </div>
+        <h4 style="font-size:1.15rem;margin-bottom:.35rem">Claude Cowork</h4>
+        <p style="color:var(--t2);font-size:.88rem;line-height:1.7;margin-bottom:1.2rem">Sidecar registers as an MCP server automatically. Cowork agents can spawn sidecars natively from their sandbox.</p>
+        <div style="background:var(--bg);border:1px solid var(--border);border-radius:6px;padding:.7rem .9rem;font-family:'IBM Plex Mono',monospace;font-size:.76rem">
+          <span style="color:var(--t3)">Tool:</span> <span style="color:var(--green)">sidecar_start</span> <span style="color:var(--t3)">model:</span> <span style="color:var(--t2)">gemini</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="sep">
+
+<!-- TERMINAL -->
+<section style="background:var(--s1);border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
+  <div class="w">
+    <div class="tag rv">See It In Action</div>
+    <h2 class="rv">One Command.<br><span>Full Context.</span></h2>
+    <div style="max-width:680px;margin:2.5rem auto 0;border-radius:10px;background:var(--bg);border:1px solid var(--border2);overflow:hidden" class="rv">
+      <div style="display:flex;gap:5px;padding:10px 14px;border-bottom:1px solid var(--border)">
+        <span style="width:8px;height:8px;border-radius:50%;background:var(--border2)"></span>
+        <span style="width:8px;height:8px;border-radius:50%;background:var(--border2)"></span>
+        <span style="width:8px;height:8px;border-radius:50%;background:var(--border2)"></span>
+      </div>
+      <pre style="padding:1.4rem 1.6rem;font-family:'IBM Plex Mono',monospace;font-size:.78rem;line-height:2.1;overflow-x:auto;margin:0"><span style="color:#555"># Fact-check Claude's approach with Gemini</span>
+<span style="color:var(--green)">sidecar start</span> <span style="color:var(--accent)">--model</span> gemini <span style="color:var(--accent)">--prompt</span> <span style="color:#c4a4dc">"Verify the auth refactor"</span>
+
+<span style="color:#555"># Deep-dive without polluting your main context</span>
+<span style="color:var(--green)">sidecar start</span> <span style="color:var(--accent)">--model</span> gemini-pro <span style="color:var(--accent)">--prompt</span> <span style="color:#c4a4dc">"Analyze the codebase"</span>
+
+<span style="color:#555"># Autonomous background task</span>
+<span style="color:var(--green)">sidecar start</span> <span style="color:var(--accent)">--model</span> gemini <span style="color:var(--accent)">--no-ui</span> <span style="color:var(--accent)">--prompt</span> <span style="color:#c4a4dc">"Generate tests"</span>
+
+<span style="color:#444">&gt; Started sidecar <b style="color:var(--t2)">gk7x</b> · google/gemini-3-flash-preview</span>
+<span style="color:#444">&gt; Context: 42 turns, 18.2k tokens</span>
+<span style="color:#444">&gt; Running autonomously... (15m timeout)</span></pre>
+    </div>
+  </div>
+</section>
+
+<hr class="sep">
+
+<!-- USE CASES -->
+<section id="cases">
+  <div class="w">
+    <div class="tag rv">Use Cases</div>
+    <h2 class="rv">Built for How<br><span>You Actually Work.</span></h2>
+    <p class="lead rv">Every sidecar shares your context automatically. No re-explaining, no copy-pasting.</p>
+    <div class="vig-grid">
+      <!-- Fact Check -->
+      <div class="vig-card rv r1">
+        <svg viewBox="0 0 400 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="400" height="180" fill="#0a0a0a"/>
+          <!-- Claude window -->
+          <rect x="20" y="20" width="160" height="100" rx="6" fill="#111113" stroke="#222225"/>
+          <rect x="20" y="20" width="160" height="16" rx="6" fill="#161618"/><rect x="20" y="30" width="160" height="6" fill="#111113"/>
+          <text x="100" y="32" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="7" fill="#a1a1a0">Claude Code</text>
+          <rect x="30" y="44" width="80" height="8" rx="2" fill="#d97757" opacity=".12"/>
+          <text x="34" y="51" font-family="IBM Plex Mono,monospace" font-size="6" fill="#d97757">"Use Redis for cache"</text>
+          <rect x="30" y="60" width="60" height="2" rx="1" fill="#2c2c30"/>
+          <rect x="30" y="66" width="100" height="2" rx="1" fill="#2c2c30"/>
+          <text x="30" y="90" font-family="IBM Plex Mono,monospace" font-size="6" fill="#555">architecture.md</text>
+          <rect x="30" y="94" width="80" height="2" rx="1" fill="#2c2c30"/><rect x="30" y="100" width="55" height="2" rx="1" fill="#2c2c30"/>
+          <!-- Arrow -->
+          <path d="M180 70 L210 70" stroke="#d97757" stroke-width="1.2" stroke-dasharray="3,2"/><polygon points="208,67 214,70 208,73" fill="#d97757"/>
+          <text x="196" y="62" font-family="IBM Plex Mono,monospace" font-size="5.5" fill="#d97757">fork</text>
+          <!-- Gemini sidecar -->
+          <rect x="220" y="20" width="160" height="100" rx="6" fill="#111113" stroke="#4285F4" stroke-width="1.2"/>
+          <rect x="220" y="20" width="160" height="16" rx="6" fill="#4285F4" opacity=".06"/><rect x="220" y="30" width="160" height="6" fill="#111113"/>
+          <text x="300" y="32" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="7" font-weight="600" fill="#4285F4">Gemini 3 Pro</text>
+          <rect x="230" y="44" width="140" height="50" rx="4" fill="#161618"/>
+          <text x="238" y="57" font-family="IBM Plex Mono,monospace" font-size="6.5" fill="#7aafff">Fact-checking architecture...</text>
+          <text x="238" y="69" font-family="IBM Plex Mono,monospace" font-size="6" fill="#a1a1a0">Redis is correct for this</text>
+          <text x="238" y="79" font-family="IBM Plex Mono,monospace" font-size="6" fill="#a1a1a0">workload. Consider adding</text>
+          <text x="238" y="89" font-family="IBM Plex Mono,monospace" font-size="6" fill="#a1a1a0">TTL for session keys.</text>
+          <!-- Checkmark -->
+          <circle cx="300" cy="108" r="5" fill="#4ade80" opacity=".15"/><path d="M297 108 L299 110 L303 106" stroke="#4ade80" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+          <!-- Label -->
+          <text x="200" y="150" text-anchor="middle" font-family="Outfit,sans-serif" font-size="9" fill="#555">Verify proposals with a second model</text>
+          <text x="200" y="165" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="7" fill="#d97757">sidecar start --model gemini --prompt "Verify this approach"</text>
+        </svg>
+        <div class="vig-body">
+          <h3>Fact-Check</h3>
+          <p>Claude proposed an architecture? Fork to Gemini with full context and verify. Catch assumptions before they become bugs.</p>
+        </div>
+      </div>
+      <!-- Debug -->
+      <div class="vig-card rv r2">
+        <svg viewBox="0 0 400 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="400" height="180" fill="#0a0a0a"/>
+          <!-- Bug in main window -->
+          <rect x="20" y="20" width="160" height="100" rx="6" fill="#111113" stroke="#222225"/>
+          <rect x="20" y="20" width="160" height="16" rx="6" fill="#161618"/><rect x="20" y="30" width="160" height="6" fill="#111113"/>
+          <text x="100" y="32" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="7" fill="#a1a1a0">Claude Code</text>
+          <rect x="30" y="44" width="120" height="8" rx="2" fill="#e25555" opacity=".12"/>
+          <text x="34" y="51" font-family="IBM Plex Mono,monospace" font-size="6" fill="#e25555">TypeError: undefined</text>
+          <rect x="30" y="58" width="80" height="2" rx="1" fill="#2c2c30"/>
+          <rect x="30" y="64" width="100" height="2" rx="1" fill="#2c2c30"/>
+          <text x="30" y="82" font-family="IBM Plex Mono,monospace" font-size="6" fill="#555">at handleAuth:47</text>
+          <text x="30" y="92" font-family="IBM Plex Mono,monospace" font-size="6" fill="#555">at processReq:123</text>
+          <text x="30" y="102" font-family="IBM Plex Mono,monospace" font-size="6" fill="#555">stack trace...</text>
+          <!-- Arrow -->
+          <path d="M180 70 L210 70" stroke="#d97757" stroke-width="1.2" stroke-dasharray="3,2"/><polygon points="208,67 214,70 208,73" fill="#d97757"/>
+          <!-- Debug sidecar -->
+          <rect x="220" y="20" width="160" height="100" rx="6" fill="#111113" stroke="#10a37f" stroke-width="1.2"/>
+          <rect x="220" y="20" width="160" height="16" rx="6" fill="#10a37f" opacity=".06"/><rect x="220" y="30" width="160" height="6" fill="#111113"/>
+          <text x="300" y="32" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="7" font-weight="600" fill="#10a37f">GPT-5</text>
+          <rect x="230" y="44" width="140" height="50" rx="4" fill="#161618"/>
+          <text x="238" y="57" font-family="IBM Plex Mono,monospace" font-size="6.5" fill="#10a37f">Tracing the bug...</text>
+          <text x="238" y="69" font-family="IBM Plex Mono,monospace" font-size="6" fill="#a1a1a0">Race condition in token</text>
+          <text x="238" y="79" font-family="IBM Plex Mono,monospace" font-size="6" fill="#a1a1a0">refresh. handleAuth() runs</text>
+          <text x="238" y="89" font-family="IBM Plex Mono,monospace" font-size="6" fill="#a1a1a0">before session is ready.</text>
+          <!-- Bug icon -->
+          <circle cx="370" cy="108" r="5" fill="#e25555" opacity=".15"/>
+          <text x="370" y="111" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="7" fill="#e25555">!</text>
+          <text x="200" y="150" text-anchor="middle" font-family="Outfit,sans-serif" font-size="9" fill="#555">Send the bug to another model for fresh analysis</text>
+          <text x="200" y="165" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="7" fill="#d97757">sidecar start --model gpt --prompt "Debug this error"</text>
+        </svg>
+        <div class="vig-body">
+          <h3>Debug</h3>
+          <p>Stuck on a bug? Fork the full error context to a different model. Fresh eyes often spot what familiarity misses.</p>
+        </div>
+      </div>
+      <!-- Brainstorm -->
+      <div class="vig-card rv r3">
+        <svg viewBox="0 0 400 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="400" height="180" fill="#0a0a0a"/>
+          <!-- Central idea -->
+          <rect x="140" y="10" width="120" height="30" rx="6" fill="#111113" stroke="#d97757" stroke-width="1.2"/>
+          <text x="200" y="29" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="7.5" font-weight="600" fill="#d97757">"Design the API"</text>
+          <!-- Branching lines -->
+          <path d="M160 40 L60 68" stroke="#4285F4" stroke-width="1" stroke-dasharray="3,2"/>
+          <path d="M200 40 L200 68" stroke="#10a37f" stroke-width="1" stroke-dasharray="3,2"/>
+          <path d="M240 40 L340 68" stroke="#738ADB" stroke-width="1" stroke-dasharray="3,2"/>
+          <!-- Gemini branch -->
+          <rect x="10" y="68" width="110" height="60" rx="6" fill="#111113" stroke="#4285F4" stroke-width="1"/>
+          <text x="65" y="84" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="6.5" font-weight="600" fill="#4285F4">Gemini</text>
+          <text x="65" y="97" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="6" fill="#a1a1a0">REST with versioned</text>
+          <text x="65" y="107" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="6" fill="#a1a1a0">endpoints, HATEOAS</text>
+          <text x="65" y="120" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="5.5" fill="#555">approach A</text>
+          <!-- GPT branch -->
+          <rect x="145" y="68" width="110" height="60" rx="6" fill="#111113" stroke="#10a37f" stroke-width="1"/>
+          <text x="200" y="84" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="6.5" font-weight="600" fill="#10a37f">GPT-5</text>
+          <text x="200" y="97" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="6" fill="#a1a1a0">GraphQL with real-</text>
+          <text x="200" y="107" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="6" fill="#a1a1a0">time subscriptions</text>
+          <text x="200" y="120" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="5.5" fill="#555">approach B</text>
+          <!-- DeepSeek branch -->
+          <rect x="280" y="68" width="110" height="60" rx="6" fill="#111113" stroke="#738ADB" stroke-width="1"/>
+          <text x="335" y="84" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="6.5" font-weight="600" fill="#738ADB">DeepSeek</text>
+          <text x="335" y="97" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="6" fill="#a1a1a0">Hybrid: REST for CRUD,</text>
+          <text x="335" y="107" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="6" fill="#a1a1a0">WebSockets for events</text>
+          <text x="335" y="120" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="5.5" fill="#555">approach C</text>
+          <!-- Converge -->
+          <path d="M65 128 L200 148" stroke="#666" stroke-width=".8" stroke-dasharray="2,2"/>
+          <path d="M200 128 L200 148" stroke="#666" stroke-width=".8" stroke-dasharray="2,2"/>
+          <path d="M335 128 L200 148" stroke="#666" stroke-width=".8" stroke-dasharray="2,2"/>
+          <rect x="120" y="148" width="160" height="22" rx="4" fill="#d97757" opacity=".08" stroke="#d97757" stroke-width=".8" stroke-dasharray="3,2"/>
+          <text x="200" y="163" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="7" fill="#d97757">Claude synthesizes 3 perspectives</text>
+        </svg>
+        <div class="vig-body">
+          <h3>Brainstorm</h3>
+          <p>Get three different models thinking about the same problem in parallel. Claude collects and synthesizes the best ideas from each.</p>
+        </div>
+      </div>
+      <!-- Fresh Eyes -->
+      <div class="vig-card rv r4">
+        <svg viewBox="0 0 400 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="400" height="180" fill="#0a0a0a"/>
+          <!-- Long session indicator -->
+          <rect x="20" y="20" width="160" height="100" rx="6" fill="#111113" stroke="#222225"/>
+          <rect x="20" y="20" width="160" height="16" rx="6" fill="#161618"/><rect x="20" y="30" width="160" height="6" fill="#111113"/>
+          <text x="100" y="32" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="7" fill="#a1a1a0">Claude Code</text>
+          <!-- Scrollbar showing long conversation -->
+          <rect x="170" y="40" width="3" height="72" rx="1.5" fill="#161618"/>
+          <rect x="170" y="72" width="3" height="12" rx="1.5" fill="#d97757" opacity=".4"/>
+          <!-- Content lines (many, showing deep session) -->
+          <rect x="30" y="44" width="70" height="2" rx="1" fill="#2c2c30" opacity=".3"/>
+          <rect x="30" y="50" width="90" height="2" rx="1" fill="#2c2c30" opacity=".3"/>
+          <rect x="30" y="56" width="50" height="2" rx="1" fill="#2c2c30" opacity=".3"/>
+          <rect x="30" y="62" width="80" height="2" rx="1" fill="#2c2c30" opacity=".4"/>
+          <rect x="30" y="68" width="60" height="2" rx="1" fill="#2c2c30" opacity=".4"/>
+          <rect x="30" y="74" width="100" height="2" rx="1" fill="#2c2c30" opacity=".5"/>
+          <rect x="30" y="80" width="70" height="2" rx="1" fill="#2c2c30" opacity=".5"/>
+          <rect x="30" y="86" width="90" height="2" rx="1" fill="#2c2c30" opacity=".6"/>
+          <rect x="30" y="92" width="50" height="2" rx="1" fill="#2c2c30" opacity=".7"/>
+          <rect x="30" y="98" width="80" height="2" rx="1" fill="#2c2c30"/>
+          <rect x="30" y="104" width="110" height="2" rx="1" fill="#2c2c30"/>
+          <text x="100" y="127" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="6" fill="#555">200+ turns deep</text>
+          <!-- Arrow -->
+          <path d="M180 70 L210 70" stroke="#d97757" stroke-width="1.2" stroke-dasharray="3,2"/><polygon points="208,67 214,70 208,73" fill="#d97757"/>
+          <text x="196" y="62" font-family="IBM Plex Mono,monospace" font-size="5.5" fill="#d97757">fork</text>
+          <!-- Fresh model -->
+          <rect x="220" y="20" width="160" height="100" rx="6" fill="#111113" stroke="#8E75B2" stroke-width="1.2"/>
+          <rect x="220" y="20" width="160" height="16" rx="6" fill="#8E75B2" opacity=".06"/><rect x="220" y="30" width="160" height="6" fill="#111113"/>
+          <text x="300" y="32" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="7" font-weight="600" fill="#8E75B2">Gemini Flash</text>
+          <rect x="230" y="44" width="140" height="60" rx="4" fill="#161618"/>
+          <text x="238" y="57" font-family="IBM Plex Mono,monospace" font-size="6.5" fill="#8E75B2">Fresh perspective:</text>
+          <text x="238" y="69" font-family="IBM Plex Mono,monospace" font-size="6" fill="#a1a1a0">You've been refactoring in</text>
+          <text x="238" y="79" font-family="IBM Plex Mono,monospace" font-size="6" fill="#a1a1a0">circles. The real issue is</text>
+          <text x="238" y="89" font-family="IBM Plex Mono,monospace" font-size="6" fill="#a1a1a0">the schema design. Here's</text>
+          <text x="238" y="99" font-family="IBM Plex Mono,monospace" font-size="6" fill="#a1a1a0">a simpler approach...</text>
+          <!-- Eye icon -->
+          <circle cx="300" cy="113" r="4" fill="none" stroke="#8E75B2" stroke-width=".8"/><circle cx="300" cy="113" r="1.5" fill="#8E75B2"/>
+          <text x="200" y="150" text-anchor="middle" font-family="Outfit,sans-serif" font-size="9" fill="#555">Break tunnel vision with a model that sees it fresh</text>
+          <text x="200" y="165" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="7" fill="#d97757">sidecar start --model gemini-flash --prompt "Review our approach"</text>
+        </svg>
+        <div class="vig-body">
+          <h3>Fresh Eyes</h3>
+          <p>Deep in a session and losing perspective? Fork to a new model that sees your full context without the tunnel vision.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="sep">
+
+<!-- SWARM / PARALLEL -->
+<section id="swarm" style="background:var(--s1);border-top:1px solid var(--border);border-bottom:1px solid var(--border)">
+  <div class="w">
+    <div class="tag rv">Multi-Model Swarm</div>
+    <h2 class="rv">Run a Swarm.<br><span>Claude Orchestrates.</span></h2>
+    <p class="lead rv">Spawn multiple headless sidecars in parallel. Each talks to a different model. Claude collects every perspective.</p>
+    <div class="swarm-wrap">
+      <div class="rv">
+        <!-- Swarm SVG diagram -->
+        <svg viewBox="0 0 460 340" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto">
+          <!-- Claude Code - orchestrator at top -->
+          <rect x="130" y="0" width="200" height="60" rx="8" fill="#111113" stroke="#f5f5f3" stroke-width="1.5"/>
+          <circle cx="145" cy="14" r="3" fill="#e25555" opacity=".6"/><circle cx="154" cy="14" r="3" fill="#e2a855" opacity=".6"/><circle cx="163" cy="14" r="3" fill="#55c255" opacity=".6"/>
+          <text x="230" y="17" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="8" font-weight="600" fill="#a1a1a0">Claude Code</text>
+          <text x="230" y="38" text-anchor="middle" font-family="Outfit,sans-serif" font-size="9.5" font-weight="600" fill="#f5f5f3">Orchestrator</text>
+          <text x="230" y="52" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="7" fill="#555">spawns headless sidecars</text>
+
+          <!-- Fork arrows down -->
+          <path d="M180 60 L60 110" stroke="#d97757" stroke-width="1.2" stroke-dasharray="4,3"/><polygon points="62,107 56,113 65,113" fill="#d97757"/>
+          <path d="M230 60 L230 110" stroke="#d97757" stroke-width="1.2" stroke-dasharray="4,3"/><polygon points="226,108 230,116 234,108" fill="#d97757"/>
+          <path d="M280 60 L400 110" stroke="#d97757" stroke-width="1.2" stroke-dasharray="4,3"/><polygon points="395,107 404,113 398,107" fill="#d97757"/>
+
+          <!-- Sidecar 1: Gemini -->
+          <rect x="0" y="116" width="120" height="90" rx="8" fill="#111113" stroke="#4285F4" stroke-width="1.2"/>
+          <rect x="0" y="116" width="120" height="18" rx="8" fill="#4285F4" opacity=".08"/>
+          <rect x="0" y="128" width="120" height="6" fill="#111113"/>
+          <text x="60" y="130" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="7" font-weight="600" fill="#4285F4">Gemini 3 Pro</text>
+          <rect x="10" y="142" width="100" height="18" rx="4" fill="#161618"/>
+          <text x="60" y="154" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="6.5" fill="#a1a1a0">"Review architecture"</text>
+          <rect x="10" y="166" width="58" height="12" rx="6" fill="#4ade80" opacity=".1"/><text x="39" y="175" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="6.5" fill="#4ade80">running...</text>
+          <rect x="72" y="166" width="38" height="12" rx="6" fill="#161618"/><text x="91" y="175" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="6.5" fill="#555">--no-ui</text>
+          <text x="60" y="199" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="6.5" fill="#444">headless</text>
+
+          <!-- Sidecar 2: GPT -->
+          <rect x="170" y="116" width="120" height="90" rx="8" fill="#111113" stroke="#10a37f" stroke-width="1.2"/>
+          <rect x="170" y="116" width="120" height="18" rx="8" fill="#10a37f" opacity=".08"/>
+          <rect x="170" y="128" width="120" height="6" fill="#111113"/>
+          <text x="230" y="130" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="7" font-weight="600" fill="#10a37f">GPT-5</text>
+          <rect x="180" y="142" width="100" height="18" rx="4" fill="#161618"/>
+          <text x="230" y="154" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="6.5" fill="#a1a1a0">"Audit security"</text>
+          <rect x="180" y="166" width="58" height="12" rx="6" fill="#4ade80" opacity=".1"/><text x="209" y="175" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="6.5" fill="#4ade80">running...</text>
+          <rect x="242" y="166" width="38" height="12" rx="6" fill="#161618"/><text x="261" y="175" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="6.5" fill="#555">--no-ui</text>
+          <text x="230" y="199" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="6.5" fill="#444">headless</text>
+
+          <!-- Sidecar 3: DeepSeek -->
+          <rect x="340" y="116" width="120" height="90" rx="8" fill="#111113" stroke="#738ADB" stroke-width="1.2"/>
+          <rect x="340" y="116" width="120" height="18" rx="8" fill="#738ADB" opacity=".08"/>
+          <rect x="340" y="128" width="120" height="6" fill="#111113"/>
+          <text x="400" y="130" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="7" font-weight="600" fill="#738ADB">DeepSeek R1</text>
+          <rect x="350" y="142" width="100" height="18" rx="4" fill="#161618"/>
+          <text x="400" y="154" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="6.5" fill="#a1a1a0">"Generate tests"</text>
+          <rect x="350" y="166" width="58" height="12" rx="6" fill="#4ade80" opacity=".1"/><text x="379" y="175" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="6.5" fill="#4ade80">running...</text>
+          <rect x="412" y="166" width="38" height="12" rx="6" fill="#161618"/><text x="431" y="175" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="6.5" fill="#555">--no-ui</text>
+          <text x="400" y="199" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="6.5" fill="#444">headless</text>
+
+          <!-- Fold arrows back up to results -->
+          <path d="M60 210 L120 250" stroke="#666" stroke-width="1" stroke-dasharray="3,2"/><polygon points="117,247 124,253 120,246" fill="#666"/>
+          <path d="M230 210 L230 250" stroke="#666" stroke-width="1" stroke-dasharray="3,2"/><polygon points="226,248 230,256 234,248" fill="#666"/>
+          <path d="M400 210 L340 250" stroke="#666" stroke-width="1" stroke-dasharray="3,2"/><polygon points="343,247 336,253 340,246" fill="#666"/>
+
+          <!-- Results collected -->
+          <rect x="80" y="256" width="300" height="60" rx="8" fill="#111113" stroke="#d97757" stroke-width="1" stroke-dasharray="4,2"/>
+          <text x="230" y="275" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="8" font-weight="600" fill="#d97757">3 FOLD Summaries Received</text>
+          <text x="230" y="290" text-anchor="middle" font-family="IBM Plex Mono,monospace" font-size="7" fill="#e8a07c">Architecture verified. 2 vulnerabilities found. 47 tests generated.</text>
+          <text x="230" y="305" text-anchor="middle" font-family="Outfit,sans-serif" font-size="7.5" fill="#555">All results flow back into Claude's context</text>
+
+          <!-- Fold labels -->
+          <text x="82" y="238" font-family="IBM Plex Mono,monospace" font-size="6.5" fill="#555">fold</text>
+          <text x="222" y="238" font-family="IBM Plex Mono,monospace" font-size="6.5" fill="#555">fold</text>
+          <text x="345" y="238" font-family="IBM Plex Mono,monospace" font-size="6.5" fill="#555">fold</text>
+        </svg>
+      </div>
+      <div class="swarm-desc rv">
+        <h3>Claude as the orchestrator. Every other model as a specialist.</h3>
+        <p>Run <code>sidecar start --no-ui</code> multiple times to spawn headless sidecars in parallel. Each one runs autonomously with a different model and task. Claude collects the structured summaries and synthesizes the results.</p>
+        <p>Use background execution (<code>Ctrl+B</code> in Claude Code) to launch sidecars without blocking your main session. It's a multi-model swarm with Claude directing traffic.</p>
+        <div class="swarm-feats">
+          <div class="swarm-feat">Each sidecar gets full conversation context automatically</div>
+          <div class="swarm-feat">Headless mode runs autonomously with a 15-minute timeout</div>
+          <div class="swarm-feat">Structured FOLD summaries flow back to Claude</div>
+          <div class="swarm-feat">Different models bring different strengths to each task</div>
+          <div class="swarm-feat">Conflict detection prevents sidecars from overwriting each other</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="sep">
+
+<!-- MODELS -->
+<section id="models">
+  <div class="w">
+    <div class="tag rv">Compatible Models</div>
+    <h2 class="rv">Any Model.<br><span>Your Keys.</span></h2>
+    <p class="lead rv">Use your existing API keys directly, or connect everything through OpenRouter with a single key.</p>
+    <div class="prov-grid rv">
+      <div class="prov-card">
+        <svg viewBox="0 0 24 24" fill="#8E75B2"><path d="M11.04 19.32Q12 21.51 12 24q0-2.49.93-4.68.96-2.19 2.58-3.81t3.81-2.55Q21.51 12 24 12q-2.49 0-4.68-.93a12.3 12.3 0 0 1-3.81-2.58 12.3 12.3 0 0 1-2.58-3.81Q12 2.49 12 0q0 2.49-.96 4.68-.93 2.19-2.55 3.81a12.3 12.3 0 0 1-3.81 2.58Q2.49 12 0 12q2.49 0 4.68.96 2.19.93 3.81 2.55t2.55 3.81"/></svg>
+        <span class="prov-name">Google Gemini</span>
+        <span class="prov-models">Flash, Pro, Ultra</span>
+      </div>
+      <div class="prov-card">
+        <svg viewBox="0 0 24 24" fill="#fff"><path d="M22.2819 9.8211a5.9847 5.9847 0 0 0-.5157-4.9108 6.0462 6.0462 0 0 0-6.5098-2.9A6.0651 6.0651 0 0 0 4.9807 4.1818a5.9847 5.9847 0 0 0-3.9977 2.9 6.0462 6.0462 0 0 0 .7427 7.0966 5.98 5.98 0 0 0 .511 4.9107 6.051 6.051 0 0 0 6.5146 2.9001A5.9847 5.9847 0 0 0 13.2599 24a6.0557 6.0557 0 0 0 5.7718-4.2058 5.9894 5.9894 0 0 0 3.9977-2.9001 6.0557 6.0557 0 0 0-.7475-7.0729zm-9.022 12.6081a4.4755 4.4755 0 0 1-2.8764-1.0408l.1419-.0804 4.7783-2.7582a.7948.7948 0 0 0 .3927-.6813v-6.7369l2.02 1.1686a.071.071 0 0 1 .038.052v5.5826a4.504 4.504 0 0 1-4.4945 4.4944zm-9.6607-4.1254a4.4708 4.4708 0 0 1-.5346-3.0137l.142.0852 4.783 2.7582a.7712.7712 0 0 0 .7806 0l5.8428-3.3685v2.3324a.0804.0804 0 0 1-.0332.0615L9.74 19.9502a4.4992 4.4992 0 0 1-6.1408-1.6464zM2.3408 7.8956a4.485 4.485 0 0 1 2.3655-1.9728V11.6a.7664.7664 0 0 0 .3879.6765l5.8144 3.3543-2.0201 1.1685a.0757.0757 0 0 1-.071 0l-4.8303-2.7865A4.504 4.504 0 0 1 2.3408 7.872zm16.5963 3.8558L13.1038 8.364 15.1192 7.2a.0757.0757 0 0 1 .071 0l4.8303 2.7913a4.4944 4.4944 0 0 1-.6765 8.1042v-5.6772a.79.79 0 0 0-.407-.667zm2.0107-3.0231l-.142-.0852-4.7735-2.7818a.7759.7759 0 0 0-.7854 0L9.409 9.2297V6.8974a.0662.0662 0 0 1 .0284-.0615l4.8303-2.7866a4.4992 4.4992 0 0 1 6.6802 4.66zM8.3065 12.863l-2.02-1.1638a.0804.0804 0 0 1-.038-.0567V6.0742a4.4992 4.4992 0 0 1 7.3757-3.4537l-.142.0805L8.704 5.459a.7948.7948 0 0 0-.3927.6813zm1.0976-2.3654l2.602-1.4998 2.6069 1.4998v2.9994l-2.5974 1.4997-2.6067-1.4997Z"/></svg>
+        <span class="prov-name">OpenAI</span>
+        <span class="prov-models">GPT-5, o3, o4-mini</span>
+      </div>
+      <div class="prov-card">
+        <svg viewBox="0 0 24 24" fill="#D97757"><path d="M17.3041 3.541h-3.6718l6.696 16.918H24Zm-10.6082 0L0 20.459h3.7442l1.3693-3.5527h7.0052l1.3693 3.5528h3.7442L10.5363 3.5409Zm-.3712 10.2232 2.2914-5.9456 2.2914 5.9456Z"/></svg>
+        <span class="prov-name">Anthropic</span>
+        <span class="prov-models">Claude Opus, Sonnet, Haiku</span>
+      </div>
+      <div class="prov-card">
+        <svg viewBox="0 0 24 24" fill="#fff"><path d="M14.234 10.162 22.977 0h-2.072l-7.591 8.824L7.251 0H.258l9.168 13.343L.258 24H2.33l8.016-9.318L16.749 24h6.993zm-2.837 3.299-.929-1.329L3.076 1.56h3.182l5.965 8.532.929 1.329 7.754 11.09h-3.182z"/></svg>
+        <span class="prov-name">xAI</span>
+        <span class="prov-models">Grok 3, Grok 3 Mini</span>
+      </div>
+      <div class="prov-card">
+        <svg viewBox="0 0 24 24" fill="#0081FB"><path d="M6.915 4.03c-1.968 0-3.683 1.28-4.871 3.113C.704 9.208 0 11.883 0 14.449c0 .706.07 1.369.21 1.973a6.624 6.624 0 0 0 .265.86 5.297 5.297 0 0 0 .371.761c.696 1.159 1.818 1.927 3.593 1.927 1.497 0 2.633-.671 3.965-2.444.76-1.012 1.144-1.626 2.663-4.32l.756-1.339.186-.325c.061.1.121.196.183.3l2.152 3.595c.724 1.21 1.665 2.556 2.47 3.314 1.046.987 1.992 1.22 3.06 1.22 1.075 0 1.876-.355 2.455-.843a3.743 3.743 0 0 0 .81-.973c.542-.939.861-2.127.861-3.745 0-2.72-.681-5.357-2.084-7.45-1.282-1.912-2.957-2.93-4.716-2.93-1.047 0-2.088.467-3.053 1.308-.652.57-1.257 1.29-1.82 2.05-.69-.875-1.335-1.547-1.958-2.056-1.182-.966-2.315-1.303-3.454-1.303zm10.16 2.053c1.147 0 2.188.758 2.992 1.999 1.132 1.748 1.647 4.195 1.647 6.4 0 1.548-.368 2.9-1.839 2.9-.58 0-1.027-.23-1.664-1.004-.496-.601-1.343-1.878-2.832-4.358l-.617-1.028a44.908 44.908 0 0 0-1.255-1.98c.07-.109.141-.224.211-.327 1.12-1.667 2.118-2.602 3.358-2.602zm-10.201.553c1.265 0 2.058.791 2.675 1.446.307.327.737.871 1.234 1.579l-1.02 1.566c-.757 1.163-1.882 3.017-2.837 4.338-1.191 1.649-1.81 1.817-2.486 1.817-.524 0-1.038-.237-1.383-.794-.263-.426-.464-1.13-.464-2.046 0-2.221.63-4.535 1.66-6.088.454-.687.964-1.226 1.533-1.533a2.264 2.264 0 0 1 1.088-.285z"/></svg>
+        <span class="prov-name">Meta</span>
+        <span class="prov-models">Llama 4 Scout, Maverick</span>
+      </div>
+      <div class="prov-card">
+        <img src="https://avatars.githubusercontent.com/u/148330874?s=64" alt="DeepSeek" width="32" height="32" style="border-radius:50%">
+        <span class="prov-name">DeepSeek</span>
+        <span class="prov-models">R1, V3, Coder</span>
+      </div>
+      <div class="prov-or rv">
+        <svg viewBox="0 0 24 24" fill="var(--accent)"><path d="M16.778 1.844v1.919q-.569-.026-1.138-.032-.708-.008-1.415.037c-1.93.126-4.023.728-6.149 2.237-2.911 2.066-2.731 1.95-4.14 2.75-.396.223-1.342.574-2.185.798-.841.225-1.753.333-1.751.333v4.229s.768.108 1.61.333c.842.224 1.789.575 2.185.799 1.41.798 1.228.683 4.14 2.75 2.126 1.509 4.22 2.11 6.148 2.236.88.058 1.716.041 2.555.005v1.918l7.222-4.168-7.222-4.17v2.176c-.86.038-1.611.065-2.278.021-1.364-.09-2.417-.357-3.979-1.465-2.244-1.593-2.866-2.027-3.68-2.508.889-.518 1.449-.906 3.822-2.59 1.56-1.109 2.614-1.377 3.978-1.466.667-.044 1.418-.017 2.278.02v2.176L24 6.014Z"/></svg>
+        <div class="prov-or-text">
+          <span class="prov-name">OpenRouter</span>
+          <p>200+ models from every provider. One API key for everything.</p>
+        </div>
+      </div>
+    </div>
+    <div class="api-note rv">
+      <div class="api-opt">
+        <h4 style="color:var(--green)">Direct API Keys</h4>
+        <p>Already have a Google AI or OpenAI key? Use it directly. No middleman, no extra accounts.</p>
+      </div>
+      <div class="api-opt">
+        <h4 style="color:var(--accent)">OpenRouter (Recommended)</h4>
+        <p>One key, every model. Automatic fallback, unified billing. Run <code style="font-size:.75rem;color:var(--accent)">sidecar setup</code> to configure.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="sep">
+
+<!-- FEATURES -->
+<section id="features">
+  <div class="w">
+    <div class="tag rv">Features</div>
+    <h2 class="rv">Everything You Need.<br><span>Nothing You Don't.</span></h2>
+    <div class="grid2">
+      <div class="g2-cell rv r1"><h4>Interactive + Headless</h4><p>Full GUI window for interactive work, or autonomous background mode for batch tasks like test generation.</p></div>
+      <div class="g2-cell rv r2"><h4>Conflict Detection</h4><p>Warns when files changed externally while the sidecar was running. Never accidentally overwrite work.</p></div>
+      <div class="g2-cell rv r1"><h4>Session Persistence</h4><p>Every sidecar is saved. List past sessions, resume them, or chain new investigations on previous findings.</p></div>
+      <div class="g2-cell rv r2"><h4>Context Filtering</h4><p>Filter by turns, time window, or token budget. Skip context entirely for standalone tasks.</p></div>
+      <div class="g2-cell rv r1"><h4>MCP Integration</h4><p>Full MCP server for Claude Desktop and Cowork. Sidecar tools appear natively in Cowork's sandbox.</p></div>
+      <div class="g2-cell rv r2"><h4>Agent Modes</h4><p>Chat, Plan, or Build. Match the agent to the task for the right level of autonomous control.</p></div>
+      <div class="g2-cell rv r1"><h4>Mid-Session Model Switching</h4><p>Switch models without restarting. Start fast with Flash, then switch to Pro for complex analysis.</p></div>
+      <div class="g2-cell rv r2"><h4>Auto-Update</h4><p>Background update checks with zero latency. One-click updates from the toolbar or CLI.</p></div>
+    </div>
+  </div>
+</section>
+
+<hr class="sep">
+
+<!-- CTA -->
+<section class="cta">
+  <div class="cta-glow"></div>
+  <div class="cta-i">
+    <div class="tag rv">Get Started</div>
+    <h2 class="rv">Install in 30 Seconds.</h2>
+    <p class="lead rv">One npm install. Auto-configures Claude Code skill and MCP server.</p>
+    <div class="rv" style="display:flex;flex-direction:column;align-items:center;gap:1rem">
+      <div class="cmd" onclick="copyCmd(this)" style="font-size:.88rem">
+        <span class="d">$</span>npm install -g claude-sidecar<span class="cp">copy</span>
+      </div>
+      <a href="https://github.com/jrenaldi79/sidecar" class="btn-f">
+        Read the Docs
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8h10M9 4l4 4-4 4"/></svg>
+      </a>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="ft-i">
+    <div class="ft-l">
+      <a href="https://github.com/jrenaldi79/sidecar">GitHub</a>
+      <a href="https://www.npmjs.com/package/claude-sidecar">npm</a>
+      <a href="https://github.com/jrenaldi79/sidecar/issues">Issues</a>
+      <a href="https://github.com/jrenaldi79/sidecar/blob/main/LICENSE">License</a>
+    </div>
+    <div class="ft-r">An experimental project by <a href="https://www.linkedin.com/in/renaldi/">John Renaldi</a> · Product executive, advisor, and educator</div>
+  </div>
+</footer>
+
+<script>
+function copyCmd(e){navigator.clipboard.writeText('npm install -g claude-sidecar').then(()=>{const t=e.querySelector('.cp');t.textContent='copied!';setTimeout(()=>t.textContent='copy',2e3)})}
+const io=new IntersectionObserver(e=>{e.forEach(e=>{if(e.isIntersecting){e.target.classList.add('v');io.unobserve(e.target)}})},{threshold:0,rootMargin:'0px 0px 40px 0px'});
+document.querySelectorAll('.rv').forEach((e,i)=>{const r=e.getBoundingClientRect();if(r.top<window.innerHeight+50){e.style.transitionDelay=(i*.06)+'s';e.classList.add('v')}else{io.observe(e)}});
+document.querySelectorAll('a[href^="#"]').forEach(a=>{a.addEventListener('click',e=>{e.preventDefault();document.querySelector(a.getAttribute('href'))?.scrollIntoView({behavior:'smooth'})})});
+/* Word-by-word heading reveal (safe DOM approach) */
+document.querySelectorAll('h2').forEach(h2=>{
+  if(h2.closest('.cta')){return}
+  const frag=document.createDocumentFragment();
+  const nodes=Array.from(h2.childNodes);
+  let wIdx=0;
+  nodes.forEach(node=>{
+    if(node.nodeType===3){
+      const words=node.textContent.split(/(\s+)/);
+      words.forEach(w=>{
+        if(!w){return}
+        if(/^\s+$/.test(w)){frag.appendChild(document.createTextNode(w));return}
+        const s=document.createElement('span');s.className='w-anim';s.textContent=w;s.style.transitionDelay=(wIdx*.05)+'s';wIdx++;frag.appendChild(s);
+      });
+    } else if(node.nodeName==='BR'){
+      frag.appendChild(node.cloneNode());wIdx++;
+    } else {
+      const clone=node.cloneNode(false);const inner=node.textContent.split(/(\s+)/);
+      inner.forEach(w=>{
+        if(!w){return}
+        if(/^\s+$/.test(w)){clone.appendChild(document.createTextNode(w));return}
+        const s=document.createElement('span');s.className='w-anim';s.textContent=w;s.style.transitionDelay=(wIdx*.05)+'s';wIdx++;clone.appendChild(s);
+      });
+      frag.appendChild(clone);
+    }
+  });
+  while(h2.firstChild){h2.removeChild(h2.firstChild)}
+  h2.appendChild(frag);
+  h2.classList.add('rv');
+  const r=h2.getBoundingClientRect();
+  if(r.top<window.innerHeight+50){h2.classList.add('v')}else{io.observe(h2)}
+});
+</script>
+</body>
+</html>
