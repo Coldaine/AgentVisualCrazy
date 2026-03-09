@@ -475,6 +475,122 @@ describe('MCP Server Handlers', () => {
     });
   });
 
+  describe('sidecar_status next_poll field', () => {
+    test('includes next_poll when headless:true and status:running', async () => {
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mcp-poll-'));
+      const sessDir = path.join(tmpDir, '.claude', 'sidecar_sessions', 'hl1');
+      fs.mkdirSync(sessDir, { recursive: true });
+      fs.writeFileSync(path.join(sessDir, 'metadata.json'), JSON.stringify({
+        taskId: 'hl1', status: 'running', pid: process.pid,
+        headless: true, createdAt: new Date().toISOString(),
+      }));
+      fs.writeFileSync(path.join(sessDir, 'conversation.jsonl'), '');
+      try {
+        const result = await handlers.sidecar_status({ taskId: 'hl1' }, tmpDir);
+        const parsed = JSON.parse(result.content[0].text);
+        expect(parsed).toHaveProperty('next_poll');
+        expect(parsed.next_poll).toHaveProperty('recommended_wait_seconds');
+        expect(parsed.next_poll).toHaveProperty('hint');
+        expect(typeof parsed.next_poll.recommended_wait_seconds).toBe('number');
+      } finally {
+        fs.rmSync(tmpDir, { recursive: true });
+      }
+    });
+
+    test('omits next_poll when headless is false (interactive)', async () => {
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mcp-poll-'));
+      const sessDir = path.join(tmpDir, '.claude', 'sidecar_sessions', 'ia1');
+      fs.mkdirSync(sessDir, { recursive: true });
+      fs.writeFileSync(path.join(sessDir, 'metadata.json'), JSON.stringify({
+        taskId: 'ia1', status: 'running', pid: process.pid,
+        headless: false, createdAt: new Date().toISOString(),
+      }));
+      fs.writeFileSync(path.join(sessDir, 'conversation.jsonl'), '');
+      try {
+        const result = await handlers.sidecar_status({ taskId: 'ia1' }, tmpDir);
+        const parsed = JSON.parse(result.content[0].text);
+        expect(parsed).not.toHaveProperty('next_poll');
+      } finally {
+        fs.rmSync(tmpDir, { recursive: true });
+      }
+    });
+
+    test('omits next_poll when headless is missing (legacy sessions)', async () => {
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mcp-poll-'));
+      const sessDir = path.join(tmpDir, '.claude', 'sidecar_sessions', 'leg1');
+      fs.mkdirSync(sessDir, { recursive: true });
+      fs.writeFileSync(path.join(sessDir, 'metadata.json'), JSON.stringify({
+        taskId: 'leg1', status: 'running', pid: process.pid,
+        createdAt: new Date().toISOString(),
+      }));
+      fs.writeFileSync(path.join(sessDir, 'conversation.jsonl'), '');
+      try {
+        const result = await handlers.sidecar_status({ taskId: 'leg1' }, tmpDir);
+        const parsed = JSON.parse(result.content[0].text);
+        expect(parsed).not.toHaveProperty('next_poll');
+      } finally {
+        fs.rmSync(tmpDir, { recursive: true });
+      }
+    });
+
+    test('omits next_poll when headless:true but status:complete', async () => {
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mcp-poll-'));
+      const sessDir = path.join(tmpDir, '.claude', 'sidecar_sessions', 'hlc1');
+      fs.mkdirSync(sessDir, { recursive: true });
+      fs.writeFileSync(path.join(sessDir, 'metadata.json'), JSON.stringify({
+        taskId: 'hlc1', status: 'complete', headless: true,
+        createdAt: new Date().toISOString(),
+      }));
+      try {
+        const result = await handlers.sidecar_status({ taskId: 'hlc1' }, tmpDir);
+        const parsed = JSON.parse(result.content[0].text);
+        expect(parsed.status).toBe('complete');
+        expect(parsed).not.toHaveProperty('next_poll');
+      } finally {
+        fs.rmSync(tmpDir, { recursive: true });
+      }
+    });
+
+    test('recommended_wait_seconds is 30 for prompt_sent stage', async () => {
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mcp-poll-'));
+      const sessDir = path.join(tmpDir, '.claude', 'sidecar_sessions', 'ps1');
+      fs.mkdirSync(sessDir, { recursive: true });
+      fs.writeFileSync(path.join(sessDir, 'metadata.json'), JSON.stringify({
+        taskId: 'ps1', status: 'running', pid: process.pid,
+        headless: true, createdAt: new Date().toISOString(),
+      }));
+      fs.writeFileSync(path.join(sessDir, 'conversation.jsonl'), '');
+      fs.writeFileSync(path.join(sessDir, 'progress.json'), JSON.stringify({
+        stage: 'prompt_sent', updatedAt: new Date().toISOString(),
+      }));
+      try {
+        const result = await handlers.sidecar_status({ taskId: 'ps1' }, tmpDir);
+        const parsed = JSON.parse(result.content[0].text);
+        expect(parsed.next_poll.recommended_wait_seconds).toBe(30);
+      } finally {
+        fs.rmSync(tmpDir, { recursive: true });
+      }
+    });
+
+    test('recommended_wait_seconds is 45 for receiving stage under 3 minutes', async () => {
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mcp-poll-'));
+      const sessDir = path.join(tmpDir, '.claude', 'sidecar_sessions', 'rc1');
+      fs.mkdirSync(sessDir, { recursive: true });
+      fs.writeFileSync(path.join(sessDir, 'metadata.json'), JSON.stringify({
+        taskId: 'rc1', status: 'running', pid: process.pid,
+        headless: true, createdAt: new Date().toISOString(),
+      }));
+      fs.writeFileSync(path.join(sessDir, 'conversation.jsonl'), '');
+      try {
+        const result = await handlers.sidecar_status({ taskId: 'rc1' }, tmpDir);
+        const parsed = JSON.parse(result.content[0].text);
+        expect(parsed.next_poll.recommended_wait_seconds).toBe(45);
+      } finally {
+        fs.rmSync(tmpDir, { recursive: true });
+      }
+    });
+  });
+
   describe('sidecar_read', () => {
     test('returns summary when available', async () => {
       const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mcp-test-'));
