@@ -33,6 +33,29 @@ function textResult(text, isError) {
   return result;
 }
 
+/**
+ * Compute next poll recommendation for headless sessions.
+ * @param {number} elapsedMs - Milliseconds since session start
+ * @param {string} [stage] - Current lifecycle stage from progress.json
+ * @returns {{ recommended_wait_seconds: number, hint: string }}
+ */
+function computeNextPoll(elapsedMs, stage) {
+  let recommended_wait_seconds;
+  if (stage === 'prompt_sent') {
+    recommended_wait_seconds = 30;
+  } else if (elapsedMs < 3 * 60 * 1000) {
+    recommended_wait_seconds = 45;
+  } else if (elapsedMs < 8 * 60 * 1000) {
+    recommended_wait_seconds = 30;
+  } else {
+    recommended_wait_seconds = 15;
+  }
+  return {
+    recommended_wait_seconds,
+    hint: `Task is actively running. Wait ~${recommended_wait_seconds}s before next poll.`,
+  };
+}
+
 /** Spawn a sidecar CLI process (fire-and-forget) */
 function spawnSidecarProcess(args, sessionDir) {
   const sidecarBin = path.join(__dirname, '..', 'bin', 'sidecar.js');
@@ -93,6 +116,7 @@ const handlers = {
       if (!fs.existsSync(metaPath)) {
         fs.writeFileSync(metaPath, JSON.stringify({
           taskId, status: 'running', pid: child.pid, createdAt: new Date().toISOString(),
+          headless: !!input.noUi,
         }, null, 2), { mode: 0o600 });
       }
     }
@@ -138,6 +162,9 @@ const handlers = {
     if (metadata.status === 'running') {
       const progress = readProgress(sessionDir);
       Object.assign(response, progress);
+      if (metadata.headless) {
+        response.next_poll = computeNextPoll(ms, progress.stage);
+      }
     }
     if (metadata.status === 'crashed' || metadata.status === 'error') {
       response.reason = metadata.reason || 'Unknown error';
