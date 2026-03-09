@@ -375,6 +375,43 @@ find src -name "*.js" -exec wc -l {} + | awk '$1 > 300'
 
 ---
 
+## Git Hooks
+
+Managed by [husky](https://typicode.github.io/husky/). Hooks run automatically on commit and push.
+
+### pre-commit (fast, <2s)
+
+Runs on every `git commit`. Blocks the commit if any check fails.
+
+| Step | Script | What It Does |
+|------|--------|-------------|
+| 1. lint-staged | `npx lint-staged` | ESLint `--fix` on staged `.js` files |
+| 2. Secret scan | `node scripts/check-secrets.js` | Blocks commits containing API keys, tokens, or private keys |
+| 3. File size check | `node scripts/check-file-sizes.js` | Blocks files over 300 lines |
+| 4. Doc drift warning | `node scripts/validate-docs.js` | Warns (non-blocking) if `src/`/`bin/`/`scripts/` changed without staging CLAUDE.md |
+
+### pre-push (thorough, ~3min)
+
+Runs on every `git push`. Blocks the push if tests fail.
+
+| Step | What It Does |
+|------|-------------|
+| 1. Test suite | `npm test` (all Jest tests) -- **skipped if cached** (see below) |
+| 2. Audit | `npm audit` (warn-only, does not block push) |
+
+### Test Caching (SHA-based)
+
+To avoid re-running the full test suite on push when you just ran `npm test`, the hooks use SHA-based caching:
+
+1. `npm test` succeeds -> `posttest` script writes `HEAD` SHA to `.test-passed`
+2. `pre-push` hook compares current `HEAD` SHA against `.test-passed`
+3. If they match, tests are skipped with "Tests already passed for \<sha\>"
+4. If they differ (new commit since last test run), tests run normally
+
+The cache is invalidated automatically by any new commit. `.test-passed` is gitignored.
+
+---
+
 ## Structured Logging
 
 Use `src/utils/logger.js` (levels: error/warn/info/debug). Logs go to stderr to avoid polluting stdout (used for sidecar summary output). See global CLAUDE.md for general logging guidelines.
