@@ -33,89 +33,113 @@ function normalizeMcpJson(raw) {
 }
 
 /**
- * Discover MCP servers from Claude Code's plugin chain.
+ * Discover MCP servers from Claude Code's plugin chain AND ~/.claude.json.
  *
- * Discovery chain:
- * 1. Read settings.json → enabledPlugins map (filter: value === true)
- * 2. Read installed_plugins.json → plugins map → get installPath
- * 3. Read {installPath}/.mcp.json → normalize
- * 4. Check blocklist.json → skip blocked plugins
+ * Discovery sources (merged, in priority order):
+ * 1. ~/.claude.json → mcpServers  (servers added via `claude mcp add`)
+ * 2. Enabled plugins → .mcp.json entries
  *
  * @param {string} [claudeDir] - Path to ~/.claude directory (for testing)
+ * @param {string} [claudeJsonPath] - Path to ~/.claude.json (for testing)
  * @returns {object|null} Merged MCP server configs, or null if none found
  */
-function discoverClaudeCodeMcps(claudeDir) {
+function discoverClaudeCodeMcps(claudeDir, claudeJsonPath) {
   const baseDir = claudeDir || path.join(os.homedir(), '.claude');
+  const jsonPath = claudeJsonPath || path.join(os.homedir(), '.claude.json');
 
-  // Step 1: Read enabled plugins
-  let enabledPlugins;
+  // Source 1: ~/.claude.json → mcpServers (servers added via `claude mcp add`)
+  let claudeJsonServers = {};
+  try {
+    if (fs.existsSync(jsonPath)) {
+      const raw = JSON.parse(fs.readFileSync(jsonPath, 'utf-8'));
+      if (raw.mcpServers && typeof raw.mcpServers === 'object') {
+        claudeJsonServers = raw.mcpServers;
+        logger.debug('Read MCP servers from ~/.claude.json', {
+          serverCount: Object.keys(claudeJsonServers).length
+        });
+      }
+    }
+  } catch (err) {
+    logger.debug('Failed to read ~/.claude.json', { error: err.message });
+  }
+
+  // Source 2: Plugin chain (settings.json → installed_plugins.json → .mcp.json)
+  const pluginServers = {};
+
   try {
     const settingsPath = path.join(baseDir, 'settings.json');
-    if (!fs.existsSync(settingsPath)) { return null; }
+    if (!fs.existsSync(settingsPath)) {
+      // No settings.json — skip plugin discovery, may still have claude.json servers
+      const merged = { ...claudeJsonServers };
+      delete merged.sidecar;
+      return Object.keys(merged).length > 0 ? merged : null;
+    }
     const settings = JSON.parse(fs.readFileSync(settingsPath, 'utf-8'));
-    enabledPlugins = settings.enabledPlugins;
-    if (!enabledPlugins || typeof enabledPlugins !== 'object') { return null; }
-  } catch (err) {
-    logger.debug('Failed to read Claude Code settings', { error: err.message });
-    return null;
-  }
-
-  // Step 2: Read installed plugins
-  let installedPlugins;
-  try {
-    const pluginsDir = path.join(baseDir, 'plugins');
-    const installedPath = path.join(pluginsDir, 'installed_plugins.json');
-    if (!fs.existsSync(installedPath)) { return null; }
-    const installed = JSON.parse(fs.readFileSync(installedPath, 'utf-8'));
-    installedPlugins = installed.plugins || {};
-  } catch (err) {
-    logger.debug('Failed to read installed plugins', { error: err.message });
-    return null;
-  }
-
-  // Step 4 (early): Read blocklist
-  let blocklist = [];
-  try {
-    const blocklistPath = path.join(baseDir, 'plugins', 'blocklist.json');
-    if (fs.existsSync(blocklistPath)) {
-      blocklist = JSON.parse(fs.readFileSync(blocklistPath, 'utf-8'));
-      if (!Array.isArray(blocklist)) { blocklist = []; }
-    }
-  } catch {
-    // Ignore blocklist read errors
-  }
-
-  // Iterate enabled plugins and collect MCP configs
-  const merged = {};
-  let found = false;
-
-  for (const [pluginName, isEnabled] of Object.entries(enabledPlugins)) {
-    if (!isEnabled) { continue; }
-    if (blocklist.includes(pluginName)) {
-      logger.debug('Skipping blocklisted plugin', { pluginName });
-      continue;
+    const enabledPlugins = settings.enabledPlugins;
+    if (!enabledPlugins || typeof enabledPlugins !== 'object') {
+      const merged = { ...claudeJsonServers };
+      delete merged.sidecar;
+      return Object.keys(merged).length > 0 ? merged : null;
     }
 
-    const pluginInfo = installedPlugins[pluginName];
-    if (!pluginInfo || !pluginInfo.installPath) { continue; }
-
-    // Step 3: Read .mcp.json
+    let installedPlugins = {};
     try {
-      const mcpPath = path.join(pluginInfo.installPath, '.mcp.json');
-      if (!fs.existsSync(mcpPath)) { continue; }
-      const raw = JSON.parse(fs.readFileSync(mcpPath, 'utf-8'));
-      const servers = normalizeMcpJson(raw);
-
-      for (const [name, config] of Object.entries(servers)) {
-        merged[name] = config;
-        found = true;
+      const pluginsDir = path.join(baseDir, 'plugins');
+      const installedPath = path.join(pluginsDir, 'installed_plugins.json');
+      if (fs.existsSync(installedPath)) {
+        const installed = JSON.parse(fs.readFileSync(installedPath, 'utf-8'));
+        installedPlugins = installed.plugins || {};
       }
     } catch (err) {
-      logger.debug('Failed to read plugin MCP config', { pluginName, error: err.message });
+      logger.debug('Failed to read installed plugins', { error: err.message });
     }
+
+    // Read blocklist
+    let blocklist = [];
+    try {
+      const blocklistPath = path.join(baseDir, 'plugins', 'blocklist.json');
+      if (fs.existsSync(blocklistPath)) {
+        blocklist = JSON.parse(fs.readFileSync(blocklistPath, 'utf-8'));
+        if (!Array.isArray(blocklist)) { blocklist = []; }
+      }
+    } catch {
+      // Ignore blocklist read errors
+    }
+
+    for (const [pluginName, isEnabled] of Object.entries(enabledPlugins)) {
+      if (!isEnabled) { continue; }
+      if (blocklist.includes(pluginName)) {
+        logger.debug('Skipping blocklisted plugin', { pluginName });
+        continue;
+      }
+
+      const pluginInfo = installedPlugins[pluginName];
+      if (!pluginInfo || !pluginInfo.installPath) { continue; }
+
+      try {
+        const mcpPath = path.join(pluginInfo.installPath, '.mcp.json');
+        if (!fs.existsSync(mcpPath)) { continue; }
+        const raw = JSON.parse(fs.readFileSync(mcpPath, 'utf-8'));
+        const servers = normalizeMcpJson(raw);
+
+        for (const [name, config] of Object.entries(servers)) {
+          pluginServers[name] = config;
+        }
+      } catch (err) {
+        logger.debug('Failed to read plugin MCP config', { pluginName, error: err.message });
+      }
+    }
+  } catch (err) {
+    logger.debug('Failed to read Claude Code settings', { error: err.message });
   }
 
-  return found ? merged : null;
+  // Merge: plugin servers first, then claude.json overwrites (higher priority)
+  const merged = { ...pluginServers, ...claudeJsonServers };
+
+  // Always exclude sidecar itself to prevent recursive spawning
+  delete merged.sidecar;
+
+  return Object.keys(merged).length > 0 ? merged : null;
 }
 
 /**

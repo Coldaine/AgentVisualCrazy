@@ -124,7 +124,7 @@ describe('MCP Discovery', () => {
       );
 
       loadModule();
-      const result = discoverClaudeCodeMcps(claudeDir);
+      const result = discoverClaudeCodeMcps(claudeDir, path.join(tmpDir, 'no-claude.json'));
       expect(result).not.toBeNull();
       expect(result['my-mcp-server']).toBeDefined();
       expect(result['my-mcp-server'].command).toBe('npx');
@@ -153,7 +153,7 @@ describe('MCP Discovery', () => {
       );
 
       loadModule();
-      const result = discoverClaudeCodeMcps(claudeDir);
+      const result = discoverClaudeCodeMcps(claudeDir, path.join(tmpDir, 'no-claude.json'));
       expect(result).toBeNull();
     });
 
@@ -185,7 +185,7 @@ describe('MCP Discovery', () => {
       );
 
       loadModule();
-      const result = discoverClaudeCodeMcps(claudeDir);
+      const result = discoverClaudeCodeMcps(claudeDir, path.join(tmpDir, 'no-claude.json'));
       expect(result).toBeNull();
     });
 
@@ -217,7 +217,7 @@ describe('MCP Discovery', () => {
       );
 
       loadModule();
-      const result = discoverClaudeCodeMcps(claudeDir);
+      const result = discoverClaudeCodeMcps(claudeDir, path.join(tmpDir, 'no-claude.json'));
       expect(result).not.toBeNull();
       expect(result['wrapped-server']).toBeDefined();
     });
@@ -228,7 +228,7 @@ describe('MCP Discovery', () => {
 
       // No settings.json at all
       loadModule();
-      const result = discoverClaudeCodeMcps(claudeDir);
+      const result = discoverClaudeCodeMcps(claudeDir, path.join(tmpDir, 'no-claude.json'));
       expect(result).toBeNull();
     });
 
@@ -242,7 +242,7 @@ describe('MCP Discovery', () => {
       );
 
       loadModule();
-      const result = discoverClaudeCodeMcps(claudeDir);
+      const result = discoverClaudeCodeMcps(claudeDir, path.join(tmpDir, 'no-claude.json'));
       expect(result).toBeNull();
     });
 
@@ -283,7 +283,7 @@ describe('MCP Discovery', () => {
       );
 
       loadModule();
-      const result = discoverClaudeCodeMcps(claudeDir);
+      const result = discoverClaudeCodeMcps(claudeDir, path.join(tmpDir, 'no-claude.json'));
       expect(result).not.toBeNull();
       expect(result.server1).toBeDefined();
       expect(result.server2).toBeDefined();
@@ -310,8 +310,172 @@ describe('MCP Discovery', () => {
       fs.writeFileSync(path.join(installDir, '.mcp.json'), '{ invalid json }');
 
       loadModule();
-      const result = discoverClaudeCodeMcps(claudeDir);
+      const result = discoverClaudeCodeMcps(claudeDir, path.join(tmpDir, 'no-claude.json'));
       // Should return null — the one plugin had invalid JSON
+      expect(result).toBeNull();
+    });
+  });
+
+  describe('discoverClaudeCodeMcps — claude.json source', () => {
+    function makeClaudeDir(claudeDir) {
+      // Minimal plugin chain so the function doesn't bail early on settings.json absence
+      const pluginsDir = path.join(claudeDir, 'plugins');
+      fs.mkdirSync(pluginsDir, { recursive: true });
+      fs.writeFileSync(
+        path.join(claudeDir, 'settings.json'),
+        JSON.stringify({ enabledPlugins: {} })
+      );
+      fs.writeFileSync(
+        path.join(pluginsDir, 'installed_plugins.json'),
+        JSON.stringify({ plugins: {} })
+      );
+    }
+
+    test('reads mcpServers from ~/.claude.json', () => {
+      const claudeDir = path.join(tmpDir, '.claude');
+      makeClaudeDir(claudeDir);
+
+      const claudeJsonPath = path.join(tmpDir, 'claude.json');
+      fs.writeFileSync(claudeJsonPath, JSON.stringify({
+        mcpServers: {
+          'google-workspace': {
+            type: 'stdio',
+            command: 'node',
+            args: ['/path/to/workspace-server/dist/index.js'],
+            env: {}
+          }
+        }
+      }));
+
+      loadModule();
+      const result = discoverClaudeCodeMcps(claudeDir, claudeJsonPath);
+      expect(result).not.toBeNull();
+      expect(result['google-workspace']).toBeDefined();
+      expect(result['google-workspace'].command).toBe('node');
+    });
+
+    test('claude.json mcpServers win on name collision with plugin', () => {
+      const claudeDir = path.join(tmpDir, '.claude');
+      const pluginsDir = path.join(claudeDir, 'plugins');
+      const installDir = path.join(tmpDir, 'collision-plugin');
+      fs.mkdirSync(pluginsDir, { recursive: true });
+      fs.mkdirSync(installDir, { recursive: true });
+
+      fs.writeFileSync(
+        path.join(claudeDir, 'settings.json'),
+        JSON.stringify({ enabledPlugins: { 'collision-plugin': true } })
+      );
+      fs.writeFileSync(
+        path.join(pluginsDir, 'installed_plugins.json'),
+        JSON.stringify({ plugins: { 'collision-plugin': { installPath: installDir } } })
+      );
+      fs.writeFileSync(
+        path.join(installDir, '.mcp.json'),
+        JSON.stringify({ 'my-server': { command: 'plugin-cmd', args: [] } })
+      );
+
+      const claudeJsonPath = path.join(tmpDir, 'claude.json');
+      fs.writeFileSync(claudeJsonPath, JSON.stringify({
+        mcpServers: {
+          'my-server': { command: 'cli-cmd', args: [] }
+        }
+      }));
+
+      loadModule();
+      const result = discoverClaudeCodeMcps(claudeDir, claudeJsonPath);
+      expect(result).not.toBeNull();
+      expect(result['my-server'].command).toBe('cli-cmd');
+    });
+
+    test('merges claude.json servers with plugin servers', () => {
+      const claudeDir = path.join(tmpDir, '.claude');
+      const pluginsDir = path.join(claudeDir, 'plugins');
+      const installDir = path.join(tmpDir, 'merge-plugin');
+      fs.mkdirSync(pluginsDir, { recursive: true });
+      fs.mkdirSync(installDir, { recursive: true });
+
+      fs.writeFileSync(
+        path.join(claudeDir, 'settings.json'),
+        JSON.stringify({ enabledPlugins: { 'merge-plugin': true } })
+      );
+      fs.writeFileSync(
+        path.join(pluginsDir, 'installed_plugins.json'),
+        JSON.stringify({ plugins: { 'merge-plugin': { installPath: installDir } } })
+      );
+      fs.writeFileSync(
+        path.join(installDir, '.mcp.json'),
+        JSON.stringify({ 'plugin-server': { command: 'npx', args: ['@plugin/mcp'] } })
+      );
+
+      const claudeJsonPath = path.join(tmpDir, 'claude.json');
+      fs.writeFileSync(claudeJsonPath, JSON.stringify({
+        mcpServers: {
+          'cli-server': { command: 'node', args: ['server.js'] }
+        }
+      }));
+
+      loadModule();
+      const result = discoverClaudeCodeMcps(claudeDir, claudeJsonPath);
+      expect(result).not.toBeNull();
+      expect(result['plugin-server']).toBeDefined();
+      expect(result['cli-server']).toBeDefined();
+    });
+
+    test('excludes sidecar entry from claude.json', () => {
+      const claudeDir = path.join(tmpDir, '.claude');
+      makeClaudeDir(claudeDir);
+
+      const claudeJsonPath = path.join(tmpDir, 'claude.json');
+      fs.writeFileSync(claudeJsonPath, JSON.stringify({
+        mcpServers: {
+          'sidecar': { command: 'sidecar', args: ['mcp'] },
+          'real-server': { command: 'node', args: ['server.js'] }
+        }
+      }));
+
+      loadModule();
+      const result = discoverClaudeCodeMcps(claudeDir, claudeJsonPath);
+      expect(result).not.toBeNull();
+      expect(result['sidecar']).toBeUndefined();
+      expect(result['real-server']).toBeDefined();
+    });
+
+    test('returns plugin servers when claude.json is absent', () => {
+      const claudeDir = path.join(tmpDir, '.claude');
+      const pluginsDir = path.join(claudeDir, 'plugins');
+      const installDir = path.join(tmpDir, 'only-plugin');
+      fs.mkdirSync(pluginsDir, { recursive: true });
+      fs.mkdirSync(installDir, { recursive: true });
+
+      fs.writeFileSync(
+        path.join(claudeDir, 'settings.json'),
+        JSON.stringify({ enabledPlugins: { 'only-plugin': true } })
+      );
+      fs.writeFileSync(
+        path.join(pluginsDir, 'installed_plugins.json'),
+        JSON.stringify({ plugins: { 'only-plugin': { installPath: installDir } } })
+      );
+      fs.writeFileSync(
+        path.join(installDir, '.mcp.json'),
+        JSON.stringify({ 'plugin-only-server': { command: 'npx' } })
+      );
+
+      const missingPath = path.join(tmpDir, 'nonexistent.json');
+
+      loadModule();
+      const result = discoverClaudeCodeMcps(claudeDir, missingPath);
+      expect(result).not.toBeNull();
+      expect(result['plugin-only-server']).toBeDefined();
+    });
+
+    test('returns null when both claude.json absent and no enabled plugins', () => {
+      const claudeDir = path.join(tmpDir, '.claude');
+      makeClaudeDir(claudeDir);
+
+      const missingPath = path.join(tmpDir, 'nonexistent.json');
+
+      loadModule();
+      const result = discoverClaudeCodeMcps(claudeDir, missingPath);
       expect(result).toBeNull();
     });
   });
