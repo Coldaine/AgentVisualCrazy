@@ -115,6 +115,16 @@ describe('MCP Tool Definitions', () => {
       expect(startTool.inputSchema).toHaveProperty('summaryLength');
     });
 
+    test('has includeContext in input schema', () => {
+      expect(startTool.inputSchema).toHaveProperty('includeContext');
+    });
+
+    test('includeContext defaults to true', () => {
+      const schema = startTool.inputSchema.includeContext;
+      expect(schema._def.typeName).toBe('ZodDefault');
+      expect(schema._def.defaultValue()).toBe(true);
+    });
+
     test('has parentSession in input schema', () => {
       expect(startTool.inputSchema).toHaveProperty('parentSession');
     });
@@ -226,6 +236,20 @@ describe('MCP Tool Definitions', () => {
     });
   });
 
+  describe('polling guidance in descriptions', () => {
+    test('sidecar_start description mentions interactive and headless modes', () => {
+      const tool = TOOLS.find(t => t.name === 'sidecar_start');
+      expect(tool.description).toContain('headless');
+      expect(tool.description).toContain('interactive');
+      expect(tool.description).toContain('do not poll');
+    });
+
+    test('sidecar_status description mentions headless mode', () => {
+      const tool = TOOLS.find(t => t.name === 'sidecar_status');
+      expect(tool.description).toContain('headless');
+    });
+  });
+
   describe('getGuideText', () => {
     test('returns non-empty string with key sections', () => {
       const guide = getGuideText();
@@ -262,11 +286,20 @@ describe('MCP Tool Definitions', () => {
       expect(guide).toContain('openrouter/');
     });
 
+    test('contains context control guidance', () => {
+      const guide = getGuideText();
+      expect(guide).toContain('## Context Control (includeContext)');
+      expect(guide).toContain('includeContext: false');
+      expect(guide).toContain('Safe to Skip Context');
+      expect(guide).toContain('Self-Contained Briefing Template');
+    });
+
     test('contains parentSession guidance for Claude Code CLI', () => {
       const guide = getGuideText();
       expect(guide).toContain('parentSession');
       expect(guide).toContain('Claude Code CLI');
     });
+
   });
 
   describe('Input Validation (Security)', () => {

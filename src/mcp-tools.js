@@ -33,12 +33,13 @@ function getTools() {
     name: 'sidecar_start',
     description:
       'Spawn a multi-model sidecar conversation with a different LLM ' +
-      '(Gemini, GPT, etc.). Returns a task ID immediately — the sidecar ' +
-      'runs asynchronously in the background. Use sidecar_status to poll ' +
-      'for completion and sidecar_read to get results. Opens an interactive ' +
-      'Electron GUI by default; pass noUi: true for autonomous headless ' +
-      'mode. Call sidecar_guide first if you need help choosing models or ' +
-      'writing a good briefing.',
+      '(Gemini, GPT, etc.). Returns a task ID immediately. ' +
+      'For headless mode (noUi: true), estimate task complexity and poll ' +
+      'sidecar_status accordingly. For interactive mode (default), ' +
+      'do not poll \u2014 wait for the user to tell you they\'ve clicked Fold, ' +
+      'then use sidecar_read. Call sidecar_guide first if you need help ' +
+      'choosing models or writing a good briefing.' +
+      ' Pass includeContext: false when the briefing is fully self-contained.',
     inputSchema: {
       model: safeModel.optional().describe(
         `Model alias (${aliasNames}) or full ID ` +
@@ -80,6 +81,11 @@ function getTools() {
         'Fold summary verbosity. brief: key findings only. normal (default): full ' +
         'structured output. verbose: maximum detail.'
       ),
+      includeContext: z.boolean().optional().default(true).describe(
+        'Whether to include parent conversation history as context. '
+        + 'Default: true. Set to false when the briefing is self-contained '
+        + 'and does not depend on prior conversation. See sidecar_guide for guidance.'
+      ),
       coworkProcess: z.string().optional().describe(
         'Cowork VM process name (e.g., "modest-laughing-goodall"). ' +
         'Extract from CWD: /sessions/<name>/. Required for parent context loading.'
@@ -97,8 +103,9 @@ function getTools() {
     name: 'sidecar_status',
     description:
       'Check the status of a running sidecar task. Returns status ' +
-      '(running/complete), elapsed time, and model info. Use after ' +
-      'sidecar_start to poll for completion.',
+      '(running/complete), elapsed time, and progress info. Primarily ' +
+      'for headless mode \u2014 in interactive mode, wait for the user to ' +
+      'tell you the sidecar is done instead of polling.',
     inputSchema: {
       taskId: safeTaskId.describe(
         'The task ID returned by sidecar_start.'
@@ -250,10 +257,22 @@ Sidecar spawns parallel conversations with different LLMs and folds results back
 **DON'T:** Simple tasks you can handle directly.
 
 ## Async Workflow
+
+### Headless Mode (noUi: true)
+1. sidecar_start with model + prompt + noUi: true -> get task ID
+2. Estimate task complexity from your briefing:
+   - Quick (questions, lookups, short analysis): first poll at 20s, then every 15-20s
+   - Medium (code review, debugging, research): first poll at 30s, then every 30s
+   - Heavy (implementation, test generation, large refactors): first poll at 45s, then every 45s
+3. sidecar_status to check progress
+4. sidecar_read to get the summary once complete
+5. Act on findings
+
+### Interactive Mode (noUi: false, default)
 1. sidecar_start with model + prompt -> get task ID
-2. Continue your work while sidecar runs
-3. sidecar_status to check if done
-4. sidecar_read to get the summary
+2. Tell the user: "Let me know when you're done with the sidecar and have clicked Fold."
+3. Do NOT poll sidecar_status. Wait for the user to tell you it's done.
+4. If the user starts a new message without mentioning the sidecar, ask if they're done or just call sidecar_read
 5. Act on findings
 
 ## Agent Selection
@@ -277,6 +296,37 @@ Run sidecar_setup to configure defaults and add custom aliases.
 ## Session Matching
 Cowork: pass coworkProcess (extract from CWD: /sessions/<name>/).
 Claude Code CLI: pass parentSession with your session UUID.
+
+## Context Control (includeContext)
+
+By default, sidecar includes your parent conversation history as context. Set \`includeContext: false\` to skip this and save tokens when the briefing is self-contained.
+
+### MUST Include Context (Red Flags)
+- Task references prior conversation ("the code we discussed", "that bug", "the approach you suggested")
+- Fact checking or second opinions on recent work
+- Code review of changes made in this session
+- "Does this look right?" or validation requests
+- Continuing a debugging thread
+- Any task where the sidecar needs to understand what happened before
+
+### Safe to Skip Context
+- Greenfield tasks with explicit file paths and instructions
+- General knowledge or research questions
+- Tasks fully scoped in the briefing (files, criteria, constraints all specified)
+- Independent analysis unrelated to current conversation
+
+### Self-Contained Briefing Template
+When setting \`includeContext: false\`, write a richer briefing:
+
+\`\`\`
+**Objective:** [Specific goal]
+**Files to read:** [Exact paths]
+**Relevant code:** [Paste key snippets if needed]
+**Success criteria:** [How to know when done]
+**Constraints:** [Scope limits, things to avoid]
+\`\`\`
+
+The sidecar has NO other context. Everything it needs must be in the briefing.
 
 ## Existing Sessions
 Call sidecar_list before spawning. Use sidecar_resume to reopen or sidecar_continue to build on previous findings.
