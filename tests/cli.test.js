@@ -260,6 +260,27 @@ describe('CLI Argument Parser', () => {
       });
     });
 
+    describe('--no-context flag', () => {
+      it('should parse --no-context as boolean flag', () => {
+        const result = parseArgs(['start', '--no-context']);
+        expect(result['no-context']).toBe(true);
+      });
+
+      it('should default --no-context to undefined when not specified', () => {
+        const result = parseArgs(['start', '--model', 'x', '--prompt', 'y']);
+        expect(result['no-context']).toBeUndefined();
+      });
+
+      it('should parse --no-context alongside other options', () => {
+        const result = parseArgs([
+          'start', '--model', 'gemini', '--prompt', 'test', '--no-context', '--no-ui'
+        ]);
+        expect(result['no-context']).toBe(true);
+        expect(result['no-ui']).toBe(true);
+        expect(result.model).toBe('gemini');
+      });
+    });
+
     describe('--thinking option', () => {
       it('should parse --thinking option with valid effort level', () => {
         const result = parseArgs(['start', '--thinking', 'low']);
@@ -847,6 +868,12 @@ describe('CLI Argument Parser', () => {
       const { getUsage } = require('../src/cli');
       const usage = getUsage();
       expect(usage).toContain('abort');
+    });
+
+    test('--no-context appears in usage', () => {
+      const { getUsage } = require('../src/cli');
+      const usage = getUsage();
+      expect(usage).toContain('--no-context');
     });
   });
 
