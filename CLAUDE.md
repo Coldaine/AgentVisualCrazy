@@ -478,9 +478,13 @@ npm test -- --coverage             # Coverage report
 
 ---
 
-## Electron UI Testing
+## Testing Guide
 
-See [docs/electron-testing.md](docs/electron-testing.md) for Chrome DevTools Protocol testing patterns, WebSocket recipes, CI integration, and visual screenshot testing.
+See **[docs/testing.md](docs/testing.md)** for the comprehensive testing guide covering all test tiers (unit, integration, E2E), CDP helper usage, environment variables, cross-platform setup, and how to write new tests.
+
+See also:
+- [docs/electron-testing.md](docs/electron-testing.md) for manual CDP WebSocket recipes and debugging patterns
+- [evals/README.md](evals/README.md) for the agentic eval system
 
 ---
 
@@ -773,7 +777,8 @@ GEMINI.md and AGENTS.md are symlinks to CLAUDE.md -- no sync needed.
 
 - [README.md](README.md) - User-facing documentation
 - [skill/SKILL.md](skill/SKILL.md) - Claude Code skill integration
-- [docs/electron-testing.md](docs/electron-testing.md) - Electron UI testing (Chrome DevTools Protocol)
+- [docs/testing.md](docs/testing.md) - Comprehensive testing guide (all tiers, CDP, cross-platform)
+- [docs/electron-testing.md](docs/electron-testing.md) - Manual CDP WebSocket recipes and debugging
 - [docs/jsdoc-setup.md](docs/jsdoc-setup.md) - JSDoc patterns and type declarations
 - [evals/README.md](evals/README.md) - Agentic eval system (end-to-end LLM interaction testing)
 - [OpenCode docs](https://opencode.ai/docs/) - SDK and server API reference (upstream)
