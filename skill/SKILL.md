@@ -665,30 +665,33 @@ sidecar start \
 
 ---
 
-## Background Execution (REQUIRED)
+## Background Execution
 
-**ALWAYS run sidecar commands in the background.** Use the Bash tool's `run_in_background: true` parameter for every `sidecar start`, `sidecar resume`, and `sidecar continue` invocation. This ensures:
+### Headless Mode (--no-ui)
 
-- No timeout ceiling — tasks can run for the full 15+ minutes
-- You can continue working while the sidecar runs
-- You'll be automatically notified when it completes
+**ALWAYS run headless sidecar commands in the background.** Use the Bash tool's `run_in_background: true` parameter for `sidecar start --no-ui`. This ensures no timeout ceiling and you can continue working.
 
-**Example invocation pattern:**
-```
-Bash tool:
-  command: "sidecar start --model openrouter/google/gemini-2.5-flash --prompt '...' --no-ui"
-  run_in_background: true
-```
+After launching, estimate task complexity to set your polling interval:
+- **Quick** (questions, lookups): first poll at 20s, then every 15-20s
+- **Medium** (code review, debugging): first poll at 30s, then every 30s
+- **Heavy** (implementation, test generation): first poll at 45s, then every 45s
 
-After launching, tell the user:
-> "Sidecar is running in the background. I'll share the results when it completes."
-
-**When the background task completes**, you will be automatically notified. Use the `TaskOutput` tool with the task ID to read the sidecar's summary output, then present it to the user. Do NOT poll or sleep — the notification arrives automatically.
-
-**Interactive mode note:** When running without `--no-ui`, the Electron GUI opens in a separate window. Backgrounding frees the terminal but does not prevent the user from interacting with the GUI window.
+**When the background task completes**, you will be automatically notified. Use the `TaskOutput` tool with the task ID to read the sidecar's summary output, then present it to the user. Do NOT poll or sleep for background CLI tasks. The notification arrives automatically.
 
 **Important:** Warn users about potential file conflicts:
 > "I recommend committing your current changes before the sidecar completes, in case there are file conflicts."
+
+### Interactive Mode (Default)
+
+When running without `--no-ui`, the Electron GUI opens in a separate window. **Do NOT poll for status.** Instead:
+
+1. Tell the user: "Let me know when you're done with the sidecar and have clicked Fold."
+2. Wait for the user to confirm they're done.
+3. Use `sidecar read <task_id>` to get the summary.
+
+If the user starts a new message without mentioning the sidecar, ask if they're done or just read the results.
+
+**Interactive mode note:** When running without `--no-ui`, the Electron GUI opens in a separate window. Backgrounding frees the terminal but does not prevent the user from interacting with the GUI window.
 
 ---
 
