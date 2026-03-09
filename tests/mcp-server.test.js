@@ -51,6 +51,23 @@ describe('MCP spawn arg building', () => {
     });
   });
 
+  test('sidecar_start passes --session-id when parentSession is provided', async () => {
+    let capturedArgs;
+    await jest.isolateModulesAsync(async () => {
+      jest.doMock('child_process', () => ({
+        spawn: jest.fn((cmd, args) => {
+          capturedArgs = args;
+          return { pid: 12345, unref: jest.fn(), stdout: { on: jest.fn() }, stderr: { on: jest.fn() } };
+        }),
+      }));
+      const { handlers: h } = require('../src/mcp-server');
+      await h.sidecar_start({ prompt: 'test task', noUi: true, parentSession: 'f58f2782-fc8c-41bc-afbc-e0c130b91aaf' }, '/tmp');
+      const idx = capturedArgs.indexOf('--session-id');
+      expect(idx).toBeGreaterThan(-1);
+      expect(capturedArgs[idx + 1]).toBe('f58f2782-fc8c-41bc-afbc-e0c130b91aaf');
+    });
+  });
+
   test('sidecar_start passes --timeout when provided', async () => {
     let capturedArgs;
     await jest.isolateModulesAsync(async () => {
@@ -692,7 +709,7 @@ describe('sidecar_start context and summary args', () => {
         existsSync: jest.fn(() => false)
       }));
       const { handlers } = require('../src/mcp-server');
-      await handlers.sidecar_start({ prompt: 'test', contextTurns: 25 }, '/tmp/proj');
+      await handlers.sidecar_start({ prompt: 'test', model: 'openrouter/test/model', contextTurns: 25 }, '/tmp/proj');
     });
     expect(capturedArgs).toContain('--context-turns');
     expect(capturedArgs).toContain('25');
@@ -714,7 +731,7 @@ describe('sidecar_start context and summary args', () => {
         existsSync: jest.fn(() => false)
       }));
       const { handlers } = require('../src/mcp-server');
-      await handlers.sidecar_start({ prompt: 'test', contextSince: '2h' }, '/tmp/proj');
+      await handlers.sidecar_start({ prompt: 'test', model: 'openrouter/test/model', contextSince: '2h' }, '/tmp/proj');
     });
     expect(capturedArgs).toContain('--context-since');
     expect(capturedArgs).toContain('2h');
@@ -736,7 +753,7 @@ describe('sidecar_start context and summary args', () => {
         existsSync: jest.fn(() => false)
       }));
       const { handlers } = require('../src/mcp-server');
-      await handlers.sidecar_start({ prompt: 'test', contextMaxTokens: 40000 }, '/tmp/proj');
+      await handlers.sidecar_start({ prompt: 'test', model: 'openrouter/test/model', contextMaxTokens: 40000 }, '/tmp/proj');
     });
     expect(capturedArgs).toContain('--context-max-tokens');
     expect(capturedArgs).toContain('40000');
@@ -758,7 +775,7 @@ describe('sidecar_start context and summary args', () => {
         existsSync: jest.fn(() => false)
       }));
       const { handlers } = require('../src/mcp-server');
-      await handlers.sidecar_start({ prompt: 'test', summaryLength: 'verbose' }, '/tmp/proj');
+      await handlers.sidecar_start({ prompt: 'test', model: 'openrouter/test/model', summaryLength: 'verbose' }, '/tmp/proj');
     });
     expect(capturedArgs).toContain('--summary-length');
     expect(capturedArgs).toContain('verbose');

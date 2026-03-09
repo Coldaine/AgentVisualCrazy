@@ -11,6 +11,7 @@ const { logger } = require('./utils/logger');
 const { ensureNodeModulesBinInPath } = require('./utils/path-setup');
 const { ensurePortAvailable } = require('./utils/server-setup');
 const { mapAgentToOpenCode } = require('./utils/agent-mapping');
+const { writeProgress } = require('./sidecar/progress');
 
 /**
  * Fold marker that the agent outputs when done
@@ -86,6 +87,9 @@ async function runHeadless(model, systemPrompt, userMessage, taskId, project, ti
     timestamp: new Date().toISOString()
   });
 
+  // Write initial progress
+  writeProgress(sessionDir, 'initializing');
+
   // Ensure node_modules/.bin is in PATH so SDK can find opencode wrapper
   ensureNodeModulesBinInPath();
 
@@ -127,6 +131,7 @@ async function runHeadless(model, systemPrompt, userMessage, taskId, project, ti
     logger.debug('Waiting for OpenCode server to be ready');
     const serverReady = await waitForServer(client, checkHealth);
     logger.debug('Server ready', { serverReady });
+    writeProgress(sessionDir, 'server_ready');
 
     if (!serverReady) {
       server.close();
@@ -154,6 +159,7 @@ async function runHeadless(model, systemPrompt, userMessage, taskId, project, ti
       };
     }
     logger.debug('Session ID', { sessionId });
+    writeProgress(sessionDir, 'session_created');
 
     // Log user message to conversation before sending
     logMessage(conversationPath, {
@@ -192,6 +198,7 @@ async function runHeadless(model, systemPrompt, userMessage, taskId, project, ti
       userMessageLength: userMessage.length
     });
     await sendPromptAsync(client, sessionId, promptOptions);
+    writeProgress(sessionDir, 'prompt_sent');
     logger.info('Prompt sent successfully, entering polling loop', {
       sessionId,
       timeoutMs
@@ -201,6 +208,7 @@ async function runHeadless(model, systemPrompt, userMessage, taskId, project, ti
     let completed = false;
     let timedOut = false;
     let aborted = false;
+    let sessionError = null; // Captures model/SDK errors from assistant messages
     const toolCalls = [];
 
     // Poll for completion by checking messages
@@ -209,6 +217,7 @@ async function runHeadless(model, systemPrompt, userMessage, taskId, project, ti
     let lastAssistantMsgId = null;
     let lastOutputLength = 0; // Track output growth to detect streaming
     let stablePolls = 0; // Count polls where nothing has changed
+    let receivingReported = false; // Track whether 'receiving' stage was reported
     const seenTextParts = new Map(); // partId -> last captured text length
     // seenPartIds reserved for future use (tracking processed non-text parts)
 
@@ -253,9 +262,12 @@ async function runHeadless(model, systemPrompt, userMessage, taskId, project, ti
             // Track assistant message state
             if (role === 'assistant') {
               currentAssistantMsgId = msg.info.id;
-              // Check for errors
+              // Check for errors — capture for result propagation
               if (msg.info.error) {
-                logger.warn('Session error detected', {
+                sessionError = msg.info.error.data?.message
+                  || msg.info.error.name
+                  || 'Unknown model error';
+                logger.error('Session error detected in assistant message', {
                   sessionId,
                   error: msg.info.error.name,
                   message: msg.info.error.data?.message
@@ -283,6 +295,12 @@ async function runHeadless(model, systemPrompt, userMessage, taskId, project, ti
                     content: newText,
                     timestamp: new Date().toISOString()
                   });
+
+                  // Report 'receiving' stage on first text detection
+                  if (!receivingReported) {
+                    receivingReported = true;
+                    writeProgress(sessionDir, 'receiving', { messagesReceived: 1 });
+                  }
                 }
               } else if ((part.type === 'tool_use' || part.type === 'tool') && !toolCalls.find(t => t.id === part.id)) {
                 const toolCall = {
@@ -303,6 +321,17 @@ async function runHeadless(model, systemPrompt, userMessage, taskId, project, ti
                   toolCall,
                   timestamp: new Date().toISOString()
                 });
+
+                // Update progress on tool_use detection
+                const toolLabel = part.name
+                  ? `Calling tool: ${part.name}`
+                  : 'Executing tool call...';
+                writeProgress(sessionDir, 'receiving', {
+                  messagesReceived: toolCalls.length,
+                  latestTool: part.name || undefined,
+                  stageLabel: toolLabel
+                });
+                receivingReported = true;
               } else if (part.type === 'tool_result') {
                 logger.debug('Tool result received (polling)', {
                   toolUseId: part.tool_use_id,
@@ -344,21 +373,30 @@ async function runHeadless(model, systemPrompt, userMessage, taskId, project, ti
           break;
         }
 
+        // If the model returned an error with no output, exit immediately
+        // (don't wait for timeout — the model won't produce anything)
+        if (sessionError && !output && assistantFinished) {
+          logger.error('Model returned error with no output, exiting', {
+            sessionError, pollCount
+          });
+          break;
+        }
+
         // Count as stable when nothing has changed — same messages, no new output.
-        // Two paths to completion:
         //   1. assistantFinished + stable for 2 polls (ideal)
         //   2. No output growth + same message count for 4 polls (fallback
         //      for models that don't set time.completed reliably)
         //
-        // IMPORTANT: Only count stable polls after we've seen at least one
-        // assistant message. Before the model starts generating, both IDs are
-        // null and nothing has grown — but that means the model is still
-        // loading, NOT that the session is done.
+        // IMPORTANT: Only count stable polls when the assistant has actually
+        // produced output. The SDK may create an empty assistant message
+        // placeholder immediately when promptAsync is called — that's NOT
+        // a completed response. We need real text output before we start
+        // counting towards completion.
         const outputGrew = output.length > lastOutputLength;
         lastOutputLength = output.length;
 
         if (!outputGrew && currentAssistantMsgId === lastAssistantMsgId) {
-          if (currentAssistantMsgId !== null) {
+          if (currentAssistantMsgId !== null && output.length > 0) {
             stablePolls++;
             const threshold = assistantFinished ? 2 : 4;
             if (stablePolls >= threshold) {
@@ -366,7 +404,11 @@ async function runHeadless(model, systemPrompt, userMessage, taskId, project, ti
               break;
             }
           } else {
-            logger.debug('Waiting for model to start generating', { pollCount });
+            logger.debug('Waiting for model to produce output', {
+              pollCount,
+              hasAssistantMsg: currentAssistantMsgId !== null,
+              outputLength: output.length
+            });
           }
         } else {
           stablePolls = 0;
@@ -379,8 +421,8 @@ async function runHeadless(model, systemPrompt, userMessage, taskId, project, ti
       }
     }
 
-    // Log why the polling loop exited
-    logger.info('Polling loop exited', {
+    // Log why the polling loop exited (error level so it always appears in debug.log)
+    logger.error('Polling loop exited', {
       taskId,
       completed,
       aborted,
@@ -388,7 +430,8 @@ async function runHeadless(model, systemPrompt, userMessage, taskId, project, ti
       stablePolls,
       outputLength: output.length,
       elapsed: Date.now() - startTime,
-      hasAssistantMsg: lastAssistantMsgId !== null
+      hasAssistantMsg: lastAssistantMsgId !== null,
+      sessionError: sessionError || null
     });
 
     // Handle timeout
@@ -417,6 +460,20 @@ async function runHeadless(model, systemPrompt, userMessage, taskId, project, ti
           .filter(t => t.name === 'Task' && t.input?.subagent_type)
           .map(t => ({ type: t.input.subagent_type, model: t.input.model || 'inherited' }))
       });
+    }
+
+    // If the model returned an error and produced no output, propagate the error
+    // so startSidecar() marks the session as 'error' instead of 'complete'
+    if (sessionError && !output) {
+      return {
+        summary: '',
+        completed: false,
+        timedOut,
+        aborted,
+        taskId,
+        toolCalls,
+        error: sessionError
+      };
     }
 
     return {

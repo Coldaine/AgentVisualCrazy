@@ -81,6 +81,104 @@ function applyContextFilters(messages, options) {
 }
 
 /**
+ * Get the Cowork local-agent-mode-sessions root for the current platform.
+ * @param {string} [homeDir] - Home directory override (for testing)
+ * @returns {string} Path to local-agent-mode-sessions directory
+ */
+function getCoworkSessionsRoot(homeDir = os.homedir()) {
+  // Cowork stores session data inside Claude Desktop's Application Support:
+  // ~/Library/Application Support/Claude/local-agent-mode-sessions/<org>/<user>/local_<id>/audit.jsonl
+  return path.join(homeDir, 'Library', 'Application Support', 'Claude', 'local-agent-mode-sessions');
+}
+
+/**
+ * Find a Cowork session's audit.jsonl by process name or fall back to most recent.
+ * Scans ~/Library/Application Support/Claude/local-agent-mode-sessions/
+ *
+ * When coworkProcess is provided, matches the session metadata JSON file
+ * whose processName matches. This is the reliable path for parallel sessions.
+ * Falls back to most recently modified audit.jsonl when no process name given.
+ *
+ * @param {string} [homeDir] - Home directory override (for testing)
+ * @param {string} [coworkProcess] - Cowork VM process name (e.g., 'modest-laughing-goodall')
+ * @returns {string|null} Path to the matching audit.jsonl, or null
+ */
+function findCoworkSession(homeDir = os.homedir(), coworkProcess = null) {
+  const root = getCoworkSessionsRoot(homeDir);
+  if (!fs.existsSync(root)) {
+    return null;
+  }
+
+  let bestPath = null;
+  let bestMtime = 0;
+
+  // Structure: root/<org-id>/<user-id>/local_<session-id>/audit.jsonl
+  // Metadata: root/<org-id>/<user-id>/local_<session-id>.json (has processName)
+  try {
+    for (const org of fs.readdirSync(root)) {
+      const orgPath = path.join(root, org);
+      try { if (!fs.statSync(orgPath).isDirectory()) { continue; } } catch { continue; }
+
+      for (const user of fs.readdirSync(orgPath)) {
+        const userPath = path.join(orgPath, user);
+        try { if (!fs.statSync(userPath).isDirectory()) { continue; } } catch { continue; }
+
+        for (const session of fs.readdirSync(userPath)) {
+          if (!session.startsWith('local_')) { continue; }
+          const auditPath = path.join(userPath, session, 'audit.jsonl');
+
+          // If matching by process name, check the metadata JSON
+          if (coworkProcess) {
+            const metaPath = path.join(userPath, `${session}.json`);
+            try {
+              const meta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'));
+              if (meta.processName === coworkProcess) {
+                logger.info('Matched Cowork session by processName', { coworkProcess, session });
+                return fs.existsSync(auditPath) ? auditPath : null;
+              }
+            } catch {
+              continue;
+            }
+            continue; // Skip mtime check when matching by process name
+          }
+
+          // Fallback: track most recent audit.jsonl
+          try {
+            const mtime = fs.statSync(auditPath).mtime.getTime();
+            if (mtime > bestMtime) {
+              bestMtime = mtime;
+              bestPath = auditPath;
+            }
+          } catch {
+            continue;
+          }
+        }
+      }
+    }
+  } catch {
+    return null;
+  }
+
+  return bestPath;
+}
+
+/**
+ * Normalize Cowork audit.jsonl messages to match Claude Code JSONL format.
+ * Maps _audit_timestamp → timestamp and filters to user/assistant messages.
+ *
+ * @param {Array} messages - Raw parsed audit.jsonl entries
+ * @returns {Array} Normalized messages compatible with formatContext/applyContextFilters
+ */
+function normalizeCoworkMessages(messages) {
+  return messages
+    .filter(m => m.type === 'user' || m.type === 'assistant')
+    .map(m => ({
+      ...m,
+      timestamp: m.timestamp || m._audit_timestamp || null
+    }));
+}
+
+/**
  * Build context from Claude Code session
  * Spec Reference: §5 Context Passing
  *
@@ -92,15 +190,51 @@ function applyContextFilters(messages, options) {
  * @param {number} [options.contextMaxTokens=80000] - Max context tokens
  * @param {string} [options.sessionDir] - Explicit session directory override (for code-web, cowork)
  * @param {string} [options.client] - Client type (code-local, code-web, cowork)
+ * @param {string} [options._homeDir] - Home directory override (testing only)
  * @returns {string} Formatted context string
  */
 function buildContext(project, session, options) {
-  const { contextTurns = 50, contextSince, contextMaxTokens = 80000, sessionDir: sessionDirOverride, client } = options;
+  const { contextTurns = 50, contextSince, contextMaxTokens = 80000, sessionDir: sessionDirOverride, client, coworkProcess, _homeDir } = options;
+  const homeDir = _homeDir || os.homedir();
 
   // Determine session directory:
   // 1. If sessionDir is explicitly provided, use it directly (code-web, cowork)
   // 2. Otherwise, use the standard getSessionDirectory for code-local
-  const resolvedSessionDir = sessionDirOverride || getSessionDirectory(project, os.homedir());
+  const resolvedSessionDir = sessionDirOverride || getSessionDirectory(project, homeDir);
+
+  // For cowork clients: read directly from Cowork's local-agent-mode-sessions
+  // on the host Mac. The Cowork VM can't expose its session path to the MCP server,
+  // so we find the most recently active session's audit.jsonl on the host.
+  if (client === 'cowork' && !sessionDirOverride) {
+    const auditPath = findCoworkSession(homeDir, coworkProcess);
+    if (!auditPath) {
+      logger.warn('No Cowork session found in local-agent-mode-sessions', { project });
+      return '[No Claude Code conversation history found]';
+    }
+
+    logger.info('Using Cowork session', { auditPath });
+
+    let messages;
+    try {
+      messages = readJSONL(auditPath);
+    } catch (err) {
+      logger.error('Error reading Cowork session', { error: err.message });
+      return '[Error reading Claude Code session]';
+    }
+
+    messages = normalizeCoworkMessages(messages);
+    if (messages.length === 0) {
+      return '[Empty Claude Code session]';
+    }
+
+    messages = applyContextFilters(messages, { contextTurns, contextSince });
+    let context = formatContext(messages);
+    const maxChars = contextMaxTokens * 4;
+    if (context.length > maxChars) {
+      context = '[Earlier context truncated...]\n\n' + context.slice(-maxChars);
+    }
+    return context || '[No relevant context found]';
+  }
 
   if (!fs.existsSync(resolvedSessionDir)) {
     logger.warn('No Claude Code conversation history found', { project, sessionDir: resolvedSessionDir, client });
@@ -156,5 +290,8 @@ module.exports = {
   buildContext,
   parseDuration,
   resolveSessionFile,
-  applyContextFilters
+  applyContextFilters,
+  findCoworkSession,
+  normalizeCoworkMessages,
+  getCoworkSessionsRoot
 };

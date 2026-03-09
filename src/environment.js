@@ -65,7 +65,9 @@ function encodePath(cwdPath) {
 }
 
 /**
- * Resolve the cowork session root for the given platform
+ * Resolve the cowork local-agent-mode-sessions root for the given platform.
+ * Cowork stores session audit logs inside Claude Desktop's Application Support
+ * under local-agent-mode-sessions/<org>/<user>/local_<id>/audit.jsonl.
  *
  * @param {string} platform - OS platform
  * @returns {string} Cowork session root directory
@@ -74,16 +76,16 @@ function getCoworkRoot(platform) {
   const homedir = os.homedir();
 
   if (platform === 'darwin') {
-    return path.join(homedir, 'Library', 'Application Support', 'Claude Cowork');
+    return path.join(homedir, 'Library', 'Application Support', 'Claude', 'local-agent-mode-sessions');
   }
 
   if (platform === 'win32') {
     const appdata = process.env.APPDATA || path.join(homedir, 'AppData', 'Roaming');
-    return path.join(appdata, 'Claude Cowork');
+    return path.join(appdata, 'Claude', 'local-agent-mode-sessions');
   }
 
   // Linux and other Unix-like systems
-  return path.join(homedir, '.config', 'claude-cowork');
+  return path.join(homedir, '.config', 'Claude', 'local-agent-mode-sessions');
 }
 
 /**

@@ -152,7 +152,7 @@ describe('Environment Detection', () => {
 
     it('should return Cowork path for cowork on macOS', () => {
       const result = getSessionRoot({ client: 'cowork' }, 'darwin');
-      const expected = path.join(homedir, 'Library', 'Application Support', 'Claude Cowork');
+      const expected = path.join(homedir, 'Library', 'Application Support', 'Claude', 'local-agent-mode-sessions');
       expect(result).toBe(expected);
     });
 
@@ -161,7 +161,7 @@ describe('Environment Detection', () => {
       process.env.APPDATA = 'C:\\Users\\test\\AppData\\Roaming';
 
       const result = getSessionRoot({ client: 'cowork' }, 'win32');
-      const expected = path.join('C:\\Users\\test\\AppData\\Roaming', 'Claude Cowork');
+      const expected = path.join('C:\\Users\\test\\AppData\\Roaming', 'Claude', 'local-agent-mode-sessions');
       expect(result).toBe(expected);
 
       process.env.APPDATA = originalAppdata;
@@ -169,7 +169,7 @@ describe('Environment Detection', () => {
 
     it('should return Cowork path for cowork on Linux', () => {
       const result = getSessionRoot({ client: 'cowork' }, 'linux');
-      const expected = path.join(homedir, '.config', 'claude-cowork');
+      const expected = path.join(homedir, '.config', 'Claude', 'local-agent-mode-sessions');
       expect(result).toBe(expected);
     });
   });

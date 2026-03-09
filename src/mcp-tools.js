@@ -8,6 +8,7 @@
  */
 
 const { z } = require('zod');
+const { formatAliasNames } = require('./utils/config');
 
 /** Zod pattern for safe task IDs (alphanumeric, hyphens, underscores only) */
 const safeTaskId = z.string().regex(
@@ -22,11 +23,12 @@ const safeModel = z.string().regex(
 );
 
 /**
- * All MCP tools exposed by the sidecar server.
- * Each tool has a name, description, and Zod-based inputSchema.
- * @type {Array<{name: string, description: string, inputSchema: object}>}
+ * Build all MCP tools with dynamic descriptions that include live alias names.
+ * @returns {Array<{name: string, description: string, inputSchema: object}>}
  */
-const TOOLS = [
+function getTools() {
+  const aliasNames = formatAliasNames();
+  return [
   {
     name: 'sidecar_start',
     description:
@@ -39,7 +41,7 @@ const TOOLS = [
       'writing a good briefing.',
     inputSchema: {
       model: safeModel.optional().describe(
-        'Model alias (gemini, opus, gpt) or full ID ' +
+        `Model alias (${aliasNames}) or full ID ` +
         '(openrouter/google/gemini-3-flash-preview). ' +
         'If omitted, uses the configured default model.'
       ),
@@ -77,6 +79,14 @@ const TOOLS = [
       summaryLength: z.enum(['brief', 'normal', 'verbose']).optional().describe(
         'Fold summary verbosity. brief: key findings only. normal (default): full ' +
         'structured output. verbose: maximum detail.'
+      ),
+      coworkProcess: z.string().optional().describe(
+        'Cowork VM process name (e.g., "modest-laughing-goodall"). ' +
+        'Extract from CWD: /sessions/<name>/. Required for parent context loading.'
+      ),
+      parentSession: z.string().optional().describe(
+        'Claude Code session UUID for exact context matching. ' +
+        'Prevents ambiguity when multiple sessions are active in the same project.'
       ),
       project: z.string().optional().describe(
         'Optional project directory path. Auto-detected from working directory if omitted.'
@@ -165,7 +175,7 @@ const TOOLS = [
         'New task description for the continuation.'
       ),
       model: safeModel.optional().describe(
-        'Override model. Defaults to the original session\'s model.'
+        `Override model (${aliasNames}). Defaults to the original session's model.`
       ),
       noUi: z.boolean().optional().default(false).describe(
         'Run headless. Default false (opens Electron window).'
@@ -215,76 +225,66 @@ const TOOLS = [
       'used sidecar before.',
     inputSchema: {},
   },
-];
+  ];
+}
 
 /**
  * Returns the guide text for the sidecar_guide tool.
- * Provides comprehensive usage instructions for Claude or other LLMs.
+ * Includes live alias table from user config.
  * @returns {string} Markdown-formatted guide text
  */
 function getGuideText() {
+  const { getEffectiveAliases } = require('./utils/config');
+  const aliases = getEffectiveAliases();
+  const aliasRows = Object.entries(aliases)
+    .map(([name, model]) => `| ${name} | ${model} |`)
+    .join('\n');
+
   return `# Sidecar Usage Guide
 
 ## What Is Sidecar?
-
-Sidecar spawns parallel conversations with different LLMs (Gemini, GPT, o3, \
-etc.) and folds the results back into your context.
+Sidecar spawns parallel conversations with different LLMs and folds results back into your context.
 
 ## When to Use Sidecars
+**DO:** Different model's strengths needed, deep exploration, parallel investigation.
+**DON'T:** Simple tasks you can handle directly.
 
-**DO spawn a sidecar when:**
-- Task benefits from a different model's strengths (Gemini's large context, \
-o3's reasoning)
-- Deep exploration that would pollute your main context
-- User explicitly requests a different model
-- Parallel investigation while you continue other work
-
-**DON'T spawn a sidecar when:**
-- Simple task you can handle directly
-- Task requires your specific context that's hard to transfer
-
-## Async Workflow Pattern
-
-1. Call sidecar_start with model + prompt -> get task ID immediately
-2. Continue your work while sidecar runs in background
-3. Call sidecar_status to check if done
-4. Call sidecar_read to get the summary when complete
-5. Act on the findings
+## Async Workflow
+1. sidecar_start with model + prompt -> get task ID
+2. Continue your work while sidecar runs
+3. sidecar_status to check if done
+4. sidecar_read to get the summary
+5. Act on findings
 
 ## Agent Selection
-
 | Agent | Reads | Writes | Bash | Use When |
 |-------|-------|--------|------|----------|
-| Chat (default) | auto | asks | asks | Questions, analysis, guided work |
-| Plan | auto | denied | denied | Read-only analysis, code review |
-| Build | auto | auto | auto | Offloading implementation tasks |
+| Chat (default) | auto | asks | asks | Questions, analysis |
+| Plan | auto | denied | denied | Read-only analysis |
+| Build | auto | auto | auto | Implementation tasks |
 
 ## Writing Good Briefings
+Include: Objective, Background, Files of interest, Success criteria, Constraints.
 
-Include in your prompt:
-- Objective: One-line goal
-- Background: Context and what led to this task
-- Files of interest: Specific file paths
-- Success criteria: How to know when done
-- Constraints: Scope limits, things to avoid
+## Available Model Aliases
+| Alias | Model |
+|-------|-------|
+${aliasRows}
 
-## Model Aliases
+Or use full IDs: openrouter/google/gemini-3-flash-preview
+Run sidecar_setup to configure defaults and add custom aliases.
 
-Use short aliases: gemini, opus, gpt, deepseek
-Or full IDs: openrouter/google/gemini-3-flash-preview
-Run sidecar_setup to configure defaults and aliases.
+## Session Matching
+Cowork: pass coworkProcess (extract from CWD: /sessions/<name>/).
+Claude Code CLI: pass parentSession with your session UUID.
 
 ## Existing Sessions
-
-Before spawning a new sidecar, call sidecar_list to check for relevant \
-past work.
-Use sidecar_resume to reopen, or sidecar_continue to build on previous \
-findings.
+Call sidecar_list before spawning. Use sidecar_resume to reopen or sidecar_continue to build on previous findings.
 `;
 }
 
 module.exports = {
-  TOOLS,
+  getTools,
   getGuideText,
   safeTaskId,
   safeModel,

@@ -13,7 +13,8 @@ const os = require('os');
 const {
   readProgress,
   extractLatest,
-  computeLastActivity
+  computeLastActivity,
+  writeProgress
 } = require('../../src/sidecar/progress');
 
 describe('Progress Reader', () => {
@@ -209,6 +210,299 @@ describe('Progress Reader', () => {
         { role: 'assistant', toolCall: { name: 'Grep' } }
       ];
       expect(extractLatest(entries)).toBe('Using Grep');
+    });
+
+    it('returns "Executing tool call..." for tool_use entry with no toolCall.name', () => {
+      const entries = [
+        { role: 'assistant', type: 'tool_use', toolCall: { id: 'tool-1' } }
+      ];
+      expect(extractLatest(entries)).toBe('Executing tool call...');
+    });
+
+    it('returns "Executing tool call..." for tool_use entry with undefined name', () => {
+      const entries = [
+        { role: 'assistant', type: 'tool_use', toolCall: { id: 'tool-1', name: undefined } }
+      ];
+      expect(extractLatest(entries)).toBe('Executing tool call...');
+    });
+
+    it('returns "Working..." for assistant entry with no content or toolCall', () => {
+      // Entry exists but has neither content nor toolCall (edge case)
+      const entries = [
+        { role: 'assistant', timestamp: '2026-03-09T00:00:00Z' }
+      ];
+      expect(extractLatest(entries)).toBe('Working...');
+    });
+
+    it('handles content that is only whitespace', () => {
+      const entries = [
+        { role: 'assistant', content: '\n' }
+      ];
+      // firstLine would be '' after split, should not return empty string
+      expect(extractLatest(entries)).toBe('Working...');
+    });
+  });
+
+  describe('readProgress with progress.json', () => {
+    it('uses progress.json stage label when no assistant entries exist', () => {
+      // Only system/user messages in conversation.jsonl
+      const lines = [
+        JSON.stringify({ role: 'system', content: 'System prompt' }),
+        JSON.stringify({ role: 'user', content: 'User message' })
+      ];
+      fs.writeFileSync(
+        path.join(tmpDir, 'conversation.jsonl'),
+        lines.join('\n')
+      );
+
+      // Progress file indicates prompt was sent
+      fs.writeFileSync(
+        path.join(tmpDir, 'progress.json'),
+        JSON.stringify({
+          stage: 'prompt_sent',
+          stageLabel: 'Briefing delivered, waiting for response...',
+          updatedAt: new Date().toISOString()
+        })
+      );
+
+      const result = readProgress(tmpDir);
+
+      expect(result.latest).toBe('Briefing delivered, waiting for response...');
+      expect(result.stage).toBe('prompt_sent');
+    });
+
+    it('uses progress.json when conversation.jsonl does not exist', () => {
+      fs.writeFileSync(
+        path.join(tmpDir, 'progress.json'),
+        JSON.stringify({
+          stage: 'initializing',
+          stageLabel: 'Starting OpenCode server...',
+          updatedAt: new Date().toISOString()
+        })
+      );
+
+      const result = readProgress(tmpDir);
+
+      expect(result.latest).toBe('Starting OpenCode server...');
+      expect(result.stage).toBe('initializing');
+      expect(result.messages).toBe(0);
+    });
+
+    it('prefers assistant entries over progress.json for latest', () => {
+      const lines = [
+        JSON.stringify({ role: 'assistant', content: 'Analyzing the code' })
+      ];
+      fs.writeFileSync(
+        path.join(tmpDir, 'conversation.jsonl'),
+        lines.join('\n')
+      );
+
+      fs.writeFileSync(
+        path.join(tmpDir, 'progress.json'),
+        JSON.stringify({
+          stage: 'receiving',
+          stageLabel: 'Generating response...',
+          messagesReceived: 1,
+          updatedAt: new Date().toISOString()
+        })
+      );
+
+      const result = readProgress(tmpDir);
+
+      // Should use the actual assistant content, not the generic stage label
+      expect(result.latest).toBe('Analyzing the code');
+      expect(result.messages).toBe(1);
+    });
+
+    it('uses progress.json latest for tool_use entries without toolCall.name', () => {
+      // Tool-use entry with missing name (SDK may not populate part.name)
+      const lines = [
+        JSON.stringify({ role: 'assistant', type: 'tool_use', toolCall: { id: 'tool-1' } })
+      ];
+      fs.writeFileSync(
+        path.join(tmpDir, 'conversation.jsonl'),
+        lines.join('\n')
+      );
+
+      fs.writeFileSync(
+        path.join(tmpDir, 'progress.json'),
+        JSON.stringify({
+          stage: 'receiving',
+          stageLabel: 'Calling tool: web_search',
+          latestTool: 'web_search',
+          messagesReceived: 1,
+          updatedAt: new Date().toISOString()
+        })
+      );
+
+      const result = readProgress(tmpDir);
+
+      // progress.json has a better label; extractLatest returns "Executing tool call..."
+      // but progress.json latestTool gives us the tool name
+      expect(result.latest).toBe('Calling tool: web_search');
+      expect(result.stage).toBe('receiving');
+    });
+
+    it('uses extractLatest when it returns something meaningful', () => {
+      // Tool-use entry with proper name
+      const lines = [
+        JSON.stringify({ role: 'assistant', toolCall: { name: 'Read', id: 'tool-1' } })
+      ];
+      fs.writeFileSync(
+        path.join(tmpDir, 'conversation.jsonl'),
+        lines.join('\n')
+      );
+
+      fs.writeFileSync(
+        path.join(tmpDir, 'progress.json'),
+        JSON.stringify({
+          stage: 'receiving',
+          stageLabel: 'Generating response...',
+          updatedAt: new Date().toISOString()
+        })
+      );
+
+      const result = readProgress(tmpDir);
+
+      // extractLatest returns "Using Read" which is better than the generic stage label
+      expect(result.latest).toBe('Using Read');
+    });
+
+    it('uses messagesReceived from progress.json when conversation has no assistant entries', () => {
+      const lines = [
+        JSON.stringify({ role: 'system', content: 'System prompt' })
+      ];
+      fs.writeFileSync(
+        path.join(tmpDir, 'conversation.jsonl'),
+        lines.join('\n')
+      );
+
+      fs.writeFileSync(
+        path.join(tmpDir, 'progress.json'),
+        JSON.stringify({
+          stage: 'receiving',
+          stageLabel: 'Generating response...',
+          messagesReceived: 1,
+          updatedAt: new Date().toISOString()
+        })
+      );
+
+      const result = readProgress(tmpDir);
+
+      expect(result.messages).toBe(1);
+    });
+
+    it('uses lastActivity from progress.json updatedAt when more recent', () => {
+      // Write conversation.jsonl with old mtime
+      const convPath = path.join(tmpDir, 'conversation.jsonl');
+      fs.writeFileSync(convPath, JSON.stringify({ role: 'system', content: 'init' }));
+      const tenMinutesAgo = new Date(Date.now() - 600000);
+      fs.utimesSync(convPath, tenMinutesAgo, tenMinutesAgo);
+
+      // Progress file updated recently
+      fs.writeFileSync(
+        path.join(tmpDir, 'progress.json'),
+        JSON.stringify({
+          stage: 'prompt_sent',
+          stageLabel: 'Briefing delivered',
+          updatedAt: new Date().toISOString()
+        })
+      );
+
+      const result = readProgress(tmpDir);
+
+      // Should use progress.json's time, not the old conversation.jsonl mtime
+      expect(result.lastActivity).toMatch(/^\d+s ago$/);
+    });
+
+    it('ignores malformed progress.json gracefully', () => {
+      const lines = [
+        JSON.stringify({ role: 'assistant', content: 'Hello' })
+      ];
+      fs.writeFileSync(
+        path.join(tmpDir, 'conversation.jsonl'),
+        lines.join('\n')
+      );
+      fs.writeFileSync(path.join(tmpDir, 'progress.json'), '{ invalid json');
+
+      const result = readProgress(tmpDir);
+
+      // Should fall back to conversation.jsonl data
+      expect(result.messages).toBe(1);
+      expect(result.latest).toBe('Hello');
+    });
+
+    it('returns all lifecycle stages correctly', () => {
+      const stages = [
+        { stage: 'initializing', label: 'Starting OpenCode server...' },
+        { stage: 'server_ready', label: 'Server ready, creating session...' },
+        { stage: 'session_created', label: 'Session created' },
+        { stage: 'prompt_sent', label: 'Briefing delivered, waiting for response...' },
+      ];
+
+      for (const { stage, label } of stages) {
+        fs.writeFileSync(
+          path.join(tmpDir, 'progress.json'),
+          JSON.stringify({
+            stage,
+            stageLabel: label,
+            updatedAt: new Date().toISOString()
+          })
+        );
+
+        const result = readProgress(tmpDir);
+        expect(result.stage).toBe(stage);
+        expect(result.latest).toBe(label);
+      }
+    });
+
+    it('defaults stage to undefined when no progress.json exists', () => {
+      const result = readProgress(tmpDir);
+
+      expect(result.stage).toBeUndefined();
+    });
+  });
+
+  describe('writeProgress', () => {
+    it('writes progress.json with stage and label', () => {
+      writeProgress(tmpDir, 'initializing');
+
+      const data = JSON.parse(
+        fs.readFileSync(path.join(tmpDir, 'progress.json'), 'utf-8')
+      );
+      expect(data.stage).toBe('initializing');
+      expect(data.stageLabel).toBe('Starting OpenCode server...');
+      expect(data.updatedAt).toBeDefined();
+    });
+
+    it('includes extra fields when provided', () => {
+      writeProgress(tmpDir, 'receiving', { messagesReceived: 2 });
+
+      const data = JSON.parse(
+        fs.readFileSync(path.join(tmpDir, 'progress.json'), 'utf-8')
+      );
+      expect(data.stage).toBe('receiving');
+      expect(data.messagesReceived).toBe(2);
+    });
+
+    it('overwrites previous progress', () => {
+      writeProgress(tmpDir, 'initializing');
+      writeProgress(tmpDir, 'prompt_sent');
+
+      const data = JSON.parse(
+        fs.readFileSync(path.join(tmpDir, 'progress.json'), 'utf-8')
+      );
+      expect(data.stage).toBe('prompt_sent');
+    });
+
+    it('handles unknown stage gracefully', () => {
+      writeProgress(tmpDir, 'custom_stage');
+
+      const data = JSON.parse(
+        fs.readFileSync(path.join(tmpDir, 'progress.json'), 'utf-8')
+      );
+      expect(data.stage).toBe('custom_stage');
+      expect(data.stageLabel).toBe('custom_stage');
     });
   });
 

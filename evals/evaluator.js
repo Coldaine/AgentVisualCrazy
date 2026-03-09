@@ -72,6 +72,18 @@ function runProgrammaticChecks(criteria, transcript, sandboxDir) {
         const passed = new RegExp(c.pattern, 'i').test(result);
         return { type: c.type, tool: c.tool, passed, detail: passed ? `Matched: ${result.slice(0, 100)}` : `No match in: ${result.slice(0, 100)}` };
       }
+      case 'bash_result_matches': {
+        const cmdRegex = new RegExp(c.command_pattern);
+        const matchingCall = transcript.toolCalls.find(tc =>
+          tc.params?.command && cmdRegex.test(tc.params.command)
+        );
+        if (!matchingCall) {
+          return { type: c.type, passed: false, detail: 'No matching bash command found' };
+        }
+        const output = String(matchingCall.result || '');
+        const passed = new RegExp(c.pattern, 'i').test(output);
+        return { type: c.type, passed, detail: passed ? `Matched: ${output.slice(0, 100)}` : `No match in output (${output.length} chars)` };
+      }
       case 'bash_command_matches': {
         const cmds = transcript.bashCommands || [];
         const regex = new RegExp(c.pattern);
@@ -112,9 +124,12 @@ function findFilesRecursive(baseDir, prefix = '') {
  * @returns {string}
  */
 function buildJudgePrompt(rubric, transcript) {
-  const toolSummary = transcript.toolCalls.map(tc =>
-    `- ${tc.tool}(${JSON.stringify(tc.params)}) -> ${(tc.result || '').slice(0, 200)}`
-  ).join('\n');
+  const toolSummary = transcript.toolCalls.map(tc => {
+    const result = tc.result || '';
+    // Show up to 2000 chars to capture full sidecar analysis output
+    const truncated = result.length > 2000 ? result.slice(0, 2000) + '...(truncated)' : result;
+    return `- ${tc.tool}(${JSON.stringify(tc.params)}) -> ${truncated}`;
+  }).join('\n');
 
   const rubricText = rubric.map((q, i) => `${i + 1}. ${q}`).join('\n');
 

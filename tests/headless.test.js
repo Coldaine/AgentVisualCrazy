@@ -638,6 +638,166 @@ describe('Headless Mode Runner', () => {
     }, 15000);
   });
 
+  describe('Progress Updates', () => {
+    const testProject = '/test/project';
+    const testModel = 'openrouter/google/gemini-2.5-flash';
+    const testSystemPrompt = '# Test system prompt';
+    const testUserMessage = 'Please complete the task';
+    const testTaskId = 'progress1';
+
+    beforeEach(() => {
+      mockCheckHealth.mockResolvedValue(true);
+      mockCreateSession.mockResolvedValue('session-123');
+      mockSendPromptAsync.mockResolvedValue(undefined);
+      mockGetMessages.mockResolvedValue([{
+        info: { role: 'assistant', id: 'msg-1', time: { completed: Date.now() } },
+        parts: [{ type: 'text', text: COMPLETE_MARKER }]
+      }]);
+    });
+
+    it('should write progress updates to progress.json at lifecycle stages', async () => {
+      await runHeadless(testModel, testSystemPrompt, testUserMessage, testTaskId, testProject, 5000);
+
+      // Verify writeFileSync was called with progress.json content
+      const progressWrites = fs.writeFileSync.mock.calls.filter(call =>
+        typeof call[0] === 'string' && call[0].includes('progress.json')
+      );
+
+      // Should have at least 3 progress updates:
+      // initializing, server_ready/session_created, prompt_sent
+      expect(progressWrites.length).toBeGreaterThanOrEqual(3);
+
+      // Check that stages were written in order
+      const stages = progressWrites.map(call => JSON.parse(call[1]).stage);
+      expect(stages).toContain('initializing');
+      expect(stages).toContain('prompt_sent');
+    });
+
+    it('should write receiving stage when first assistant text is detected', async () => {
+      // First poll: model starts producing text
+      mockGetMessages
+        .mockResolvedValueOnce([{
+          info: { role: 'assistant', id: 'msg-1', time: {} },
+          parts: [{ id: 'p1', type: 'text', text: 'Working on it...' }]
+        }])
+        .mockResolvedValueOnce([{
+          info: { role: 'assistant', id: 'msg-1', time: { completed: Date.now() } },
+          parts: [{ id: 'p1', type: 'text', text: `Working on it... Done\n${COMPLETE_MARKER}` }]
+        }]);
+
+      await runHeadless(testModel, testSystemPrompt, testUserMessage, testTaskId, testProject, 15000);
+
+      const progressWrites = fs.writeFileSync.mock.calls.filter(call =>
+        typeof call[0] === 'string' && call[0].includes('progress.json')
+      );
+
+      const stages = progressWrites.map(call => JSON.parse(call[1]).stage);
+      expect(stages).toContain('receiving');
+    }, 20000);
+
+    it('should write receiving stage when tool_use is detected (no text yet)', async () => {
+      // First poll: model makes a tool call, no text yet
+      mockGetMessages
+        .mockResolvedValueOnce([{
+          info: { role: 'assistant', id: 'msg-1', time: {} },
+          parts: [
+            { id: 'tool-1', type: 'tool_use', name: 'web_search', input: { query: 'test' } }
+          ]
+        }])
+        .mockResolvedValueOnce([{
+          info: { role: 'assistant', id: 'msg-1', time: { completed: Date.now() } },
+          parts: [
+            { id: 'tool-1', type: 'tool_use', name: 'web_search', input: { query: 'test' } },
+            { id: 'p1', type: 'text', text: `Search results found\n${COMPLETE_MARKER}` }
+          ]
+        }]);
+
+      await runHeadless(testModel, testSystemPrompt, testUserMessage, testTaskId, testProject, 15000);
+
+      const progressWrites = fs.writeFileSync.mock.calls.filter(call =>
+        typeof call[0] === 'string' && call[0].includes('progress.json')
+      );
+
+      const stages = progressWrites.map(call => JSON.parse(call[1]).stage);
+      expect(stages).toContain('receiving');
+
+      // Should include tool name in the progress data
+      const receivingWrite = progressWrites.find(call =>
+        JSON.parse(call[1]).stage === 'receiving'
+      );
+      if (receivingWrite) {
+        const data = JSON.parse(receivingWrite[1]);
+        expect(data.latestTool).toBe('web_search');
+      }
+    }, 20000);
+
+    it('should update progress with latest tool name on each new tool call', async () => {
+      // Multiple tool calls across polls
+      mockGetMessages
+        .mockResolvedValueOnce([{
+          info: { role: 'assistant', id: 'msg-1', time: {} },
+          parts: [
+            { id: 'tool-1', type: 'tool_use', name: 'web_search', input: { query: 'test' } }
+          ]
+        }])
+        .mockResolvedValueOnce([{
+          info: { role: 'assistant', id: 'msg-1', time: {} },
+          parts: [
+            { id: 'tool-1', type: 'tool_use', name: 'web_search', input: { query: 'test' } },
+            { id: 'tool-2', type: 'tool_use', name: 'Read', input: { path: '/tmp/x' } }
+          ]
+        }])
+        .mockResolvedValueOnce([{
+          info: { role: 'assistant', id: 'msg-1', time: { completed: Date.now() } },
+          parts: [
+            { id: 'tool-1', type: 'tool_use', name: 'web_search', input: { query: 'test' } },
+            { id: 'tool-2', type: 'tool_use', name: 'Read', input: { path: '/tmp/x' } },
+            { id: 'p1', type: 'text', text: `Done\n${COMPLETE_MARKER}` }
+          ]
+        }]);
+
+      await runHeadless(testModel, testSystemPrompt, testUserMessage, testTaskId, testProject, 15000);
+
+      const progressWrites = fs.writeFileSync.mock.calls.filter(call =>
+        typeof call[0] === 'string' && call[0].includes('progress.json')
+      );
+
+      // Find all receiving writes
+      const receivingWrites = progressWrites.filter(call =>
+        JSON.parse(call[1]).stage === 'receiving'
+      );
+
+      // Should have updated at least twice (one for each new tool)
+      expect(receivingWrites.length).toBeGreaterThanOrEqual(2);
+
+      // Last receiving write should have the latest tool name
+      const lastReceiving = JSON.parse(receivingWrites[receivingWrites.length - 1][1]);
+      expect(lastReceiving.latestTool).toBe('Read');
+    }, 25000);
+
+    it('should include messagesReceived count in receiving stage', async () => {
+      mockGetMessages.mockResolvedValue([{
+        info: { role: 'assistant', id: 'msg-1', time: { completed: Date.now() } },
+        parts: [{ id: 'p1', type: 'text', text: `Response text\n${COMPLETE_MARKER}` }]
+      }]);
+
+      await runHeadless(testModel, testSystemPrompt, testUserMessage, testTaskId, testProject, 5000);
+
+      const progressWrites = fs.writeFileSync.mock.calls.filter(call =>
+        typeof call[0] === 'string' && call[0].includes('progress.json')
+      );
+
+      const receivingWrites = progressWrites.filter(call =>
+        JSON.parse(call[1]).stage === 'receiving'
+      );
+
+      if (receivingWrites.length > 0) {
+        const data = JSON.parse(receivingWrites[receivingWrites.length - 1][1]);
+        expect(data.messagesReceived).toBeGreaterThanOrEqual(1);
+      }
+    });
+  });
+
   describe('Polling Behavior', () => {
     const testProject = '/test/project';
     const testModel = 'openrouter/google/gemini-2.5-flash';
@@ -805,6 +965,52 @@ describe('Headless Mode Runner', () => {
       // Must have polled at least 4 times (3 empty + 1 with response + 2 stable)
       expect(callCount).toBeGreaterThanOrEqual(4);
     }, 35000);
+
+    it('should NOT exit early when assistant message exists but has no output', async () => {
+      // The SDK creates an empty assistant message placeholder immediately
+      // when promptAsync is called. This message has a non-null ID but no
+      // text parts. Without the output.length > 0 guard, stablePolls would
+      // count these empty polls and exit after 4.
+      let callCount = 0;
+      mockGetMessages.mockImplementation(() => {
+        callCount++;
+        if (callCount <= 4) {
+          // SDK placeholder: assistant message exists but has no text parts
+          return Promise.resolve([{
+            info: { role: 'assistant', id: 'msg-placeholder', time: {} },
+            parts: []
+          }]);
+        }
+        // Model actually responds on poll 5
+        return Promise.resolve([{
+          info: { role: 'assistant', id: 'msg-1', time: { completed: Date.now() } },
+          parts: [{ id: 'p1', type: 'text', text: 'Real response' }]
+        }]);
+      });
+
+      const result = await runHeadless(testModel, testSystemPrompt, testUserMessage, testTaskId, testProject, 30000);
+      expect(result.summary).toBe('Real response');
+      expect(callCount).toBeGreaterThanOrEqual(5);
+    }, 35000);
+
+    it('should propagate session error when model returns error with no output', async () => {
+      // Simulate model error: assistant message has error info, time.completed,
+      // but no text parts. This happens when API key is invalid, model not found, etc.
+      mockGetMessages.mockResolvedValue([{
+        info: {
+          role: 'assistant',
+          id: 'msg-err-1',
+          time: { completed: Date.now() },
+          error: { name: 'ModelError', data: { message: 'API key invalid' } }
+        },
+        parts: []
+      }]);
+
+      const result = await runHeadless(testModel, testSystemPrompt, testUserMessage, testTaskId, testProject, 30000);
+      expect(result.error).toBe('API key invalid');
+      expect(result.completed).toBe(false);
+      expect(result.summary).toBe('');
+    }, 15000);
 
     it('should reset stablePolls when output grows', async () => {
       // Simulate streaming: same part ID, text grows each poll then stabilizes

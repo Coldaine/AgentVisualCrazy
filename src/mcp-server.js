@@ -1,12 +1,9 @@
-/**
- * Sidecar MCP Server - exposes sidecar operations as MCP tools over stdio.
- * @module mcp-server
- */
-
+/** @module mcp-server — Sidecar MCP Server (stdio transport) */
 const fs = require('fs');
 const path = require('path');
 const { spawn } = require('child_process');
-const { TOOLS, getGuideText } = require('./mcp-tools');
+const { getTools, getGuideText } = require('./mcp-tools');
+const { tryResolveModel } = require('./utils/config');
 const os = require('os');
 const { logger } = require('./utils/logger');
 const { safeSessionDir } = require('./utils/validators');
@@ -49,7 +46,7 @@ function spawnSidecarProcess(args, sessionDir) {
   const child = spawn('node', [sidecarBin, ...args], {
     cwd: getProjectDir(),
     stdio: ['ignore', 'ignore', stderrFd],
-    env: { ...process.env, SIDECAR_DEBUG_PORT: '9223' },
+    env: { ...process.env, SIDECAR_DEBUG_PORT: '9223', LOG_LEVEL: process.env.LOG_LEVEL || 'info' },
   });
   child.unref();
   return child;
@@ -58,13 +55,17 @@ function spawnSidecarProcess(args, sessionDir) {
 /** Tool handler implementations */
 const handlers = {
   async sidecar_start(input, project) {
+    const modelCheck = tryResolveModel(input.model);
+    if (modelCheck.error) {
+      return textResult(modelCheck.error, true);
+    }
+
     const cwd = project || getProjectDir(input.project);
     const { generateTaskId } = require('./sidecar/start');
     const taskId = generateTaskId();
 
     const args = ['start', '--prompt', input.prompt, '--task-id', taskId, '--client', 'cowork'];
     if (input.model) { args.push('--model', input.model); }
-    // Override 'Chat' agent in headless mode — it requires interactive approval
     const agent = (input.noUi && (!input.agent || input.agent.toLowerCase() === 'chat'))
       ? 'build' : input.agent;
     if (agent) { args.push('--agent', agent); }
@@ -75,6 +76,8 @@ const handlers = {
     if (input.contextSince)     { args.push('--context-since', input.contextSince); }
     if (input.contextMaxTokens) { args.push('--context-max-tokens', String(input.contextMaxTokens)); }
     if (input.summaryLength)    { args.push('--summary-length', input.summaryLength); }
+    if (input.coworkProcess)    { args.push('--cowork-process', input.coworkProcess); }
+    if (input.parentSession)    { args.push('--session-id', input.parentSession); }
     args.push('--cwd', cwd);
 
     const sessionDir = path.join(cwd, '.claude', 'sidecar_sessions', taskId);
@@ -83,7 +86,6 @@ const handlers = {
       return textResult(`Failed to start sidecar: ${err.message}`, true);
     }
 
-    // Save PID so sidecar_abort can kill the process
     if (child && child.pid) {
       fs.mkdirSync(sessionDir, { recursive: true, mode: 0o700 });
       const metaPath = path.join(sessionDir, 'metadata.json');
@@ -106,7 +108,6 @@ const handlers = {
     const metadata = readMetadata(input.taskId, cwd);
     if (!metadata) { return textResult(`Session ${input.taskId} not found.`, true); }
 
-    // PID liveness check: detect crashed processes
     if (metadata.status === 'running' && metadata.pid) {
       try { process.kill(metadata.pid, 0); } catch {
         Object.assign(metadata, {
@@ -205,6 +206,13 @@ const handlers = {
   },
 
   async sidecar_continue(input, project) {
+    if (input.model) {
+      const modelCheck = tryResolveModel(input.model);
+      if (modelCheck.error) {
+        return textResult(modelCheck.error, true);
+      }
+    }
+
     const cwd = project || getProjectDir(input.project);
     const { generateTaskId } = require('./sidecar/start');
     const newTaskId = generateTaskId();
@@ -234,19 +242,13 @@ const handlers = {
       return textResult(`Session ${input.taskId} is not running (status: ${metadata.status}).`);
     }
 
-    // Kill the process if PID is recorded
     if (metadata.pid) {
-      try {
-        process.kill(metadata.pid, 'SIGTERM');
-      } catch (err) {
-        // ESRCH = process already exited; any other error is unexpected but non-fatal
+      try { process.kill(metadata.pid, 'SIGTERM'); } catch (err) {
         if (err.code !== 'ESRCH') {
           logger.warn('Failed to kill sidecar process', { pid: metadata.pid, error: err.message });
         }
       }
     }
-
-    // Update metadata to aborted
     const sessionDir = safeSessionDir(cwd, input.taskId);
     const metaPath = path.join(sessionDir, 'metadata.json');
     metadata.status = 'aborted';
@@ -265,20 +267,16 @@ const handlers = {
     }
     return textResult('Setup wizard launched. The Electron window should appear on your desktop.');
   },
-
-  async sidecar_guide() {
-    return textResult(getGuideText());
-  },
+  async sidecar_guide() { return textResult(getGuideText()); },
 };
 
 /** Start the MCP server on stdio transport */
 async function startMcpServer() {
   const { McpServer } = require('@modelcontextprotocol/sdk/server/mcp.js');
   const { StdioServerTransport } = require('@modelcontextprotocol/sdk/server/stdio.js');
-
   const server = new McpServer({ name: 'sidecar', version: require('../package.json').version });
 
-  for (const tool of TOOLS) {
+  for (const tool of getTools()) {
     server.registerTool(
       tool.name,
       { description: tool.description, inputSchema: tool.inputSchema },
@@ -292,7 +290,6 @@ async function startMcpServer() {
       }
     );
   }
-
   const transport = new StdioServerTransport();
   await server.connect(transport);
   process.stderr.write('[sidecar] MCP server running on stdio\n');

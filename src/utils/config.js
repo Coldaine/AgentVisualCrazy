@@ -228,6 +228,37 @@ function checkConfigChanged(currentHash) {
   };
 }
 
+/**
+ * Get effective aliases: defaults merged with user config (user wins)
+ * @returns {object} Merged alias map
+ */
+function getEffectiveAliases() {
+  const config = loadConfig();
+  const userAliases = (config && config.aliases) || {};
+  return { ...DEFAULT_ALIASES, ...userAliases };
+}
+
+/**
+ * Format alias names as a comma-separated string for tool descriptions
+ * @returns {string} e.g. "gemini, opus, gpt, deepseek, ..."
+ */
+function formatAliasNames() {
+  return Object.keys(getEffectiveAliases()).join(', ');
+}
+
+/**
+ * Non-throwing wrapper around resolveModel
+ * @param {string|undefined} modelArg - Model argument
+ * @returns {{model?: string, error?: string}} Resolved model or error message
+ */
+function tryResolveModel(modelArg) {
+  try {
+    return { model: resolveModel(modelArg) };
+  } catch (err) {
+    return { error: err.message };
+  }
+}
+
 module.exports = {
   getConfigDir,
   getConfigPath,
@@ -238,4 +269,7 @@ module.exports = {
   computeConfigHash,
   buildAliasTable,
   checkConfigChanged,
+  getEffectiveAliases,
+  formatAliasNames,
+  tryResolveModel,
 };

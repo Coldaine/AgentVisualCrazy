@@ -16,7 +16,7 @@
       ],
       "programmatic_cli": [
         {"type": "bash_command_matches", "pattern": "sidecar\\s+start\\s+--model"},
-        {"type": "bash_command_matches", "pattern": "sidecar\\s+read"},
+        {"type": "bash_result_matches", "command_pattern": "sidecar\\s+(start|read)", "pattern": "(await|bug|fix|missing|refresh|verify)"},
         {"type": "file_changed", "path": "src/server.js"}
       ],
       "llm_judge": {
@@ -47,7 +47,7 @@
       ],
       "programmatic_cli": [
         {"type": "bash_command_matches", "pattern": "sidecar\\s+start\\s+--model"},
-        {"type": "bash_command_matches", "pattern": "sidecar\\s+read"},
+        {"type": "bash_result_matches", "command_pattern": "sidecar\\s+(start|read)", "pattern": "(test|describe|expect|assert|it\\()"},
         {"type": "file_created", "pattern": "tests/.*\\.js$"}
       ],
       "llm_judge": {
@@ -78,7 +78,7 @@
       ],
       "programmatic_cli": [
         {"type": "bash_command_matches", "pattern": "sidecar\\s+start\\s+--model"},
-        {"type": "bash_command_matches", "pattern": "sidecar\\s+read"},
+        {"type": "bash_result_matches", "command_pattern": "sidecar\\s+(start|read)", "pattern": "(JWT|token|rotation|refresh|security)"},
         {"type": "file_created", "pattern": "docs/.*\\.md$"}
       ],
       "llm_judge": {
@@ -87,6 +87,34 @@
           "Was the sidecar briefing specific about what to research and what deliverable format to produce? (1-5)",
           "Did the harness (Claude) incorporate sidecar's research findings into the final document rather than writing it independently? (1-5)",
           "Does the final document contain accurate, actionable information about JWT rotation strategies? (1-5)"
+        ],
+        "pass_threshold": 3.5
+      }
+    }
+  },
+  {
+    "id": 4,
+    "name": "Context Passing",
+    "description": "Tests that sidecar receives and uses parent session context from Claude Code",
+    "fixture": "buggy-auth-app",
+    "prompt": "Read all the source files in this project (src/auth.js, src/server.js, package.json) and analyze the codebase architecture. After you understand the code, ask Gemini to suggest improvements for this project. Keep the sidecar briefing deliberately short — just say 'Suggest improvements for this project'. Do NOT include file contents or details in the briefing. Sidecar will pick up our conversation context automatically. Wait for the response, then summarize what Gemini suggested.",
+    "max_budget_usd": 2.0,
+    "model": "sonnet",
+    "success_criteria": {
+      "programmatic": [
+        {"type": "tool_called", "tool": "sidecar_start"},
+        {"type": "tool_called", "tool": "sidecar_read"},
+        {"type": "tool_result_matches", "tool": "sidecar_read", "pattern": "(express|token|auth|refresh|server\\.js|middleware|jwt)"}
+      ],
+      "programmatic_cli": [
+        {"type": "bash_command_matches", "pattern": "sidecar\\s+start\\s+--model"},
+        {"type": "bash_result_matches", "command_pattern": "sidecar\\s+(start|read)", "pattern": "(express|token|auth|refresh|server\\.js|middleware|jwt)"}
+      ],
+      "llm_judge": {
+        "rubric": [
+          "Did sidecar's output reference specific details from the codebase (file names, function names, patterns) that were NOT in the briefing but were in the parent conversation? (1-5)",
+          "Was the sidecar briefing intentionally vague (not containing file contents or specific details), proving that context came from the parent session? (1-5)",
+          "Did sidecar produce actionable improvement suggestions that are relevant to this specific codebase, not generic advice? (1-5)"
         ],
         "pass_threshold": 3.5
       }

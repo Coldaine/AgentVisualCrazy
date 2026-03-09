@@ -5,7 +5,8 @@
  * and the sidecar_guide text content.
  */
 
-const { TOOLS, getGuideText, safeTaskId, safeModel } = require('../src/mcp-tools');
+const { getTools, getGuideText, safeTaskId, safeModel } = require('../src/mcp-tools');
+const TOOLS = getTools();
 
 describe('MCP Tool Definitions', () => {
   test('exports TOOLS array with correct structure', () => {
@@ -58,6 +59,15 @@ describe('MCP Tool Definitions', () => {
     }
   });
 
+  test('model description contains actual alias names', () => {
+    const startTool = TOOLS.find(t => t.name === 'sidecar_start');
+    const modelDesc = startTool.inputSchema.model.description;
+    expect(modelDesc).toContain('codex');
+    expect(modelDesc).toContain('opus');
+    expect(modelDesc).toContain('gemini');
+    expect(modelDesc).toContain('deepseek');
+  });
+
   describe('sidecar_start', () => {
     let startTool;
 
@@ -103,6 +113,10 @@ describe('MCP Tool Definitions', () => {
 
     test('has summaryLength in input schema', () => {
       expect(startTool.inputSchema).toHaveProperty('summaryLength');
+    });
+
+    test('has parentSession in input schema', () => {
+      expect(startTool.inputSchema).toHaveProperty('parentSession');
     });
   });
 
@@ -237,6 +251,21 @@ describe('MCP Tool Definitions', () => {
     test('contains briefing guidance', () => {
       const guide = getGuideText();
       expect(guide.toLowerCase()).toContain('briefing');
+    });
+
+    test('contains full alias table with actual model IDs', () => {
+      const guide = getGuideText();
+      expect(guide).toContain('| Alias | Model |');
+      expect(guide).toContain('| gemini |');
+      expect(guide).toContain('| opus |');
+      expect(guide).toContain('| codex |');
+      expect(guide).toContain('openrouter/');
+    });
+
+    test('contains parentSession guidance for Claude Code CLI', () => {
+      const guide = getGuideText();
+      expect(guide).toContain('parentSession');
+      expect(guide).toContain('Claude Code CLI');
     });
   });
 

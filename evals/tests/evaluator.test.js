@@ -189,6 +189,46 @@ describe('runProgrammaticChecks', () => {
     expect(results[0].passed).toBe(false);
   });
 
+  test('bash_result_matches passes when bash command output matches pattern', () => {
+    const transcript = {
+      toolCalls: [{
+        tool: 'Bash', params: { command: 'sidecar read abc123 --summary' },
+        result: '## Summary\nFound missing await on refreshToken in server.js',
+      }],
+      bashCommands: ['sidecar read abc123 --summary'],
+      errors: [],
+    };
+    const criteria = [{ type: 'bash_result_matches', command_pattern: 'sidecar\\s+read', pattern: '(refresh|token|server\\.js)' }];
+    const results = runProgrammaticChecks(criteria, transcript, '/tmp');
+    expect(results[0].passed).toBe(true);
+  });
+
+  test('bash_result_matches fails when output does not match', () => {
+    const transcript = {
+      toolCalls: [{
+        tool: 'Bash', params: { command: 'sidecar read abc123 --summary' },
+        result: 'No summary available.',
+      }],
+      bashCommands: ['sidecar read abc123 --summary'],
+      errors: [],
+    };
+    const criteria = [{ type: 'bash_result_matches', command_pattern: 'sidecar\\s+read', pattern: '(express|token|auth)' }];
+    const results = runProgrammaticChecks(criteria, transcript, '/tmp');
+    expect(results[0].passed).toBe(false);
+  });
+
+  test('bash_result_matches fails when command not found', () => {
+    const transcript = {
+      toolCalls: [{ tool: 'Bash', params: { command: 'ls -la' }, result: 'files...' }],
+      bashCommands: ['ls -la'],
+      errors: [],
+    };
+    const criteria = [{ type: 'bash_result_matches', command_pattern: 'sidecar\\s+read', pattern: 'anything' }];
+    const results = runProgrammaticChecks(criteria, transcript, '/tmp');
+    expect(results[0].passed).toBe(false);
+    expect(results[0].detail).toContain('No matching');
+  });
+
   test('tool_result_matches fails when tool was never called', () => {
     const transcript = {
       toolCalls: [{ tool: 'mcp__sidecar__sidecar_status', params: {}, result: '{"status":"complete"}' }],

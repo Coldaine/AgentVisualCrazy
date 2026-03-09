@@ -303,7 +303,7 @@ ${FOLD_MARKER}`;
         timeout: 1
       });
 
-      // Should still create a session but mark it as complete
+      // Should still create a session but mark it as error (not complete)
       const sessions = fs.readdirSync(path.join(tmpDir, '.claude', 'sidecar_sessions'));
       expect(sessions.length).toBe(1);
 
@@ -311,11 +311,11 @@ ${FOLD_MARKER}`;
         path.join(tmpDir, '.claude', 'sidecar_sessions', sessions[0], 'metadata.json'),
         'utf-8'
       ));
-      expect(metadata.status).toBe('complete');
+      expect(metadata.status).toBe('error');
 
       // Error should be logged via structured logger
       const { logger } = require('../src/utils/logger');
-      expect(logger.error).toHaveBeenCalledWith('Task error', expect.objectContaining({ error: expect.any(String) }));
+      expect(logger.error).toHaveBeenCalledWith('Session completed with error', expect.objectContaining({ error: expect.any(String) }));
 
       // Reset mock for other tests
       checkHealth.mockResolvedValue(true);

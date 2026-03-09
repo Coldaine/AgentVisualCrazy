@@ -1,12 +1,23 @@
 /**
  * Sidecar Progress Reader
  *
- * Reads conversation.jsonl from a session directory and returns
- * progress info: message count, last activity time, and latest action.
+ * Reads conversation.jsonl and progress.json from a session directory
+ * and returns progress info: message count, last activity time, latest action,
+ * and lifecycle stage.
  */
 
 const fs = require('fs');
 const path = require('path');
+
+/** Lifecycle stage labels */
+const STAGE_LABELS = {
+  initializing: 'Starting OpenCode server...',
+  server_ready: 'Server ready, creating session...',
+  session_created: 'Session created',
+  prompt_sent: 'Briefing delivered, waiting for response...',
+  receiving: 'Generating response...',
+  complete: 'Complete'
+};
 
 /**
  * Extract the latest action description from parsed JSONL entries.
@@ -23,7 +34,7 @@ function extractLatest(entries) {
 
   const last = assistantEntries[assistantEntries.length - 1];
 
-  // Tool use entry
+  // Tool use entry with name
   if (last.toolCall && last.toolCall.name) {
     return `Using ${last.toolCall.name}`;
   }
@@ -31,13 +42,22 @@ function extractLatest(entries) {
   // Text content: take first line, truncate to 80 chars
   if (last.content) {
     const firstLine = String(last.content).split('\n')[0];
+    if (!firstLine) {
+      return 'Working...';
+    }
     if (firstLine.length > 80) {
       return firstLine.slice(0, 80) + '...';
     }
     return firstLine;
   }
 
-  return 'Starting up...';
+  // Tool use entry without name (SDK may not populate part.name)
+  if (last.type === 'tool_use' || last.toolCall) {
+    return 'Executing tool call...';
+  }
+
+  // Assistant entry exists but has no recognizable content
+  return 'Working...';
 }
 
 /**
@@ -68,49 +88,111 @@ function computeLastActivity(mtime) {
 }
 
 /**
- * Read progress from a session's conversation.jsonl file.
+ * Write a progress update to progress.json.
  *
  * @param {string} sessionDir - Path to the session directory
- * @returns {{ messages: number, lastActivity: string, latest: string }}
+ * @param {string} stage - Lifecycle stage name
+ * @param {object} [extra={}] - Additional fields (e.g., messagesReceived)
+ */
+function writeProgress(sessionDir, stage, extra = {}) {
+  const progressPath = path.join(sessionDir, 'progress.json');
+  const data = {
+    stage,
+    stageLabel: STAGE_LABELS[stage] || stage,
+    updatedAt: new Date().toISOString(),
+    ...extra
+  };
+  fs.writeFileSync(progressPath, JSON.stringify(data), { mode: 0o600 });
+}
+
+/**
+ * Read progress from a session's conversation.jsonl and progress.json files.
+ *
+ * @param {string} sessionDir - Path to the session directory
+ * @returns {{ messages: number, lastActivity: string, latest: string, stage?: string }}
  */
 function readProgress(sessionDir) {
   const convPath = path.join(sessionDir, 'conversation.jsonl');
+  const progressPath = path.join(sessionDir, 'progress.json');
 
-  // File does not exist
-  if (!fs.existsSync(convPath)) {
-    return { messages: 0, lastActivity: 'never', latest: 'Starting up...' };
-  }
-
-  // Read file mtime for lastActivity
-  const stat = fs.statSync(convPath);
-  const lastActivity = computeLastActivity(stat.mtime);
-
-  // Read and parse JSONL, skipping malformed lines
-  const content = fs.readFileSync(convPath, 'utf-8');
+  let convStat = null;
   const entries = [];
 
-  for (const line of content.split('\n')) {
-    if (!line.trim()) {
-      continue;
-    }
-    try {
-      entries.push(JSON.parse(line));
-    } catch {
-      // Skip malformed lines
+  // Read conversation.jsonl if it exists
+  if (fs.existsSync(convPath)) {
+    convStat = fs.statSync(convPath);
+    const content = fs.readFileSync(convPath, 'utf-8');
+
+    for (const line of content.split('\n')) {
+      if (!line.trim()) {
+        continue;
+      }
+      try {
+        entries.push(JSON.parse(line));
+      } catch {
+        // Skip malformed lines
+      }
     }
   }
 
-  // Count assistant messages
-  const messages = entries.filter(e => e.role === 'assistant').length;
+  // Count assistant messages from conversation.jsonl
+  let messages = entries.filter(e => e.role === 'assistant').length;
 
-  // Extract latest action
-  const latest = extractLatest(entries);
+  // Extract latest action from conversation.jsonl
+  let latest = extractLatest(entries);
 
-  return { messages, lastActivity, latest };
+  // Determine lastActivity from conversation.jsonl mtime
+  let lastActivity = convStat
+    ? computeLastActivity(convStat.mtime)
+    : 'never';
+
+  // Read progress.json for lifecycle stage info
+  let stage;
+
+  if (fs.existsSync(progressPath)) {
+    try {
+      const progress = JSON.parse(fs.readFileSync(progressPath, 'utf-8'));
+      stage = progress.stage;
+
+      // Use progress stage label when no assistant entries exist yet
+      if (messages === 0 && progress.stageLabel) {
+        latest = progress.stageLabel;
+      }
+
+      // Use progress.json latestTool for better latest when extractLatest
+      // returns a generic fallback (tool_use entries without name)
+      if (messages > 0 && progress.latestTool && (latest === 'Working...' || latest === 'Executing tool call...')) {
+        latest = `Calling tool: ${progress.latestTool}`;
+      }
+
+      // Use messagesReceived from progress when conversation has no assistant entries
+      if (messages === 0 && progress.messagesReceived !== undefined) {
+        messages = progress.messagesReceived;
+      }
+
+      // Use progress updatedAt for lastActivity if more recent
+      if (progress.updatedAt) {
+        const progressTime = new Date(progress.updatedAt);
+        if (!convStat || progressTime > convStat.mtime) {
+          lastActivity = computeLastActivity(progressTime);
+        }
+      }
+    } catch {
+      // Ignore malformed progress file
+    }
+  }
+
+  const result = { messages, lastActivity, latest };
+  if (stage !== undefined) {
+    result.stage = stage;
+  }
+  return result;
 }
 
 module.exports = {
   readProgress,
+  writeProgress,
   extractLatest,
-  computeLastActivity
+  computeLastActivity,
+  STAGE_LABELS
 };

@@ -152,4 +152,247 @@ describe('Context Builder', () => {
       expect(context).toContain('No Claude Code conversation history');
     });
   });
+
+  describe('findCoworkSession', () => {
+    const { findCoworkSession } = require('../../src/sidecar/context-builder');
+
+    it('should return null when local-agent-mode-sessions dir does not exist', () => {
+      const result = findCoworkSession('/nonexistent/home/dir');
+      expect(result).toBeNull();
+    });
+
+    it('should return null when no sessions have audit.jsonl', () => {
+      const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'sidecar-cowork-'));
+      const sessRoot = path.join(tmpHome, 'Library', 'Application Support', 'Claude', 'local-agent-mode-sessions');
+      const sessionDir = path.join(sessRoot, 'org-1', 'user-1', 'local_empty-session');
+      fs.mkdirSync(sessionDir, { recursive: true });
+      // No audit.jsonl
+
+      const result = findCoworkSession(tmpHome);
+      expect(result).toBeNull();
+      fs.rmSync(tmpHome, { recursive: true });
+    });
+
+    it('should return the most recently modified audit.jsonl', () => {
+      const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'sidecar-cowork-'));
+      const sessRoot = path.join(tmpHome, 'Library', 'Application Support', 'Claude', 'local-agent-mode-sessions');
+
+      // Create old session
+      const oldDir = path.join(sessRoot, 'org-1', 'user-1', 'local_old-session');
+      fs.mkdirSync(oldDir, { recursive: true });
+      const oldAudit = path.join(oldDir, 'audit.jsonl');
+      fs.writeFileSync(oldAudit, '{"type":"user"}\n');
+      const pastTime = new Date(Date.now() - 60000);
+      fs.utimesSync(oldAudit, pastTime, pastTime);
+
+      // Create new session
+      const newDir = path.join(sessRoot, 'org-1', 'user-1', 'local_new-session');
+      fs.mkdirSync(newDir, { recursive: true });
+      const newAudit = path.join(newDir, 'audit.jsonl');
+      fs.writeFileSync(newAudit, '{"type":"user"}\n');
+
+      const result = findCoworkSession(tmpHome);
+      expect(result).toBe(newAudit);
+      fs.rmSync(tmpHome, { recursive: true });
+    });
+
+    it('should match by coworkProcess when provided', () => {
+      const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'sidecar-cowork-'));
+      const sessRoot = path.join(tmpHome, 'Library', 'Application Support', 'Claude', 'local-agent-mode-sessions');
+      const userDir = path.join(sessRoot, 'org-1', 'user-1');
+
+      // Create two sessions with different processNames
+      const sessA = path.join(userDir, 'local_session-a');
+      const sessB = path.join(userDir, 'local_session-b');
+      fs.mkdirSync(sessA, { recursive: true });
+      fs.mkdirSync(sessB, { recursive: true });
+
+      // Session A: older but matches processName
+      const auditA = path.join(sessA, 'audit.jsonl');
+      fs.writeFileSync(auditA, '{"type":"user"}\n');
+      const pastTime = new Date(Date.now() - 60000);
+      fs.utimesSync(auditA, pastTime, pastTime);
+      fs.writeFileSync(path.join(userDir, 'local_session-a.json'),
+        JSON.stringify({ processName: 'target-process', sessionId: 'local_session-a' }));
+
+      // Session B: newer but different processName
+      const auditB = path.join(sessB, 'audit.jsonl');
+      fs.writeFileSync(auditB, '{"type":"user"}\n');
+      fs.writeFileSync(path.join(userDir, 'local_session-b.json'),
+        JSON.stringify({ processName: 'other-process', sessionId: 'local_session-b' }));
+
+      // Without coworkProcess: should return the newer one (B)
+      const resultNoMatch = findCoworkSession(tmpHome);
+      expect(resultNoMatch).toBe(auditB);
+
+      // With coworkProcess: should return the matching one (A)
+      const resultMatch = findCoworkSession(tmpHome, 'target-process');
+      expect(resultMatch).toBe(auditA);
+
+      fs.rmSync(tmpHome, { recursive: true });
+    });
+
+    it('should return null when coworkProcess does not match any session', () => {
+      const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'sidecar-cowork-'));
+      const sessRoot = path.join(tmpHome, 'Library', 'Application Support', 'Claude', 'local-agent-mode-sessions');
+      const sessDir = path.join(sessRoot, 'org-1', 'user-1', 'local_session-x');
+      fs.mkdirSync(sessDir, { recursive: true });
+      fs.writeFileSync(path.join(sessDir, 'audit.jsonl'), '{"type":"user"}\n');
+      fs.writeFileSync(path.join(sessRoot, 'org-1', 'user-1', 'local_session-x.json'),
+        JSON.stringify({ processName: 'wrong-process' }));
+
+      const result = findCoworkSession(tmpHome, 'nonexistent-process');
+      expect(result).toBeNull();
+      fs.rmSync(tmpHome, { recursive: true });
+    });
+
+    it('should only scan local_ prefixed directories', () => {
+      const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'sidecar-cowork-'));
+      const sessRoot = path.join(tmpHome, 'Library', 'Application Support', 'Claude', 'local-agent-mode-sessions');
+
+      // Create non-session dir with audit.jsonl (should be skipped)
+      const skipDir = path.join(sessRoot, 'org-1', 'user-1', 'debug');
+      fs.mkdirSync(skipDir, { recursive: true });
+      fs.writeFileSync(path.join(skipDir, 'audit.jsonl'), '{"type":"user"}\n');
+
+      // Create real session
+      const sessDir = path.join(sessRoot, 'org-1', 'user-1', 'local_real-session');
+      fs.mkdirSync(sessDir, { recursive: true });
+      const realAudit = path.join(sessDir, 'audit.jsonl');
+      fs.writeFileSync(realAudit, '{"type":"user"}\n');
+
+      const result = findCoworkSession(tmpHome);
+      expect(result).toBe(realAudit);
+      fs.rmSync(tmpHome, { recursive: true });
+    });
+  });
+
+  describe('normalizeCoworkMessages', () => {
+    const { normalizeCoworkMessages } = require('../../src/sidecar/context-builder');
+
+    it('should filter to user and assistant messages only', () => {
+      const messages = [
+        { type: 'user', message: { content: 'hello' } },
+        { type: 'system', message: { content: 'sys' } },
+        { type: 'assistant', message: { content: 'hi' } },
+        { type: 'result', subtype: 'done' },
+        { type: 'rate_limit_event' },
+      ];
+      const result = normalizeCoworkMessages(messages);
+      expect(result).toHaveLength(2);
+      expect(result[0].type).toBe('user');
+      expect(result[1].type).toBe('assistant');
+    });
+
+    it('should map _audit_timestamp to timestamp', () => {
+      const ts = '2026-03-09T00:23:00.000Z';
+      const messages = [
+        { type: 'user', message: { content: 'hello' }, _audit_timestamp: ts },
+      ];
+      const result = normalizeCoworkMessages(messages);
+      expect(result[0].timestamp).toBe(ts);
+    });
+
+    it('should preserve existing timestamp over _audit_timestamp', () => {
+      const messages = [
+        { type: 'user', message: { content: 'hello' }, timestamp: 'existing', _audit_timestamp: 'audit' },
+      ];
+      const result = normalizeCoworkMessages(messages);
+      expect(result[0].timestamp).toBe('existing');
+    });
+  });
+
+  describe('buildContext with cowork client', () => {
+    it('should read from Cowork local-agent-mode-sessions', () => {
+      const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'sidecar-cowork-'));
+      const sessRoot = path.join(tmpHome, 'Library', 'Application Support', 'Claude', 'local-agent-mode-sessions');
+      const sessDir = path.join(sessRoot, 'org-1', 'user-1', 'local_test-session');
+      fs.mkdirSync(sessDir, { recursive: true });
+
+      // Write audit.jsonl with Cowork format
+      const lines = [
+        JSON.stringify({ type: 'user', message: { content: 'cowork parent context' }, _audit_timestamp: new Date().toISOString() }),
+        JSON.stringify({ type: 'assistant', message: { content: [{ type: 'text', text: 'model reply' }] }, _audit_timestamp: new Date().toISOString() }),
+        JSON.stringify({ type: 'rate_limit_event', _audit_timestamp: new Date().toISOString() }),
+      ];
+      fs.writeFileSync(path.join(sessDir, 'audit.jsonl'), lines.join('\n') + '\n');
+
+      const context = buildContext('/Users/john_renaldi', null, {
+        client: 'cowork',
+        _homeDir: tmpHome
+      });
+      expect(context).toContain('cowork parent context');
+      expect(context).toContain('model reply');
+      expect(context).not.toContain('rate_limit');
+      fs.rmSync(tmpHome, { recursive: true });
+    });
+
+    it('should return no-history when no Cowork sessions exist', () => {
+      const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'sidecar-cowork-'));
+      // Don't create local-agent-mode-sessions at all
+
+      const context = buildContext('/Users/john_renaldi', null, {
+        client: 'cowork',
+        _homeDir: tmpHome
+      });
+      expect(context).toContain('No Claude Code conversation history');
+      fs.rmSync(tmpHome, { recursive: true });
+    });
+
+    it('should match correct session when coworkProcess is provided', () => {
+      const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'sidecar-cowork-'));
+      const sessRoot = path.join(tmpHome, 'Library', 'Application Support', 'Claude', 'local-agent-mode-sessions');
+      const userDir = path.join(sessRoot, 'org-1', 'user-1');
+
+      // Create two sessions
+      const sessA = path.join(userDir, 'local_sess-a');
+      const sessB = path.join(userDir, 'local_sess-b');
+      fs.mkdirSync(sessA, { recursive: true });
+      fs.mkdirSync(sessB, { recursive: true });
+
+      fs.writeFileSync(path.join(sessA, 'audit.jsonl'),
+        JSON.stringify({ type: 'user', message: { content: 'from target session' }, _audit_timestamp: new Date().toISOString() }) + '\n');
+      fs.writeFileSync(path.join(userDir, 'local_sess-a.json'),
+        JSON.stringify({ processName: 'my-target', sessionId: 'local_sess-a' }));
+
+      fs.writeFileSync(path.join(sessB, 'audit.jsonl'),
+        JSON.stringify({ type: 'user', message: { content: 'from other session' }, _audit_timestamp: new Date().toISOString() }) + '\n');
+      fs.writeFileSync(path.join(userDir, 'local_sess-b.json'),
+        JSON.stringify({ processName: 'other-sess', sessionId: 'local_sess-b' }));
+
+      const context = buildContext('/Users/john_renaldi', null, {
+        client: 'cowork',
+        coworkProcess: 'my-target',
+        _homeDir: tmpHome
+      });
+      expect(context).toContain('from target session');
+      expect(context).not.toContain('from other session');
+      fs.rmSync(tmpHome, { recursive: true });
+    });
+
+    it('should apply context filters to Cowork sessions', () => {
+      const tmpHome = fs.mkdtempSync(path.join(os.tmpdir(), 'sidecar-cowork-'));
+      const sessRoot = path.join(tmpHome, 'Library', 'Application Support', 'Claude', 'local-agent-mode-sessions');
+      const sessDir = path.join(sessRoot, 'org-1', 'user-1', 'local_test-session');
+      fs.mkdirSync(sessDir, { recursive: true });
+
+      // Write 5 user turns
+      const lines = [];
+      for (let i = 0; i < 5; i++) {
+        lines.push(JSON.stringify({ type: 'user', message: { content: `user msg ${i}` }, _audit_timestamp: new Date().toISOString() }));
+        lines.push(JSON.stringify({ type: 'assistant', message: { content: `reply ${i}` }, _audit_timestamp: new Date().toISOString() }));
+      }
+      fs.writeFileSync(path.join(sessDir, 'audit.jsonl'), lines.join('\n') + '\n');
+
+      const context = buildContext('/Users/john_renaldi', null, {
+        client: 'cowork',
+        _homeDir: tmpHome,
+        contextTurns: 2
+      });
+      expect(context).toContain('user msg 3');
+      expect(context).toContain('user msg 4');
+      expect(context).not.toContain('user msg 0');
+      fs.rmSync(tmpHome, { recursive: true });
+    });
+  });
 });

@@ -76,6 +76,7 @@ Each mode uses its own programmatic criteria (`programmatic` for MCP, `programma
 | 1 | Debug Auth Bug | `buggy-auth-app` | File read/write, code analysis, model selection |
 | 2 | Generate Tests | `todo-api` | Multi-file analysis, file creation, agent mode selection |
 | 3 | Research and Document | `research-task` | Research capability, file creation, model routing |
+| 4 | Context Passing | `buggy-auth-app` | Parent session context flows to sidecar |
 
 Each scenario runs in both MCP and CLI modes by default.
 
@@ -105,6 +106,7 @@ Run first. All must pass before LLM-as-judge runs. Criteria are mode-aware.
 | Criterion Type | Description |
 |----------------|-------------|
 | `bash_command_matches` | Did a bash tool call contain a command matching this regex? |
+| `bash_result_matches` | Does the output of a matching bash command contain this regex? |
 | `file_changed` | Was this file modified in the sandbox? |
 | `file_created` | Was a new file created matching a pattern? |
 | `file_contains` | Does the file contain this regex pattern? |

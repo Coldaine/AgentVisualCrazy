@@ -477,6 +477,86 @@ describe('Sidecar Config Module', () => {
     });
   });
 
+  describe('getEffectiveAliases', () => {
+    it('should return defaults when no config exists', () => {
+      const config = loadModule();
+      const aliases = config.getEffectiveAliases();
+      expect(aliases.gemini).toBe('openrouter/google/gemini-3-flash-preview');
+      expect(aliases.opus).toBe('openrouter/anthropic/claude-opus-4.6');
+    });
+
+    it('should merge user aliases with defaults (user wins)', () => {
+      const data = {
+        default: 'gemini',
+        aliases: {
+          gemini: 'openrouter/google/custom-gemini',
+          'my-model': 'openrouter/custom/model',
+        },
+      };
+      fs.writeFileSync(path.join(tempDir, 'config.json'), JSON.stringify(data));
+      const config = loadModule();
+      const aliases = config.getEffectiveAliases();
+
+      // User override wins
+      expect(aliases.gemini).toBe('openrouter/google/custom-gemini');
+      // User custom alias included
+      expect(aliases['my-model']).toBe('openrouter/custom/model');
+      // Defaults still present
+      expect(aliases.opus).toBe('openrouter/anthropic/claude-opus-4.6');
+    });
+  });
+
+  describe('formatAliasNames', () => {
+    it('should return comma-separated alias names', () => {
+      const config = loadModule();
+      const names = config.formatAliasNames();
+      expect(names).toContain('gemini');
+      expect(names).toContain('opus');
+      expect(names).toContain('codex');
+      expect(names).toContain(', ');
+    });
+  });
+
+  describe('tryResolveModel', () => {
+    it('should return resolved model for valid alias', () => {
+      const data = {
+        default: 'gemini',
+        aliases: { gemini: 'openrouter/google/gemini-3-flash-preview' },
+      };
+      fs.writeFileSync(path.join(tempDir, 'config.json'), JSON.stringify(data));
+      const config = loadModule();
+      const result = config.tryResolveModel('gemini');
+      expect(result.model).toBe('openrouter/google/gemini-3-flash-preview');
+      expect(result.error).toBeUndefined();
+    });
+
+    it('should return error for invalid alias', () => {
+      const data = {
+        default: 'gemini',
+        aliases: { gemini: 'openrouter/google/gemini-3-flash-preview' },
+      };
+      fs.writeFileSync(path.join(tempDir, 'config.json'), JSON.stringify(data));
+      const config = loadModule();
+      const result = config.tryResolveModel('nonexistent');
+      expect(result.model).toBeUndefined();
+      expect(result.error).toContain('nonexistent');
+      expect(result.error.toLowerCase()).toContain('sidecar setup');
+    });
+
+    it('should return error when no model and no default', () => {
+      const config = loadModule();
+      const result = config.tryResolveModel(undefined);
+      expect(result.model).toBeUndefined();
+      expect(result.error).toBeDefined();
+    });
+
+    it('should return resolved for full model ID with slashes', () => {
+      const config = loadModule();
+      const result = config.tryResolveModel('openrouter/google/gemini-3-flash-preview');
+      expect(result.model).toBe('openrouter/google/gemini-3-flash-preview');
+    });
+  });
+
   describe('Edge cases', () => {
     it('should handle resolveModel with full model path containing multiple slashes', () => {
       const config = loadModule();

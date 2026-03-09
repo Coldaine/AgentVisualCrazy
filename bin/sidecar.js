@@ -150,7 +150,8 @@ async function handleStart(args) {
     foldShortcut: args['fold-shortcut'],
     opencodePort: args['opencode-port'],
     noMcp: args['no-mcp'],
-    excludeMcp: args['exclude-mcp']
+    excludeMcp: args['exclude-mcp'],
+    coworkProcess: args['cowork-process']
   });
 }
 
