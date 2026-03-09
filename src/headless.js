@@ -89,17 +89,19 @@ async function runHeadless(model, systemPrompt, userMessage, taskId, project, ti
   // Ensure node_modules/.bin is in PATH so SDK can find opencode wrapper
   ensureNodeModulesBinInPath();
 
-  // Ensure port is available (kills stale processes from previous sessions).
-  // SDK defaults to port 4096 when no port is specified.
-  ensurePortAvailable(4096);
+  // Use specified port, or 0 to let the OS auto-assign (enables parallel sessions)
+  const port = options.port || 0;
+  if (port > 0) {
+    ensurePortAvailable(port);
+  }
 
   // Start OpenCode server using SDK (no CLI spawning required)
-  logger.debug('Starting OpenCode server via SDK', { model, hasMcp: !!options.mcp });
+  logger.debug('Starting OpenCode server via SDK', { model, hasMcp: !!options.mcp, port });
   let client, server;
 
   try {
-    // Pass MCP config to server if provided
-    const serverOptions = {};
+    // Pass MCP config and port to server
+    const serverOptions = { port };
     if (options.mcp) {
       serverOptions.mcp = options.mcp;
     }
@@ -153,6 +155,13 @@ async function runHeadless(model, systemPrompt, userMessage, taskId, project, ti
     }
     logger.debug('Session ID', { sessionId });
 
+    // Log user message to conversation before sending
+    logMessage(conversationPath, {
+      role: 'user',
+      content: userMessage,
+      timestamp: new Date().toISOString()
+    });
+
     // Send system prompt and user message using SDK
     logger.debug('Sending message to OpenCode', {
       sessionId,
@@ -176,8 +185,17 @@ async function runHeadless(model, systemPrompt, userMessage, taskId, project, ti
     }
 
     // Send prompt asynchronously (returns immediately, we poll for results)
+    logger.info('Sending prompt to OpenCode', {
+      sessionId,
+      model,
+      agent: promptOptions.agent,
+      userMessageLength: userMessage.length
+    });
     await sendPromptAsync(client, sessionId, promptOptions);
-    logger.debug('Async prompt sent');
+    logger.info('Prompt sent successfully, entering polling loop', {
+      sessionId,
+      timeoutMs
+    });
 
     let output = '';
     let completed = false;
@@ -331,15 +349,24 @@ async function runHeadless(model, systemPrompt, userMessage, taskId, project, ti
         //   1. assistantFinished + stable for 2 polls (ideal)
         //   2. No output growth + same message count for 4 polls (fallback
         //      for models that don't set time.completed reliably)
+        //
+        // IMPORTANT: Only count stable polls after we've seen at least one
+        // assistant message. Before the model starts generating, both IDs are
+        // null and nothing has grown — but that means the model is still
+        // loading, NOT that the session is done.
         const outputGrew = output.length > lastOutputLength;
         lastOutputLength = output.length;
 
         if (!outputGrew && currentAssistantMsgId === lastAssistantMsgId) {
-          stablePolls++;
-          const threshold = assistantFinished ? 2 : 4;
-          if (stablePolls >= threshold) {
-            logger.debug('Session appears complete', { stablePolls, assistantFinished });
-            break;
+          if (currentAssistantMsgId !== null) {
+            stablePolls++;
+            const threshold = assistantFinished ? 2 : 4;
+            if (stablePolls >= threshold) {
+              logger.debug('Session appears complete', { stablePolls, assistantFinished });
+              break;
+            }
+          } else {
+            logger.debug('Waiting for model to start generating', { pollCount });
           }
         } else {
           stablePolls = 0;
@@ -351,6 +378,18 @@ async function runHeadless(model, systemPrompt, userMessage, taskId, project, ti
         // Continue polling despite errors
       }
     }
+
+    // Log why the polling loop exited
+    logger.info('Polling loop exited', {
+      taskId,
+      completed,
+      aborted,
+      pollCount,
+      stablePolls,
+      outputLength: output.length,
+      elapsed: Date.now() - startTime,
+      hasAssistantMsg: lastAssistantMsgId !== null
+    });
 
     // Handle timeout
     if (!completed && !aborted && (Date.now() - startTime) >= timeoutMs) {
@@ -391,6 +430,11 @@ async function runHeadless(model, systemPrompt, userMessage, taskId, project, ti
     };
 
   } catch (error) {
+    logger.error('runHeadless caught exception', {
+      taskId,
+      error: error.message,
+      stack: error.stack?.split('\n').slice(0, 3).join(' | ')
+    });
     // Abort session on error (agent may keep running)
     if (sessionId) {
       try {

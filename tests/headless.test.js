@@ -781,6 +781,31 @@ describe('Headless Mode Runner', () => {
       expect(result.summary).toBe('Final output');
     }, 35000);
 
+    it('should NOT exit early when model has not started generating yet', async () => {
+      // Simulate slow model startup: first 3 polls return empty messages,
+      // then assistant message appears. Before the fix, stablePolls would
+      // increment during the empty polls and exit after 4, before the model
+      // even started.
+      let callCount = 0;
+      mockGetMessages.mockImplementation(() => {
+        callCount++;
+        if (callCount <= 3) {
+          // Model still loading — no assistant message yet
+          return Promise.resolve([]);
+        }
+        // Model responds on poll 4
+        return Promise.resolve([{
+          info: { role: 'assistant', id: 'msg-1', time: { completed: Date.now() } },
+          parts: [{ id: 'p1', type: 'text', text: 'Delayed response' }]
+        }]);
+      });
+
+      const result = await runHeadless(testModel, testSystemPrompt, testUserMessage, testTaskId, testProject, 30000);
+      expect(result.summary).toBe('Delayed response');
+      // Must have polled at least 4 times (3 empty + 1 with response + 2 stable)
+      expect(callCount).toBeGreaterThanOrEqual(4);
+    }, 35000);
+
     it('should reset stablePolls when output grows', async () => {
       // Simulate streaming: same part ID, text grows each poll then stabilizes
       let callCount = 0;

@@ -36,7 +36,7 @@ function textResult(text, isError) {
   return result;
 }
 
-/** Spawn a sidecar CLI process (detached, fire-and-forget) */
+/** Spawn a sidecar CLI process (fire-and-forget) */
 function spawnSidecarProcess(args, sessionDir) {
   const sidecarBin = path.join(__dirname, '..', 'bin', 'sidecar.js');
   let stderrFd = 'ignore';
@@ -49,7 +49,6 @@ function spawnSidecarProcess(args, sessionDir) {
   const child = spawn('node', [sidecarBin, ...args], {
     cwd: getProjectDir(),
     stdio: ['ignore', 'ignore', stderrFd],
-    detached: true,
     env: { ...process.env, SIDECAR_DEBUG_PORT: '9223' },
   });
   child.unref();
@@ -65,7 +64,10 @@ const handlers = {
 
     const args = ['start', '--prompt', input.prompt, '--task-id', taskId, '--client', 'cowork'];
     if (input.model) { args.push('--model', input.model); }
-    if (input.agent) { args.push('--agent', input.agent); }
+    // Override 'Chat' agent in headless mode — it requires interactive approval
+    const agent = (input.noUi && (!input.agent || input.agent.toLowerCase() === 'chat'))
+      ? 'build' : input.agent;
+    if (agent) { args.push('--agent', agent); }
     if (input.noUi) { args.push('--no-ui'); }
     if (input.thinking) { args.push('--thinking', input.thinking); }
     if (input.timeout) { args.push('--timeout', String(input.timeout)); }
@@ -191,7 +193,7 @@ const handlers = {
     const cwd = project || getProjectDir(input.project);
     const sessionDir = safeSessionDir(cwd, input.taskId);
     const args = ['resume', input.taskId, '--client', 'cowork', '--cwd', cwd];
-    if (input.noUi) { args.push('--no-ui'); }
+    if (input.noUi) { args.push('--no-ui', '--agent', 'build'); }
     if (input.timeout) { args.push('--timeout', String(input.timeout)); }
     try { spawnSidecarProcess(args, sessionDir); } catch (err) {
       return textResult(`Failed to resume: ${err.message}`, true);
@@ -211,7 +213,7 @@ const handlers = {
     const args = ['continue', input.taskId, '--prompt', input.prompt,
       '--task-id', newTaskId, '--client', 'cowork', '--cwd', cwd];
     if (input.model) { args.push('--model', input.model); }
-    if (input.noUi) { args.push('--no-ui'); }
+    if (input.noUi) { args.push('--no-ui', '--agent', 'build'); }
     if (input.timeout) { args.push('--timeout', String(input.timeout)); }
     if (input.contextTurns)     { args.push('--context-turns', String(input.contextTurns)); }
     if (input.contextMaxTokens) { args.push('--context-max-tokens', String(input.contextMaxTokens)); }

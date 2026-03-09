@@ -198,9 +198,14 @@ async function startOpenCodeServer(mcpConfig, options = {}) {
   const { waitForServer } = require('../headless');
 
   ensureNodeModulesBinInPath();
-  ensurePortAvailable();
 
-  const serverOptions = {};
+  // Use specified port, or 0 to let the OS auto-assign (enables parallel sessions)
+  const port = options.port || 0;
+  if (port > 0) {
+    ensurePortAvailable(port);
+  }
+
+  const serverOptions = { port };
   if (mcpConfig) { serverOptions.mcp = mcpConfig; }
   if (options.client) { serverOptions.client = options.client; }
 

@@ -142,10 +142,24 @@ async function sendPrompt(client, sessionId, options) {
     body.reasoning = reasoning;
   }
 
-  return client.session.promptAsync({
+  const result = await client.session.promptAsync({
     path: { id: sessionId },
     body
   });
+
+  // Log but don't throw on promptAsync errors.
+  // promptAsync is fire-and-forget: the server queues the prompt for async
+  // processing. Errors here may be informational (e.g., model config warnings)
+  // rather than fatal. The polling loop will detect real failures via timeout.
+  if (result.error) {
+    const { logger } = require('./utils/logger');
+    logger.error('promptAsync returned error (continuing to poll)', {
+      error: result.error.message || JSON.stringify(result.error),
+      sessionId
+    });
+  }
+
+  return result;
 }
 
 /**

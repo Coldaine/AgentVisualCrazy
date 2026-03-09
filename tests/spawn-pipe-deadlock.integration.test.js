@@ -50,7 +50,7 @@ describe('spawnSidecarProcess stdio configuration (Bug #4 fix)', () => {
     expect(parts[2]).toBe('stderrFd');
   });
 
-  it('spawns as detached with unref for fire-and-forget behavior', () => {
+  it('spawns with unref for fire-and-forget (NOT detached — detached causes SIGTERM on macOS)', () => {
     const spawnSrc = fs.readFileSync(
       path.join(__dirname, '..', 'src', 'mcp-server.js'), 'utf-8'
     );
@@ -59,7 +59,8 @@ describe('spawnSidecarProcess stdio configuration (Bug #4 fix)', () => {
     expect(fnMatch).toBeTruthy();
     const fnBody = fnMatch[0];
 
-    expect(fnBody).toContain('detached: true');
+    // Must NOT use detached — causes child to receive SIGTERM ~5s after spawn
+    expect(fnBody).not.toContain('detached: true');
     expect(fnBody).toContain('child.unref()');
   });
 });
