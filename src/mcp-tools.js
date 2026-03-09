@@ -41,7 +41,7 @@ function getTools() {
       'need to monitor. When in doubt, use interactive. ' +
       'For headless mode, estimate task complexity and poll sidecar_status ' +
       'accordingly. sidecar_status responses include next_poll timing hints. ' +
-      'For interactive mode, do not poll \u2014 wait for the user to tell you ' +
+      'For interactive mode, do not poll. Wait for the user to tell you ' +
       'they\'ve clicked Fold, then use sidecar_read. ' +
       'Call sidecar_guide first if you need help choosing models or writing a good briefing.' +
       ' Pass includeContext: false when the briefing is fully self-contained.',
