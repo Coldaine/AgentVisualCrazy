@@ -42,9 +42,20 @@ async function main() {
 
   // Non-interactive update check (skip for mcp, --version, --help)
   if (command !== 'mcp' && !args.version && !args.help) {
-    const { initUpdateCheck, notifyUpdate } = require('../src/utils/updater');
+    const { initUpdateCheck, getUpdateInfo, notifyUpdate } = require('../src/utils/updater');
     initUpdateCheck();
-    process.on('exit', () => { notifyUpdate(); });
+    // Pass update info to Electron child process via env var,
+    // because update-notifier deletes the cache entry after reading it.
+    const cliUpdateInfo = getUpdateInfo();
+    if (cliUpdateInfo) {
+      process.env.SIDECAR_UPDATE_INFO = JSON.stringify(cliUpdateInfo);
+      process.on('exit', () => {
+        process.stderr.write(
+          `\n  Update available: v${cliUpdateInfo.current} → v${cliUpdateInfo.latest}\n` +
+          '  Run `npm install -g claude-sidecar` to upgrade.\n\n'
+        );
+      });
+    }
   }
 
   // Handle --version

@@ -356,7 +356,7 @@ For Claude Desktop and Cowork, sidecar exposes a full MCP server auto-registered
 
 To register manually:
 ```bash
-claude mcp add-json sidecar '{"command":"sidecar","args":["mcp"]}' --scope user
+claude mcp add-json sidecar '{"command":"npx","args":["-y","claude-sidecar@latest","mcp"]}' --scope user
 ```
 
 | MCP Tool | Description |

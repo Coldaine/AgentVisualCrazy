@@ -91,10 +91,16 @@ function createSidecarWindow() {
     }
   });
 
-  // Check for updates before building toolbar (uses cached data, no network call)
-  const { getUpdateInfo, initUpdateCheck } = require('../src/utils/updater');
-  initUpdateCheck();
-  const updateInfo = getUpdateInfo();
+  // Check for updates: prefer env var from CLI (cache is one-shot), fallback to direct check
+  let updateInfo = null;
+  if (process.env.SIDECAR_UPDATE_INFO) {
+    try { updateInfo = JSON.parse(process.env.SIDECAR_UPDATE_INFO); } catch (_) {}
+  }
+  if (!updateInfo) {
+    const { getUpdateInfo, initUpdateCheck } = require('../src/utils/updater');
+    initUpdateCheck();
+    updateInfo = getUpdateInfo();
+  }
   if (updateInfo) {
     currentToolbarH = TOOLBAR_H + 32; // Expand for 32px update banner
     logger.info('Update available', { current: updateInfo.current, latest: updateInfo.latest });

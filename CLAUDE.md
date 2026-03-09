@@ -49,7 +49,7 @@ sidecar update                       # Update to latest version
 ### MCP Server (for Cowork / Claude Desktop)
 ```bash
 # Auto-registered during npm install. Manual registration:
-claude mcp add-json sidecar '{"command":"sidecar","args":["mcp"]}' --scope user
+claude mcp add-json sidecar '{"command":"npx","args":["-y","claude-sidecar@latest","mcp"]}' --scope user
 ```
 
 MCP tools: `sidecar_start`, `sidecar_status`, `sidecar_read`, `sidecar_list`, `sidecar_resume`, `sidecar_continue`, `sidecar_setup`, `sidecar_guide`, `sidecar_abort`

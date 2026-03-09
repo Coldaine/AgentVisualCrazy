@@ -17,7 +17,7 @@ const SKILL_SOURCE = path.join(__dirname, '..', 'skill', 'SKILL.md');
 const SKILL_DEST_DIR = path.join(os.homedir(), '.claude', 'skills', 'sidecar');
 const SKILL_DEST = path.join(SKILL_DEST_DIR, 'SKILL.md');
 
-const MCP_CONFIG = { command: 'sidecar', args: ['mcp'] };
+const MCP_CONFIG = { command: 'npx', args: ['-y', 'claude-sidecar@latest', 'mcp'] };
 
 /**
  * Add an MCP server to a JSON config file.
