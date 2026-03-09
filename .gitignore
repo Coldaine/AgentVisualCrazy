@@ -35,6 +35,10 @@ opencode.json
 *.tmp
 *.temp
 
+# E2E screenshots (generated during test runs)
+tests/screenshots/*
+!tests/screenshots/.gitkeep
+
 # Package lock (optional - some prefer to commit it)
 # package-lock.json
 

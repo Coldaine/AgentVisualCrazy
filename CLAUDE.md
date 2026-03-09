@@ -236,6 +236,14 @@ sidecar/
 │   │   ├── progress.test.js
 │   │   └── exit-handler.test.js
 │   ├── mcp-headless-lifecycle.test.js  # Full MCP headless lifecycle
+│   ├── cli-headless-e2e.integration.test.js  # CLI headless E2E (real LLM)
+│   ├── electron-headless-mode.test.js  # Electron headless mode source check
+│   ├── electron-toolbar-e2e.integration.test.js  # Electron CDP E2E (real LLM)
+│   ├── helpers/                 # Test helpers
+│   │   ├── cdp-client.js        # CDP WebSocket helper for Electron testing
+│   │   ├── cdp-client.test.js   # CDP helper unit tests
+│   │   └── start-server.js      # OpenCode server starter (child process)
+│   ├── screenshots/             # CDP screenshots (gitignored)
 │   ├── scripts/                 # Enforcement script tests
 │   │   ├── check-secrets.test.js
 │   │   ├── check-file-sizes.test.js
@@ -404,6 +412,10 @@ Use `src/utils/logger.js` (levels: error/warn/info/debug). Logs go to stderr to 
 | `scripts/check-secrets.test.js` | Secret detection | Pattern matching, allowlist, multi-secret |
 | `scripts/check-file-sizes.test.js` | File size limits | Line counting, batch checking |
 | `scripts/validate-docs.test.js` | Doc drift detection | Section extraction, drift comparison, staged file check |
+| `helpers/cdp-client.test.js` | CDP helper | Mock HTTP+WebSocket CDP server, factory methods |
+| `electron-headless-mode.test.js` | Electron headless | Source-level verify `SIDECAR_HEADLESS_TEST` guard |
+| `cli-headless-e2e.integration.test.js` | CLI E2E (real LLM) | `start --no-ui`, `list`, `read`, `read --metadata` |
+| `electron-toolbar-e2e.integration.test.js` | Electron CDP E2E (real LLM) | Brand, task ID, timer, fold button, settings, update banner, screenshots |
 
 ### What NOT to Unit Test (UI Code)
 

@@ -138,7 +138,9 @@ function createSidecarWindow() {
       rebrandUI().then(() => {
         mainWindow.addBrowserView(contentView);
         updateContentBounds();
-        mainWindow.show();
+        if (!process.env.SIDECAR_HEADLESS_TEST) {
+          mainWindow.show();
+        }
         if (OPENCODE_SESSION_ID) { navigateToSession(OPENCODE_SESSION_ID); }
       });
     }, 500);
