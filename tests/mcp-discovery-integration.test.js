@@ -90,7 +90,7 @@ describe('MCP Discovery Integration', () => {
       }]);
 
       const { discoverClaudeCodeMcps } = require('../src/utils/mcp-discovery');
-      const result = discoverClaudeCodeMcps(claudeDir);
+      const result = discoverClaudeCodeMcps(claudeDir, path.join(tmpDir, '.claude.json'));
 
       expect(result).not.toBeNull();
       expect(result['my-server']).toBeDefined();
@@ -110,7 +110,7 @@ describe('MCP Discovery Integration', () => {
       }]);
 
       const { discoverClaudeCodeMcps } = require('../src/utils/mcp-discovery');
-      const result = discoverClaudeCodeMcps(claudeDir);
+      const result = discoverClaudeCodeMcps(claudeDir, path.join(tmpDir, '.claude.json'));
 
       expect(result).not.toBeNull();
       expect(result['wrapped-server']).toBeDefined();
@@ -137,7 +137,7 @@ describe('MCP Discovery Integration', () => {
       ]);
 
       const { discoverClaudeCodeMcps } = require('../src/utils/mcp-discovery');
-      const result = discoverClaudeCodeMcps(claudeDir);
+      const result = discoverClaudeCodeMcps(claudeDir, path.join(tmpDir, '.claude.json'));
 
       expect(result).not.toBeNull();
       expect(Object.keys(result)).toHaveLength(3);
@@ -161,7 +161,7 @@ describe('MCP Discovery Integration', () => {
       ]);
 
       const { discoverClaudeCodeMcps } = require('../src/utils/mcp-discovery');
-      const result = discoverClaudeCodeMcps(claudeDir);
+      const result = discoverClaudeCodeMcps(claudeDir, path.join(tmpDir, '.claude.json'));
 
       expect(result).not.toBeNull();
       expect(result['enabled-server']).toBeDefined();
@@ -183,7 +183,7 @@ describe('MCP Discovery Integration', () => {
       ]);
 
       const { discoverClaudeCodeMcps } = require('../src/utils/mcp-discovery');
-      const result = discoverClaudeCodeMcps(claudeDir);
+      const result = discoverClaudeCodeMcps(claudeDir, path.join(tmpDir, '.claude.json'));
 
       expect(result).not.toBeNull();
       expect(result['good-server']).toBeDefined();
@@ -204,7 +204,7 @@ describe('MCP Discovery Integration', () => {
       ]);
 
       const { discoverClaudeCodeMcps } = require('../src/utils/mcp-discovery');
-      const result = discoverClaudeCodeMcps(claudeDir);
+      const result = discoverClaudeCodeMcps(claudeDir, path.join(tmpDir, '.claude.json'));
 
       expect(result).not.toBeNull();
       expect(result['real-server']).toBeDefined();
@@ -221,7 +221,7 @@ describe('MCP Discovery Integration', () => {
       ]);
 
       const { discoverClaudeCodeMcps } = require('../src/utils/mcp-discovery');
-      const result = discoverClaudeCodeMcps(claudeDir);
+      const result = discoverClaudeCodeMcps(claudeDir, path.join(tmpDir, '.claude.json'));
       expect(result).toBeNull();
     });
   });
