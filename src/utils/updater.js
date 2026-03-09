@@ -48,7 +48,8 @@ function initUpdateCheck() {
   }
 
   try {
-    const updateNotifier = require('update-notifier');
+    const mod = require('update-notifier');
+    const updateNotifier = mod.default || mod;
     notifier = updateNotifier({
       pkg: { name: pkg.name, version: pkg.version }
     });
