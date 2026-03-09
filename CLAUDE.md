@@ -182,6 +182,7 @@ sidecar/
 │   │   ├── read.js              # readSidecar(), listSidecars(), formatAge()
 │   │   ├── context-builder.js   # buildContext(), parseDuration()
 │   │   ├── session-utils.js     # Shared utilities (SessionPaths, finalizeSession, etc.)
+│   │   ├── interactive.js      # Interactive mode (Electron GUI session)
 │   │   ├── progress.js          # Session progress reader (message counts, latest activity)
 │   │   ├── crash-handler.js     # Crash recovery (updates metadata on uncaught exceptions)
 │   │   └── setup.js             # addAlias(), createDefaultConfig(), runInteractiveSetup()
@@ -290,7 +291,8 @@ sidecar/
 
 | Module | Purpose | Key Functions |
 |--------|---------|---------------|
-| `sidecar/start.js` | Session starting | `startSidecar()`, `runInteractive()`, `generateTaskId()`, `buildMcpConfig()` |
+| `sidecar/start.js` | Session starting | `startSidecar()`, `generateTaskId()`, `buildMcpConfig()` |
+| `sidecar/interactive.js` | Interactive mode (Electron) | `runInteractive()`, `checkElectronAvailable()`, `buildElectronEnv()` |
 | `sidecar/resume.js` | Session resumption | `resumeSidecar()`, `checkFileDrift()`, `buildDriftWarning()` |
 | `sidecar/continue.js` | Session continuation | `continueSidecar()`, `loadPreviousSession()`, `buildContinuationContext()` |
 | `sidecar/read.js` | Session listing/reading | `readSidecar()`, `listSidecars()`, `formatAge()` |
