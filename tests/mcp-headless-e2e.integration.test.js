@@ -102,9 +102,11 @@ function createMcpClient() {
   };
 }
 
-/** Poll sidecar_status until terminal state or timeout */
+/** Poll sidecar_status until terminal state or timeout.
+ * Collects all intermediate poll results for assertions. */
 async function pollUntilDone(client, taskId, project, { intervalMs = 5000, timeoutMs = 120000 } = {}) {
   const start = Date.now();
+  const polls = [];
   while (Date.now() - start < timeoutMs) {
     const result = await client.request('tools/call', {
       name: 'sidecar_status',
@@ -115,22 +117,25 @@ async function pollUntilDone(client, taskId, project, { intervalMs = 5000, timeo
     let data;
     try { data = JSON.parse(text); } catch {
       // Non-JSON response (error message)
-      return { raw: text, status: 'error' };
+      return { final: { raw: text, status: 'error' }, polls };
     }
 
+    polls.push(data);
+
     if (data.status !== 'running') {
-      return data;
+      return { final: data, polls };
     }
 
     // Log progress for debugging
     const elapsed = Math.round((Date.now() - start) / 1000);
     const latest = data.latest || 'waiting...';
-    process.stderr.write(`  [e2e] ${elapsed}s | status=${data.status} | messages=${data.messages || 0} | ${latest}\n`);
+    const stage = data.stage || 'none';
+    process.stderr.write(`  [e2e] ${elapsed}s | status=${data.status} | stage=${stage} | messages=${data.messages || 0} | ${latest}\n`);
 
     await new Promise(r => setTimeout(r, intervalMs));
   }
 
-  return { status: 'timeout', elapsed: `${Math.round((Date.now() - start) / 1000)}s` };
+  return { final: { status: 'timeout', elapsed: `${Math.round((Date.now() - start) / 1000)}s` }, polls };
 }
 
 describeE2E('MCP Headless E2E: real LLM via sidecar_start', () => {
@@ -182,9 +187,10 @@ describeE2E('MCP Headless E2E: real LLM via sidecar_start', () => {
     process.stderr.write(`  [e2e] Started task ${taskId}\n`);
 
     // Step 2: Poll sidecar_status until it completes (allow up to 3 min)
-    const finalStatus = await pollUntilDone(client, taskId, tmpDir, { timeoutMs: 180000 });
+    const { final: finalStatus, polls } = await pollUntilDone(client, taskId, tmpDir, { timeoutMs: 180000 });
 
     process.stderr.write(`  [e2e] Final status: ${JSON.stringify(finalStatus)}\n`);
+    process.stderr.write(`  [e2e] Total polls: ${polls.length}\n`);
 
     // Dump debug log if not complete
     if (finalStatus.status !== 'complete') {
@@ -201,6 +207,23 @@ describeE2E('MCP Headless E2E: real LLM via sidecar_start', () => {
 
     // Step 3: Assert it completed (not crashed, error, or timeout)
     expect(finalStatus.status).toBe('complete');
+
+    // Step 3b: Verify progress tracking during the run
+    const runningPolls = polls.filter(p => p.status === 'running');
+    if (runningPolls.length > 0) {
+      // At least one poll should have a stage field (from progress.json)
+      const withStage = runningPolls.filter(p => p.stage);
+      expect(withStage.length).toBeGreaterThan(0);
+
+      // latest should never stay as "Starting up..." for ALL running polls
+      // (progress.json should override it with a lifecycle stage label)
+      const allStartingUp = runningPolls.every(p => p.latest === 'Starting up...');
+      expect(allStartingUp).toBe(false);
+
+      // Log progress stages for debugging
+      process.stderr.write(`  [e2e] Progress stages seen: ${[...new Set(runningPolls.map(p => p.stage || 'none'))].join(', ')}\n`);
+      process.stderr.write(`  [e2e] Latest values seen: ${[...new Set(runningPolls.map(p => p.latest))].join(' | ')}\n`);
+    }
 
     // Step 4: Read the summary
     const readResult = await client.request('tools/call', {

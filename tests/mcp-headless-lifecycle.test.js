@@ -359,6 +359,114 @@ describe('MCP Headless Lifecycle Integration', () => {
     });
   });
 
+  describe('Progress tracking through sidecar_status', () => {
+    test('status reflects progress.json lifecycle stages', async () => {
+      const taskId = 'progress-stage-001';
+      const { writeProgress } = require('../src/sidecar/progress');
+
+      // Step 1: Create session - no progress.json yet
+      const sessDir = createSession(tmpDir, taskId, {
+        status: 'running',
+        pid: process.pid,
+      });
+
+      const status1 = await handlers.sidecar_status({ taskId }, tmpDir);
+      const data1 = parseResult(status1);
+      expect(data1.status).toBe('running');
+      expect(data1.latest).toBe('Starting up...');
+      expect(data1.messages).toBe(0);
+
+      // Step 2: Write initializing stage
+      writeProgress(sessDir, 'initializing');
+
+      const status2 = await handlers.sidecar_status({ taskId }, tmpDir);
+      const data2 = parseResult(status2);
+      expect(data2.stage).toBe('initializing');
+      expect(data2.latest).toBe('Starting OpenCode server...');
+      expect(data2.messages).toBe(0);
+
+      // Step 3: Write prompt_sent stage
+      writeProgress(sessDir, 'prompt_sent');
+
+      const status3 = await handlers.sidecar_status({ taskId }, tmpDir);
+      const data3 = parseResult(status3);
+      expect(data3.stage).toBe('prompt_sent');
+      expect(data3.latest).toBe('Briefing delivered, waiting for response...');
+      expect(data3.messages).toBe(0);
+
+      // Step 4: Write receiving stage with tool call
+      writeProgress(sessDir, 'receiving', {
+        messagesReceived: 1,
+        latestTool: 'web_search',
+        stageLabel: 'Calling tool: web_search',
+      });
+
+      // Also add a tool_use entry to conversation.jsonl (simulating headless.js)
+      writeConversation(sessDir, [
+        { role: 'system', content: 'System prompt' },
+        { role: 'user', content: 'Search the web' },
+        { role: 'assistant', type: 'tool_use', toolCall: { id: 't1', name: 'web_search' } },
+      ]);
+
+      const status4 = await handlers.sidecar_status({ taskId }, tmpDir);
+      const data4 = parseResult(status4);
+      expect(data4.stage).toBe('receiving');
+      expect(data4.latest).toBe('Using web_search');
+      expect(data4.messages).toBe(1);
+
+      // Step 5: Tool_use entry WITHOUT name (SDK doesn't populate part.name)
+      writeConversation(sessDir, [
+        { role: 'system', content: 'System prompt' },
+        { role: 'user', content: 'Search the web' },
+        { role: 'assistant', type: 'tool_use', toolCall: { id: 't1' } },
+      ]);
+      writeProgress(sessDir, 'receiving', {
+        messagesReceived: 1,
+        latestTool: 'web_search',
+        stageLabel: 'Calling tool: web_search',
+      });
+
+      const status5 = await handlers.sidecar_status({ taskId }, tmpDir);
+      const data5 = parseResult(status5);
+      // extractLatest returns "Executing tool call..." but progress.json
+      // has latestTool, so readProgress overrides with "Calling tool: web_search"
+      expect(data5.latest).toBe('Calling tool: web_search');
+
+      // Step 6: Text output arrives
+      writeConversation(sessDir, [
+        { role: 'system', content: 'System prompt' },
+        { role: 'user', content: 'Search the web' },
+        { role: 'assistant', type: 'tool_use', toolCall: { id: 't1' } },
+        { role: 'assistant', content: 'Here are the search results for your query.' },
+      ]);
+
+      const status6 = await handlers.sidecar_status({ taskId }, tmpDir);
+      const data6 = parseResult(status6);
+      expect(data6.messages).toBe(2);
+      expect(data6.latest).toBe('Here are the search results for your query.');
+    });
+
+    test('status without progress.json falls back to conversation.jsonl', async () => {
+      const taskId = 'progress-fallback-001';
+      const sessDir = createSession(tmpDir, taskId, {
+        status: 'running',
+        pid: process.pid,
+      });
+
+      // No progress.json - only conversation.jsonl
+      writeConversation(sessDir, [
+        { role: 'assistant', content: 'Analyzing code...' },
+        { role: 'assistant', toolCall: { name: 'Read', id: 'r1' } },
+      ]);
+
+      const status = await handlers.sidecar_status({ taskId }, tmpDir);
+      const data = parseResult(status);
+      expect(data.messages).toBe(2);
+      expect(data.latest).toBe('Using Read');
+      expect(data.stage).toBeUndefined();
+    });
+  });
+
   describe('No conversation yet', () => {
     test('session with no conversation file returns appropriate message', async () => {
       const taskId = 'empty-001';
