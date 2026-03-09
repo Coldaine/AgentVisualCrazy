@@ -8,22 +8,35 @@ const path = require('path');
  * @param {string} sandboxDir - Path to sandbox directory
  * @returns {Array<{type: string, passed: boolean, detail: string}>}
  */
+/**
+ * Match tool name allowing MCP prefix and pipe-separated alternatives.
+ * Examples:
+ *   toolMatches('mcp__sidecar__sidecar_start', 'sidecar_start') -> true
+ *   toolMatches('sidecar_read', 'sidecar_read|sidecar_status') -> true
+ */
+function toolMatches(actualName, criterionName) {
+  const alternatives = criterionName.split('|');
+  return alternatives.some(alt =>
+    actualName === alt || actualName.endsWith(`__${alt}`)
+  );
+}
+
 function runProgrammaticChecks(criteria, transcript, sandboxDir) {
   return criteria.map(c => {
     switch (c.type) {
       case 'tool_called': {
-        const found = transcript.toolCalls.find(tc => tc.tool === c.tool);
+        const found = transcript.toolCalls.find(tc => toolMatches(tc.tool, c.tool));
         return { type: c.type, tool: c.tool, passed: !!found, detail: found ? 'Called' : 'Not called' };
       }
       case 'tool_param': {
-        const call = transcript.toolCalls.find(tc => tc.tool === c.tool);
+        const call = transcript.toolCalls.find(tc => toolMatches(tc.tool, c.tool));
         if (!call) { return { type: c.type, passed: false, detail: `Tool ${c.tool} not called` }; }
         const actual = call.params[c.param];
         const passed = actual === c.expected;
         return { type: c.type, passed, detail: `${c.param}=${actual} (expected ${c.expected})` };
       }
       case 'tool_param_matches': {
-        const call = transcript.toolCalls.find(tc => tc.tool === c.tool);
+        const call = transcript.toolCalls.find(tc => toolMatches(tc.tool, c.tool));
         if (!call) { return { type: c.type, passed: false, detail: `Tool ${c.tool} not called` }; }
         const actual = String(call.params[c.param] || '');
         const passed = new RegExp(c.pattern).test(actual);

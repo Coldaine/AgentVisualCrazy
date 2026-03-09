@@ -10,7 +10,7 @@
     "success_criteria": {
       "programmatic": [
         {"type": "tool_called", "tool": "sidecar_start"},
-        {"type": "tool_called", "tool": "sidecar_read"},
+        {"type": "tool_called", "tool": "sidecar_read|sidecar_status"},
         {"type": "file_changed", "path": "src/server.js"}
       ],
       "programmatic_cli": [
@@ -40,7 +40,7 @@
     "success_criteria": {
       "programmatic": [
         {"type": "tool_called", "tool": "sidecar_start"},
-        {"type": "tool_called", "tool": "sidecar_read"},
+        {"type": "tool_called", "tool": "sidecar_read|sidecar_status"},
         {"type": "file_created", "pattern": "tests/.*\\.js$"}
       ],
       "programmatic_cli": [
@@ -70,7 +70,7 @@
     "success_criteria": {
       "programmatic": [
         {"type": "tool_called", "tool": "sidecar_start"},
-        {"type": "tool_called", "tool": "sidecar_read"},
+        {"type": "tool_called", "tool": "sidecar_read|sidecar_status"},
         {"type": "file_created", "pattern": "docs/.*\\.md$"}
       ],
       "programmatic_cli": [

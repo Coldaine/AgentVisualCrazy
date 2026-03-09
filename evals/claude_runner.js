@@ -72,8 +72,12 @@ function buildClaudeCommand({ prompt, model, maxBudget, mcpConfigPath, sandboxDi
     '--verbose',
   ];
 
+  const baseTools = 'Read,Edit,Write,Bash,Glob,Grep';
   if (mcpConfigPath) {
     args.push('--mcp-config', mcpConfigPath);
+    args.push('--allowedTools', `mcp__sidecar__*,${baseTools}`);
+  } else {
+    args.push('--allowedTools', baseTools);
   }
 
   const env = { ...process.env, CLAUDECODE: '' };

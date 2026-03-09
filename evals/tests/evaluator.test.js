@@ -127,6 +127,47 @@ describe('runProgrammaticChecks', () => {
     const results = runProgrammaticChecks(criteria, transcript, '/tmp');
     expect(results[0].passed).toBe(false);
   });
+
+  test('tool_called matches MCP-prefixed tool names', () => {
+    const transcript = {
+      toolCalls: [{ tool: 'mcp__sidecar__sidecar_start', params: { model: 'gemini' }, result: '{}' }],
+      errors: [],
+    };
+    const criteria = [{ type: 'tool_called', tool: 'sidecar_start' }];
+    const results = runProgrammaticChecks(criteria, transcript, '/tmp');
+    expect(results[0].passed).toBe(true);
+    expect(results[0].detail).toBe('Called');
+  });
+
+  test('tool_called matches pipe-separated alternatives', () => {
+    const transcript = {
+      toolCalls: [{ tool: 'mcp__sidecar__sidecar_status', params: {}, result: '{}' }],
+      errors: [],
+    };
+    const criteria = [{ type: 'tool_called', tool: 'sidecar_read|sidecar_status' }];
+    const results = runProgrammaticChecks(criteria, transcript, '/tmp');
+    expect(results[0].passed).toBe(true);
+  });
+
+  test('tool_param matches MCP-prefixed tool names', () => {
+    const transcript = {
+      toolCalls: [{ tool: 'mcp__sidecar__sidecar_start', params: { agent: 'Build' }, result: '{}' }],
+      errors: [],
+    };
+    const criteria = [{ type: 'tool_param', tool: 'sidecar_start', param: 'agent', expected: 'Build' }];
+    const results = runProgrammaticChecks(criteria, transcript, '/tmp');
+    expect(results[0].passed).toBe(true);
+  });
+
+  test('tool_param_matches matches MCP-prefixed tool names', () => {
+    const transcript = {
+      toolCalls: [{ tool: 'mcp__sidecar__sidecar_start', params: { model: 'openrouter/google/gemini-2.5-flash' }, result: '{}' }],
+      errors: [],
+    };
+    const criteria = [{ type: 'tool_param_matches', tool: 'sidecar_start', param: 'model', pattern: 'gemini' }];
+    const results = runProgrammaticChecks(criteria, transcript, '/tmp');
+    expect(results[0].passed).toBe(true);
+  });
 });
 
 const { buildJudgePrompt, parseJudgeResponse } = require('../evaluator');
