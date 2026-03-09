@@ -300,6 +300,21 @@ describe('MCP Tool Definitions', () => {
       expect(guide).toContain('Claude Code CLI');
     });
 
+    test('contains headless polling tiers', () => {
+      const guide = getGuideText();
+      expect(guide).toContain('Headless Mode');
+      expect(guide).toContain('20s');
+      expect(guide).toContain('30s');
+      expect(guide).toContain('45s');
+      expect(guide).toContain('complexity');
+    });
+
+    test('contains interactive mode no-poll guidance', () => {
+      const guide = getGuideText();
+      expect(guide).toContain('Interactive Mode');
+      expect(guide).toContain('Do NOT poll');
+      expect(guide).toContain('clicked Fold');
+    });
   });
 
   describe('Input Validation (Security)', () => {
