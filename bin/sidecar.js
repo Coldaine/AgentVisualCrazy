@@ -121,12 +121,35 @@ async function main() {
  */
 async function handleStart(args) {
   // Resolve model alias or use config default before validation
-  const { resolveModel } = require('../src/utils/config');
+  const { resolveModel, detectFallback, loadConfig } = require('../src/utils/config');
+  const rawAlias = args.model;
   try {
     args.model = resolveModel(args.model);
   } catch (err) {
     console.error(err.message);
     process.exit(1);
+  }
+
+  // Determine the alias used (explicit or config default)
+  let alias = rawAlias;
+  if (alias === undefined) {
+    const cfg = loadConfig();
+    if (cfg && cfg.default && !cfg.default.includes('/')) {
+      alias = cfg.default;
+    }
+  }
+
+  // Validate direct-API fallback models exist on the provider (opt-in via --validate-model)
+  if (args['validate-model'] && alias && detectFallback(alias, args.model)) {
+    const { validateDirectModel } = require('../src/utils/model-validator');
+    try {
+      args.model = await validateDirectModel(args.model, alias, {
+        headless: args['no-ui'] || !process.stdin.isTTY
+      });
+    } catch (err) {
+      console.error(err.message);
+      process.exit(1);
+    }
   }
 
   // Normalize agent: --agent takes precedence, otherwise use --mode

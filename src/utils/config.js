@@ -9,11 +9,10 @@
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const { PROVIDER_ENV_MAP } = require('./api-key-store');
+const { logger } = require('./logger');
 
-/**
- * Default model alias map
- * Maps short alias names to full OpenRouter model identifiers.
- */
+/** Default model alias map — short names to full OpenRouter model identifiers */
 const DEFAULT_ALIASES = {
   'gemini': 'openrouter/google/gemini-3.1-flash-lite-preview',
   'gemini-pro': 'openrouter/google/gemini-3.1-pro-preview',
@@ -37,10 +36,7 @@ const DEFAULT_ALIASES = {
   'seed': 'openrouter/bytedance-seed/seed-2.0-mini',
 };
 
-/**
- * Get the sidecar configuration directory path
- * @returns {string} Config directory path
- */
+/** @returns {string} Config directory path */
 function getConfigDir() {
   if (process.env.SIDECAR_CONFIG_DIR) {
     const resolved = path.resolve(process.env.SIDECAR_CONFIG_DIR);
@@ -53,18 +49,12 @@ function getConfigDir() {
   return path.join(homeDir, '.config', 'sidecar');
 }
 
-/**
- * Get the path to the config.json file
- * @returns {string} Full path to config.json
- */
+/** @returns {string} Full path to config.json */
 function getConfigPath() {
   return path.join(getConfigDir(), 'config.json');
 }
 
-/**
- * Load and parse the config file
- * @returns {object|null} Parsed config data, or null if missing/invalid
- */
+/** @returns {object|null} Parsed config data, or null if missing/invalid */
 function loadConfig() {
   const configPath = getConfigPath();
   try {
@@ -81,10 +71,7 @@ function loadConfig() {
   }
 }
 
-/**
- * Save config data to disk, creating the directory if needed
- * @param {object} configData - Configuration object to persist
- */
+/** Save config data to disk, creating the directory if needed */
 function saveConfig(configData) {
   const configDir = getConfigDir();
   fs.mkdirSync(configDir, { recursive: true, mode: 0o700 });
@@ -92,12 +79,27 @@ function saveConfig(configData) {
   fs.writeFileSync(configPath, JSON.stringify(configData, null, 2), { mode: 0o600 });
 }
 
-/**
- * Get the default alias map
- * @returns {object} Map of alias name to full model identifier
- */
+/** @returns {object} Copy of the default alias map */
 function getDefaultAliases() {
   return { ...DEFAULT_ALIASES };
+}
+
+/** Strip openrouter/ prefix when direct provider API key is available but OPENROUTER_API_KEY is not */
+function applyDirectApiFallback(model) {
+  if (!model.startsWith('openrouter/') || process.env.OPENROUTER_API_KEY) {
+    return model;
+  }
+  const direct = model.slice('openrouter/'.length);
+  const envVar = PROVIDER_ENV_MAP[direct.split('/')[0]];
+  if (envVar && process.env[envVar]) {
+    logger.warn({ msg: 'Using direct provider API (OPENROUTER_API_KEY not set)', original: model, resolved: direct });
+    process.stderr.write(
+      `Notice: Using direct ${direct.split('/')[0]} API (OPENROUTER_API_KEY not set). ` +
+      'Use --validate-model to verify model availability.\n'
+    );
+    return direct;
+  }
+  return model;
 }
 
 /**
@@ -128,7 +130,7 @@ function resolveModel(modelArg) {
 
     // Try to resolve as alias (user config + defaults)
     if (effectiveAliases[modelArg] !== undefined) {
-      return effectiveAliases[modelArg];
+      return applyDirectApiFallback(effectiveAliases[modelArg]);
     }
 
     // Unknown alias
@@ -153,7 +155,7 @@ function resolveModel(modelArg) {
 
   // Default is an alias - resolve via user config + defaults
   if (effectiveAliases[defaultValue] !== undefined) {
-    return effectiveAliases[defaultValue];
+    return applyDirectApiFallback(effectiveAliases[defaultValue]);
   }
 
   // Default alias not found anywhere
@@ -162,10 +164,7 @@ function resolveModel(modelArg) {
   );
 }
 
-/**
- * Compute SHA-256 hash of the config file content (first 8 hex chars)
- * @returns {string|null} 8-char hex hash, or null if no config file
- */
+/** @returns {string|null} 8-char hex hash of config file, or null if missing */
 function computeConfigHash() {
   const configPath = getConfigPath();
   try {
@@ -179,10 +178,7 @@ function computeConfigHash() {
   }
 }
 
-/**
- * Format aliases as a markdown table with (default) marker
- * @returns {string} Markdown-formatted alias table, or empty string if no aliases
- */
+/** @returns {string} Markdown alias table with (default) marker, or empty string */
 function buildAliasTable() {
   const config = loadConfig();
   if (!config || !config.aliases || Object.keys(config.aliases).length === 0) {
@@ -203,11 +199,7 @@ function buildAliasTable() {
   return lines.join('\n');
 }
 
-/**
- * Check whether the config file has changed compared to a known hash
- * @param {string|null} currentHash - Previously known hash to compare
- * @returns {{changed: boolean, newHash: string|null, updateData?: string}}
- */
+/** Check whether the config file has changed compared to a known hash */
 function checkConfigChanged(currentHash) {
   const newHash = computeConfigHash();
 
@@ -281,6 +273,13 @@ function buildProviderModels() {
   return providers;
 }
 
+/** Detect if direct API fallback was applied during alias resolution */
+function detectFallback(alias, resolvedModel) {
+  if (!alias || alias.includes('/')) { return false; }
+  const val = getEffectiveAliases()[alias];
+  return !!(val && val.startsWith('openrouter/') && !resolvedModel.startsWith('openrouter/'));
+}
+
 module.exports = {
   getConfigDir,
   getConfigPath,
@@ -288,6 +287,7 @@ module.exports = {
   saveConfig,
   getDefaultAliases,
   resolveModel,
+  detectFallback,
   computeConfigHash,
   buildAliasTable,
   checkConfigChanged,
