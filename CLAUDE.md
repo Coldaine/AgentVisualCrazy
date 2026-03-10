@@ -1,5 +1,5 @@
 # CLAUDE.md
-<!-- Last updated: 2026-03-09 -->
+<!-- Last updated: 2026-03-10 -->
 
 This file provides guidance to Claude Code when working with code in this repository.
 
@@ -29,7 +29,9 @@ This file provides guidance to Claude Code when working with code in this reposi
 ### Development
 ```bash
 npm start                    # Run sidecar CLI
-npm test                     # Run all tests (Jest)
+npm test                     # Run unit tests (Jest, excludes *.integration.test.js)
+npm run test:integration     # Run integration tests only (real LLM, costs tokens)
+npm run test:all             # Run all tests (unit + integration, used by pre-push)
 npm run lint                 # Run ESLint
 ```
 
@@ -71,7 +73,8 @@ Custom agents defined in `~/.config/opencode/agents/` or `.opencode/agents/` are
 
 ### Testing
 ```bash
-npm test                           # All tests
+npm test                           # Unit tests (excludes integration)
+npm run test:all                   # Unit + integration tests
 npm test tests/context.test.js     # Single file (preferred during dev)
 npm test -- --coverage             # Coverage report
 ```
@@ -219,9 +222,9 @@ sidecar/
 │       └── styles.css           # UI styles
 ├── tests/                       # Jest test suite (run npm test for current count)
 │   ├── cli.test.js
+│   ├── config.test.js
 │   ├── config-fallback.test.js
 │   ├── config-hash.test.js
-│   ├── config-misc.test.js
 │   ├── config-null-alias.test.js
 │   ├── config-resolve.test.js
 │   ├── context.test.js
@@ -233,7 +236,6 @@ sidecar/
 │   ├── e2e.test.js
 │   ├── mcp-tools.test.js
 │   ├── mcp-server.test.js
-│   ├── mcp-integration.test.js
 │   ├── postinstall.test.js
 │   ├── auth-json.test.js
 │   ├── opencode-client-cowork.test.js
@@ -248,6 +250,7 @@ sidecar/
 │   │   ├── session-utils.test.js
 │   │   ├── progress.test.js
 │   │   └── exit-handler.test.js
+│   ├── mcp-discovery-integration.test.js  # buildMcpConfig merge + CLI parsing
 │   ├── mcp-headless-lifecycle.test.js  # Full MCP headless lifecycle
 │   ├── cli-headless-e2e.integration.test.js  # CLI headless E2E (real LLM)
 │   ├── electron-headless-mode.test.js  # Electron headless mode source check
@@ -411,14 +414,14 @@ Runs on every `git push`. Blocks the push if tests fail.
 
 | Step | What It Does |
 |------|-------------|
-| 1. Test suite | `npm test` (all Jest tests) -- **skipped if cached** (see below) |
+| 1. Test suite | `npm run test:all` (unit + integration) -- **skipped if cached** (see below) |
 | 2. Audit | `npm audit` (warn-only, does not block push) |
 
 ### Test Caching (SHA-based)
 
 To avoid re-running the full test suite on push when you just ran `npm test`, the hooks use SHA-based caching:
 
-1. `npm test` succeeds -> `posttest` script writes `HEAD` SHA to `.test-passed`
+1. `npm test` / `npm run test:all` succeeds -> `posttest` script writes `HEAD` SHA to `.test-passed`
 2. `pre-push` hook compares current `HEAD` SHA against `.test-passed`
 3. If they match, tests are skipped with "Tests already passed for \<sha\>"
 4. If they differ (new commit since last test run), tests run normally
@@ -447,7 +450,7 @@ Use `src/utils/logger.js` (levels: error/warn/info/debug). Logs go to stderr to 
 | `drift.test.js` | Drift calculation | Age, turn count, significance |
 | `headless.test.js` | OpenCode HTTP API | Spawn, polling, timeout |
 | `prompt-builder.test.js` | System prompts | Template construction |
-| `index.test.js` | Main API | Integration |
+| `index.test.js` | Main API | Re-export smoke tests, generateTaskId |
 | `e2e.test.js` | End-to-end | Full workflow |
 | `sidecar/start.test.js` | Session starting | Task ID generation, metadata creation, MCP config |
 | `sidecar/resume.test.js` | Session resumption | Drift detection, metadata loading |
@@ -459,12 +462,13 @@ Use `src/utils/logger.js` (levels: error/warn/info/debug). Logs go to stderr to 
 | `sidecar/exit-handler.test.js` | Crash handler | Metadata update on crash, status transitions |
 | `mcp-headless-lifecycle.test.js` | MCP headless lifecycle | Start, poll, progress, crash, abort, read |
 | `mcp-discovery.test.js` | MCP discovery | Plugin chain, `~/.claude.json` mcpServers, merge priority, sidecar exclusion |
+| `mcp-discovery-integration.test.js` | buildMcpConfig merge | Discovery + file + CLI merge, --no-mcp, --exclude-mcp |
 | `mcp-repomix-e2e.integration.test.js` | MCP E2E (real LLM + repomix) | Real discovery → headless sidecar → repomix tool call |
 | `auth-json.test.js` | Auth JSON reader | Import discovery, provider mapping, smart delete check |
 | `opencode-client-cowork.test.js` | OpenCode client config | Client-aware prompt, systemPrompt, port handling, provider model sync |
+| `config.test.js` | Config core | Config I/O, aliases, getEffectiveAliases, tryResolveModel, buildProviderModels |
 | `config-fallback.test.js` | Config fallback | Direct API fallback with persisted keys |
 | `config-hash.test.js` | Config hashing | Config hashing, alias table, change detection |
-| `config-misc.test.js` | Config misc | Effective aliases, formatting, tryResolveModel, buildProviderModels |
 | `config-null-alias.test.js` | Config null alias | Null alias protection and auto-repair |
 | `config-resolve.test.js` | Config resolution | Model resolution, default aliases, direct API fallback, detectFallback |
 | `model-validator.test.js` | Model validator | Validation, filtering, interactive prompting, headless errors |
@@ -533,7 +537,9 @@ SIDECAR_MOCK_UPDATE=error sidecar start --model gemini --prompt "test"      # Up
 ### Test Commands
 
 ```bash
-npm test                           # All tests
+npm test                           # Unit tests (excludes *.integration.test.js)
+npm run test:all                   # Unit + integration (used by pre-push hook)
+npm run test:integration           # Integration tests only (real LLM, costs tokens)
 npm test tests/context.test.js     # Single file (faster during dev)
 npm test -- --watch                # Watch mode
 npm test -- --coverage             # Coverage report

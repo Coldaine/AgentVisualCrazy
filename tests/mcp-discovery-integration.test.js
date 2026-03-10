@@ -1,9 +1,10 @@
 /**
- * MCP Discovery + buildMcpConfig Integration Tests
+ * MCP buildMcpConfig Integration Tests
  *
- * End-to-end tests that verify MCP discovery works with real filesystem
- * operations: creating plugin chains, config files, and verifying
- * discovery + merge + exclusion across the full stack.
+ * Tests the buildMcpConfig merge logic (discovery + file + CLI)
+ * and CLI parsing for MCP-related flags.
+ *
+ * Plugin chain and cowork discovery tests live in mcp-discovery.test.js.
  */
 
 const fs = require('fs');
@@ -25,7 +26,7 @@ jest.mock('../src/opencode-client', () => ({
   parseMcpSpec: jest.fn()
 }));
 
-describe('MCP Discovery Integration', () => {
+describe('MCP buildMcpConfig Integration', () => {
   let tmpDir;
 
   beforeEach(() => {
@@ -35,232 +36,6 @@ describe('MCP Discovery Integration', () => {
 
   afterEach(() => {
     fs.rmSync(tmpDir, { recursive: true, force: true });
-  });
-
-  describe('Claude Code plugin chain (end-to-end)', () => {
-    /**
-     * Creates a complete Claude Code plugin chain on disk:
-     * claudeDir/settings.json → plugins/installed_plugins.json → installPath/.mcp.json
-     */
-    function createPluginChain(claudeDir, plugins) {
-      const pluginsDir = path.join(claudeDir, 'plugins');
-      fs.mkdirSync(pluginsDir, { recursive: true });
-
-      const enabledPlugins = {};
-      const installedPlugins = {};
-
-      for (const plugin of plugins) {
-        enabledPlugins[plugin.name] = plugin.enabled !== false;
-
-        const installDir = path.join(tmpDir, 'installs', plugin.name);
-        fs.mkdirSync(installDir, { recursive: true });
-        installedPlugins[plugin.name] = { installPath: installDir };
-
-        if (plugin.mcpJson) {
-          fs.writeFileSync(
-            path.join(installDir, '.mcp.json'),
-            JSON.stringify(plugin.mcpJson)
-          );
-        }
-      }
-
-      fs.writeFileSync(
-        path.join(claudeDir, 'settings.json'),
-        JSON.stringify({ enabledPlugins })
-      );
-
-      fs.writeFileSync(
-        path.join(pluginsDir, 'installed_plugins.json'),
-        JSON.stringify({ plugins: installedPlugins })
-      );
-
-      if (plugins.some(p => p.blocked)) {
-        fs.writeFileSync(
-          path.join(pluginsDir, 'blocklist.json'),
-          JSON.stringify(plugins.filter(p => p.blocked).map(p => p.name))
-        );
-      }
-    }
-
-    test('discovers single plugin with Format B (flat) .mcp.json', () => {
-      const claudeDir = path.join(tmpDir, '.claude');
-      createPluginChain(claudeDir, [{
-        name: 'my-plugin',
-        mcpJson: { 'my-server': { command: 'npx', args: ['@my/mcp'] } }
-      }]);
-
-      const { discoverClaudeCodeMcps } = require('../src/utils/mcp-discovery');
-      const result = discoverClaudeCodeMcps(claudeDir, path.join(tmpDir, '.claude.json'));
-
-      expect(result).not.toBeNull();
-      expect(result['my-server']).toBeDefined();
-      expect(result['my-server'].command).toBe('npx');
-      expect(result['my-server'].args).toEqual(['@my/mcp']);
-    });
-
-    test('discovers single plugin with Format A (wrapped) .mcp.json', () => {
-      const claudeDir = path.join(tmpDir, '.claude');
-      createPluginChain(claudeDir, [{
-        name: 'wrapped-plugin',
-        mcpJson: {
-          mcpServers: {
-            'wrapped-server': { command: 'node', args: ['server.js'] }
-          }
-        }
-      }]);
-
-      const { discoverClaudeCodeMcps } = require('../src/utils/mcp-discovery');
-      const result = discoverClaudeCodeMcps(claudeDir, path.join(tmpDir, '.claude.json'));
-
-      expect(result).not.toBeNull();
-      expect(result['wrapped-server']).toBeDefined();
-      expect(result['wrapped-server'].command).toBe('node');
-    });
-
-    test('merges servers from multiple enabled plugins', () => {
-      const claudeDir = path.join(tmpDir, '.claude');
-      createPluginChain(claudeDir, [
-        {
-          name: 'plugin-a',
-          mcpJson: { 'server-a': { command: 'cmd-a' } }
-        },
-        {
-          name: 'plugin-b',
-          mcpJson: { 'server-b': { command: 'cmd-b' } }
-        },
-        {
-          name: 'plugin-c',
-          mcpJson: {
-            mcpServers: { 'server-c': { command: 'cmd-c' } }
-          }
-        }
-      ]);
-
-      const { discoverClaudeCodeMcps } = require('../src/utils/mcp-discovery');
-      const result = discoverClaudeCodeMcps(claudeDir, path.join(tmpDir, '.claude.json'));
-
-      expect(result).not.toBeNull();
-      expect(Object.keys(result)).toHaveLength(3);
-      expect(result['server-a'].command).toBe('cmd-a');
-      expect(result['server-b'].command).toBe('cmd-b');
-      expect(result['server-c'].command).toBe('cmd-c');
-    });
-
-    test('skips disabled plugins entirely', () => {
-      const claudeDir = path.join(tmpDir, '.claude');
-      createPluginChain(claudeDir, [
-        {
-          name: 'enabled-plugin',
-          mcpJson: { 'enabled-server': { command: 'cmd1' } }
-        },
-        {
-          name: 'disabled-plugin',
-          enabled: false,
-          mcpJson: { 'disabled-server': { command: 'cmd2' } }
-        }
-      ]);
-
-      const { discoverClaudeCodeMcps } = require('../src/utils/mcp-discovery');
-      const result = discoverClaudeCodeMcps(claudeDir, path.join(tmpDir, '.claude.json'));
-
-      expect(result).not.toBeNull();
-      expect(result['enabled-server']).toBeDefined();
-      expect(result['disabled-server']).toBeUndefined();
-    });
-
-    test('skips blocklisted plugins', () => {
-      const claudeDir = path.join(tmpDir, '.claude');
-      createPluginChain(claudeDir, [
-        {
-          name: 'good-plugin',
-          mcpJson: { 'good-server': { command: 'cmd1' } }
-        },
-        {
-          name: 'bad-plugin',
-          blocked: true,
-          mcpJson: { 'bad-server': { command: 'cmd2' } }
-        }
-      ]);
-
-      const { discoverClaudeCodeMcps } = require('../src/utils/mcp-discovery');
-      const result = discoverClaudeCodeMcps(claudeDir, path.join(tmpDir, '.claude.json'));
-
-      expect(result).not.toBeNull();
-      expect(result['good-server']).toBeDefined();
-      expect(result['bad-server']).toBeUndefined();
-    });
-
-    test('handles plugin with no .mcp.json gracefully', () => {
-      const claudeDir = path.join(tmpDir, '.claude');
-      createPluginChain(claudeDir, [
-        {
-          name: 'no-mcp-plugin'
-          // no mcpJson property → no .mcp.json file created
-        },
-        {
-          name: 'has-mcp-plugin',
-          mcpJson: { 'real-server': { command: 'cmd1' } }
-        }
-      ]);
-
-      const { discoverClaudeCodeMcps } = require('../src/utils/mcp-discovery');
-      const result = discoverClaudeCodeMcps(claudeDir, path.join(tmpDir, '.claude.json'));
-
-      expect(result).not.toBeNull();
-      expect(result['real-server']).toBeDefined();
-    });
-
-    test('returns null when no plugins are enabled', () => {
-      const claudeDir = path.join(tmpDir, '.claude');
-      createPluginChain(claudeDir, [
-        {
-          name: 'disabled-only',
-          enabled: false,
-          mcpJson: { 'server': { command: 'cmd' } }
-        }
-      ]);
-
-      const { discoverClaudeCodeMcps } = require('../src/utils/mcp-discovery');
-      const result = discoverClaudeCodeMcps(claudeDir, path.join(tmpDir, '.claude.json'));
-      expect(result).toBeNull();
-    });
-  });
-
-  describe('Cowork discovery (end-to-end)', () => {
-    test('discovers servers from claude_desktop_config.json', () => {
-      const configDir = path.join(tmpDir, 'Claude');
-      fs.mkdirSync(configDir, { recursive: true });
-      fs.writeFileSync(
-        path.join(configDir, 'claude_desktop_config.json'),
-        JSON.stringify({
-          mcpServers: {
-            'desktop-server': { command: 'npx', args: ['@desktop/mcp'] },
-            'another-server': { command: 'node', args: ['server.js'] }
-          }
-        })
-      );
-
-      const { discoverCoworkMcps } = require('../src/utils/mcp-discovery');
-      const result = discoverCoworkMcps(configDir);
-
-      expect(result).not.toBeNull();
-      expect(Object.keys(result)).toHaveLength(2);
-      expect(result['desktop-server'].command).toBe('npx');
-      expect(result['another-server'].command).toBe('node');
-    });
-
-    test('returns null when config has empty mcpServers', () => {
-      const configDir = path.join(tmpDir, 'Claude');
-      fs.mkdirSync(configDir, { recursive: true });
-      fs.writeFileSync(
-        path.join(configDir, 'claude_desktop_config.json'),
-        JSON.stringify({ mcpServers: {} })
-      );
-
-      const { discoverCoworkMcps } = require('../src/utils/mcp-discovery');
-      const result = discoverCoworkMcps(configDir);
-      expect(result).toBeNull();
-    });
   });
 
   describe('buildMcpConfig integration', () => {

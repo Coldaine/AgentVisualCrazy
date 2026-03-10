@@ -14,8 +14,8 @@ fi
 if [ -n "$HEAD_SHA" ] && [ "$HEAD_SHA" = "$CACHED_SHA" ]; then
   echo "Tests already passed for $HEAD_SHA — skipping."
 else
-  echo "Running test suite before push..."
-  npm test
+  echo "Running full test suite (unit + integration) before push..."
+  npm run test:all
 fi
 
 echo "Checking for dependency vulnerabilities..."
