@@ -38,7 +38,14 @@ function registerSetupHandlers(ipcMain, getMainWindow) {
   ipcMain.handle('sidecar:remove-key', async (_event, provider) => {
     try {
       const { removeApiKey } = require('../src/utils/api-key-store');
-      return removeApiKey(provider);
+      const { removeFromAuthJson } = require('../src/utils/auth-json');
+      const result = removeApiKey(provider);
+      // Always clean auth.json too — prevents auto-import from re-adding the key
+      if (result.alsoInAuthJson) {
+        removeFromAuthJson(provider);
+        result.alsoInAuthJson = false;
+      }
+      return result;
     } catch (err) {
       logger.error('remove-key handler error', { error: err.message });
       return { success: false, error: err.message };

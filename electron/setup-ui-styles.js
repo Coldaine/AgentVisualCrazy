@@ -284,26 +284,6 @@ function buildWizardCSS() {
   .import-notice .dismiss { cursor: pointer; margin-left: auto; opacity: 0.6; }
   .import-notice .dismiss:hover { opacity: 1; }
 
-  /* Confirm dialog */
-  .confirm-overlay {
-    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-    background: rgba(0,0,0,0.5); display: flex; align-items: center;
-    justify-content: center; z-index: 100;
-  }
-  .confirm-box {
-    background: #2D2B2A; border: 1px solid #3D3A38; border-radius: 8px;
-    padding: 20px; max-width: 360px; text-align: center;
-  }
-  .confirm-box p { margin-bottom: 16px; font-size: 13px; }
-  .confirm-btns { display: flex; gap: 8px; justify-content: center; }
-  .confirm-btns button {
-    padding: 6px 16px; border-radius: 4px; border: 1px solid #3D3A38;
-    background: #3D3A38; color: #E8E0D8; cursor: pointer; font-size: 12px;
-  }
-  .confirm-btns button.primary {
-    background: #D97757; border-color: #D97757; color: #1A1918;
-  }
-
   /* Review (Step 4) */
   .review-section { margin-bottom: 14px; }
   .review-label { color: #A09B96; font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }

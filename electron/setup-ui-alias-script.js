@@ -35,13 +35,16 @@ function buildAliasScript() {
   }
 
   // Helper: filter model groups by a keyword (alias name)
+  // Splits keyword on hyphens so "gemini-pro" matches "gemini-3-pro-preview"
   function filterModels(groups, keyword) {
     if (!keyword || !groups || groups.length === 0) { return groups; }
-    var kw = keyword.toLowerCase();
+    var parts = keyword.toLowerCase().split('-').filter(function(p) { return p.length > 0; });
     var filtered = [];
     groups.forEach(function(g) {
       var matching = g.models.filter(function(m) {
-        return m.id.toLowerCase().includes(kw) || (m.name || '').toLowerCase().includes(kw);
+        var id = m.id.toLowerCase();
+        var name = (m.name || '').toLowerCase();
+        return parts.every(function(p) { return id.includes(p) || name.includes(p); });
       });
       if (matching.length > 0) {
         filtered.push({ family: g.family, models: matching });

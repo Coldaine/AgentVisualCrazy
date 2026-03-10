@@ -159,63 +159,38 @@ describe('api-key-store readwrite', () => {
       expect(content).not.toContain('OPENROUTER_API_KEY');
     });
 
-    it('should NOT auto-clean auth.json on removal', () => {
-      const authJsonPath = path.join(os.homedir(), '.local', 'share', 'opencode', 'auth.json');
-      let originalAuth = null;
-      try { originalAuth = fs.readFileSync(authJsonPath, 'utf-8'); } catch (_e) { /* no file */ }
+    it('should return alsoInAuthJson: true when key exists in auth.json', () => {
+      jest.resetModules();
+      jest.doMock('../src/utils/auth-json', () => ({
+        checkAuthJson: jest.fn(() => true)
+      }));
+      const { removeApiKey: removeWithMock } = require('../src/utils/api-key-store');
 
-      try {
-        fs.mkdirSync(path.dirname(authJsonPath), { recursive: true });
-        fs.writeFileSync(authJsonPath, JSON.stringify({
-          openrouter: { type: 'api', key: 'sk-or-v1-stale' }
-        }));
+      fs.writeFileSync(
+        path.join(tmpDir, '.env'),
+        'OPENROUTER_API_KEY=sk-or-v1-stale\n'
+      );
 
-        fs.writeFileSync(
-          path.join(tmpDir, '.env'),
-          'OPENROUTER_API_KEY=sk-or-v1-stale\n'
-        );
-
-        const result = removeApiKey('openrouter');
-
-        // auth.json should still have the key (no auto-clean)
-        const authContent = JSON.parse(fs.readFileSync(authJsonPath, 'utf-8'));
-        expect(authContent.openrouter).toBeDefined();
-        // But result should indicate it is also in auth.json
-        expect(result.alsoInAuthJson).toBe(true);
-      } finally {
-        if (originalAuth !== null) {
-          fs.writeFileSync(authJsonPath, originalAuth, 'utf-8');
-        } else {
-          try { fs.unlinkSync(authJsonPath); } catch (_e) { /* ignore */ }
-        }
-      }
+      const result = removeWithMock('openrouter');
+      expect(result.success).toBe(true);
+      expect(result.alsoInAuthJson).toBe(true);
     });
 
     it('should return alsoInAuthJson: false when key not in auth.json', () => {
-      const authJsonPath = path.join(os.homedir(), '.local', 'share', 'opencode', 'auth.json');
-      let originalAuth = null;
-      try { originalAuth = fs.readFileSync(authJsonPath, 'utf-8'); } catch (_e) { /* no file */ }
+      jest.resetModules();
+      jest.doMock('../src/utils/auth-json', () => ({
+        checkAuthJson: jest.fn(() => false)
+      }));
+      const { removeApiKey: removeWithMock } = require('../src/utils/api-key-store');
 
-      try {
-        // Ensure auth.json exists but has NO google entry
-        fs.mkdirSync(path.dirname(authJsonPath), { recursive: true });
-        fs.writeFileSync(authJsonPath, JSON.stringify({}));
+      fs.writeFileSync(
+        path.join(tmpDir, '.env'),
+        'GOOGLE_GENERATIVE_AI_API_KEY=AIza-test\n'
+      );
 
-        fs.writeFileSync(
-          path.join(tmpDir, '.env'),
-          'GOOGLE_GENERATIVE_AI_API_KEY=AIza-test\n'
-        );
-
-        const result = removeApiKey('google');
-        expect(result.success).toBe(true);
-        expect(result.alsoInAuthJson).toBe(false);
-      } finally {
-        if (originalAuth !== null) {
-          fs.writeFileSync(authJsonPath, originalAuth, 'utf-8');
-        } else {
-          try { fs.unlinkSync(authJsonPath); } catch (_e) { /* ignore */ }
-        }
-      }
+      const result = removeWithMock('google');
+      expect(result.success).toBe(true);
+      expect(result.alsoInAuthJson).toBe(false);
     });
   });
 
