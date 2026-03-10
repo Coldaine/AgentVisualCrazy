@@ -36,21 +36,39 @@ describe('Postinstall MCP registration', () => {
     fs.rmSync(tmpDir, { recursive: true });
   });
 
-  test('addMcpToConfigFile does not overwrite existing sidecar entry', () => {
+  test('addMcpToConfigFile updates existing sidecar entry with new config', () => {
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'postinstall-test-'));
     const configPath = path.join(tmpDir, 'claude.json');
 
-    const existingConfig = { command: 'sidecar', args: ['mcp'], env: { CUSTOM: 'value' } };
+    const oldConfig = { command: 'sidecar', args: ['mcp'] };
+    const newConfig = { command: 'npx', args: ['-y', 'claude-sidecar@latest', 'mcp'] };
     fs.writeFileSync(configPath, JSON.stringify({
-      mcpServers: { sidecar: existingConfig },
+      mcpServers: { sidecar: oldConfig },
     }));
 
     const { addMcpToConfigFile } = require('../scripts/postinstall');
-    const added = addMcpToConfigFile(configPath, 'sidecar', { command: 'sidecar', args: ['mcp'] });
+    const status = addMcpToConfigFile(configPath, 'sidecar', newConfig);
 
-    expect(added).toBe(false);
+    expect(status).toBe('updated');
     const config = JSON.parse(fs.readFileSync(configPath, 'utf-8'));
-    expect(config.mcpServers.sidecar).toEqual(existingConfig);
+    expect(config.mcpServers.sidecar).toEqual(newConfig);
+
+    fs.rmSync(tmpDir, { recursive: true });
+  });
+
+  test('addMcpToConfigFile returns unchanged when config matches', () => {
+    const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'postinstall-test-'));
+    const configPath = path.join(tmpDir, 'claude.json');
+
+    const config = { command: 'npx', args: ['-y', 'claude-sidecar@latest', 'mcp'] };
+    fs.writeFileSync(configPath, JSON.stringify({
+      mcpServers: { sidecar: config },
+    }));
+
+    const { addMcpToConfigFile } = require('../scripts/postinstall');
+    const status = addMcpToConfigFile(configPath, 'sidecar', config);
+
+    expect(status).toBe('unchanged');
 
     fs.rmSync(tmpDir, { recursive: true });
   });

@@ -146,7 +146,8 @@ async function startSidecar(options) {
     cwd, project = process.cwd(), contextTurns = 50, contextSince,
     contextMaxTokens = 80000, noUi, headless = false, timeout = 15,
     agent, mcp, mcpConfig, summaryLength = 'normal', thinking,
-    client, sessionDir, noMcp, excludeMcp, opencodePort, coworkProcess, includeContext = true
+    client, sessionDir, noMcp, excludeMcp, opencodePort, coworkProcess, includeContext = true,
+    position = 'right'
   } = options;
 
   const effectivePrompt = prompt || briefing;
@@ -202,7 +203,7 @@ async function startSidecar(options) {
       logger.info('Launching interactive sidecar', { taskId, model, agent: effectiveAgent });
       result = await runInteractive(
         model, systemPrompt, userMessage, taskId, effectiveProject,
-        { agent, mcp: mcpServers, reasoning, client }
+        { agent, mcp: mcpServers, reasoning, client, windowPosition: position }
       );
       summary = result.summary || '';
       if (result.error) { logger.error('Interactive task error', { taskId, error: result.error }); }

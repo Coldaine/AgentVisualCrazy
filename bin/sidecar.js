@@ -162,7 +162,8 @@ async function handleStart(args) {
     opencodePort: args['opencode-port'],
     noMcp: args['no-mcp'],
     excludeMcp: args['exclude-mcp'],
-    coworkProcess: args['cowork-process']
+    coworkProcess: args['cowork-process'],
+    position: args.position
   });
 }
 

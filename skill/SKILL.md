@@ -15,6 +15,10 @@ description: >
   subagent spawn. (4) NEVER use o3 or o3-pro unless the user explicitly asks for it by
   name. These models are extremely expensive ($10-60+ per request). If the user asks for
   o3, warn them about the cost before proceeding. Default to gemini for most tasks.
+  (5) When the user asks to query MULTIPLE LLMs simultaneously (e.g., "ask Gemini AND
+  ChatGPT", "compare Gemini vs GPT"), ALWAYS use --no-ui (headless) for all of them
+  unless the user explicitly requests interactive. Opening multiple Electron windows at
+  once is disruptive. Launch them all in parallel with run_in_background: true.
 ---
 
 # Sidecar: Multi-Model Subagent Tool
@@ -655,6 +659,9 @@ This is useful when you want to:
 - Agent works until done or timeout
 - Summary returns automatically
 - **Default agent is `build`** — `chat` agent requires interactive UI and will stall in headless mode
+- **Always use headless when spawning multiple sidecars at once** (see Multi-LLM rule below)
+
+**Multi-LLM Rule:** When the user asks to query two or more LLMs simultaneously (e.g., "ask Gemini and ChatGPT", "compare three models"), use `--no-ui` for **all** of them. Launch them in parallel with `run_in_background: true`. Only switch to interactive if the user explicitly asks.
 
 **Agent Headless Compatibility:**
 

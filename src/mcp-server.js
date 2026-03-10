@@ -102,6 +102,7 @@ const handlers = {
     if (input.includeContext === false) { args.push('--no-context'); }
     if (input.coworkProcess)    { args.push('--cowork-process', input.coworkProcess); }
     if (input.parentSession)    { args.push('--session-id', input.parentSession); }
+    if (input.windowPosition)   { args.push('--position', input.windowPosition); }
     args.push('--cwd', cwd);
 
     const sessionDir = path.join(cwd, '.claude', 'sidecar_sessions', taskId);
@@ -316,7 +317,7 @@ async function startMcpServer() {
   for (const tool of getTools()) {
     server.registerTool(
       tool.name,
-      { description: tool.description, inputSchema: tool.inputSchema },
+      { description: tool.description, inputSchema: tool.inputSchema, annotations: tool.annotations },
       async (input) => {
         try {
           return await handlers[tool.name](input, getProjectDir(input.project));

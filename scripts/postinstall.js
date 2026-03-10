@@ -20,13 +20,13 @@ const SKILL_DEST = path.join(SKILL_DEST_DIR, 'SKILL.md');
 const MCP_CONFIG = { command: 'npx', args: ['-y', 'claude-sidecar@latest', 'mcp'] };
 
 /**
- * Add an MCP server to a JSON config file.
- * Does NOT overwrite an existing entry with the same name.
+ * Add or update an MCP server in a JSON config file.
+ * Always overwrites the entry to ensure upgrades apply the latest config.
  *
  * @param {string} configPath - Path to the JSON config file
  * @param {string} name - MCP server name
  * @param {object} config - MCP server config object
- * @returns {boolean} true if added, false if already existed
+ * @returns {string} 'added', 'updated', or 'unchanged'
  */
 function addMcpToConfigFile(configPath, name, config) {
   let existing = {};
@@ -37,13 +37,17 @@ function addMcpToConfigFile(configPath, name, config) {
   }
 
   if (!existing.mcpServers) { existing.mcpServers = {}; }
-  if (existing.mcpServers[name]) { return false; }
+
+  const prev = existing.mcpServers[name];
+  const status = !prev ? 'added' : JSON.stringify(prev) !== JSON.stringify(config) ? 'updated' : 'unchanged';
 
   existing.mcpServers[name] = config;
-  const dir = path.dirname(configPath);
-  if (!fs.existsSync(dir)) { fs.mkdirSync(dir, { recursive: true, mode: 0o700 }); }
-  fs.writeFileSync(configPath, JSON.stringify(existing, null, 2), { mode: 0o600 });
-  return true;
+  if (status !== 'unchanged') {
+    const dir = path.dirname(configPath);
+    if (!fs.existsSync(dir)) { fs.mkdirSync(dir, { recursive: true, mode: 0o700 }); }
+    fs.writeFileSync(configPath, JSON.stringify(existing, null, 2), { mode: 0o600 });
+  }
+  return status;
 }
 
 /** Install skill file to ~/.claude/skills/sidecar/ */
@@ -74,9 +78,11 @@ function registerClaudeCode() {
 
   // Fallback: direct file edit
   const claudeConfigPath = path.join(os.homedir(), '.claude.json');
-  const added = addMcpToConfigFile(claudeConfigPath, 'sidecar', MCP_CONFIG);
-  if (added) {
+  const status = addMcpToConfigFile(claudeConfigPath, 'sidecar', MCP_CONFIG);
+  if (status === 'added') {
     console.log('[claude-sidecar] MCP registered in Claude Code (~/.claude.json).');
+  } else if (status === 'updated') {
+    console.log('[claude-sidecar] MCP config updated in Claude Code (~/.claude.json).');
   } else {
     console.log('[claude-sidecar] MCP already registered in Claude Code.');
   }
@@ -94,9 +100,11 @@ function registerClaudeDesktop() {
   }
 
   const configPath = path.join(configDir, 'claude_desktop_config.json');
-  const added = addMcpToConfigFile(configPath, 'sidecar', MCP_CONFIG);
-  if (added) {
+  const status = addMcpToConfigFile(configPath, 'sidecar', MCP_CONFIG);
+  if (status === 'added') {
     console.log('[claude-sidecar] MCP registered in Claude Desktop.');
+  } else if (status === 'updated') {
+    console.log('[claude-sidecar] MCP config updated in Claude Desktop.');
   } else {
     console.log('[claude-sidecar] MCP already registered in Claude Desktop.');
   }

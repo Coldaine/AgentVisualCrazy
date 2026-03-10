@@ -9,9 +9,7 @@ const {
   HEADLESS_SAFE_AGENTS,
   mapAgentToOpenCode,
   isValidAgent,
-  isHeadlessSafe,
-  isValidSubagent,
-  normalizeSubagent
+  isHeadlessSafe
 } = require('../src/utils/agent-mapping');
 
 describe('Agent Mapping', () => {
@@ -59,19 +57,6 @@ describe('Agent Mapping', () => {
     });
   });
 
-  describe('isValidSubagent', () => {
-    it('should accept General and Explore', () => {
-      expect(isValidSubagent('General')).toBe(true);
-      expect(isValidSubagent('Explore')).toBe(true);
-    });
-
-    it('should reject primary agents', () => {
-      expect(isValidSubagent('chat')).toBe(false);
-      expect(isValidSubagent('build')).toBe(false);
-      expect(isValidSubagent('plan')).toBe(false);
-    });
-  });
-
   describe('HEADLESS_SAFE_AGENTS', () => {
     it('should contain build, plan, explore, general', () => {
       expect(HEADLESS_SAFE_AGENTS).toContain('build');
@@ -115,15 +100,4 @@ describe('Agent Mapping', () => {
     });
   });
 
-  describe('normalizeSubagent', () => {
-    it('should normalize valid subagent names', () => {
-      expect(normalizeSubagent('General')).toBe('general');
-      expect(normalizeSubagent('EXPLORE')).toBe('explore');
-    });
-
-    it('should return null for invalid names', () => {
-      expect(normalizeSubagent('chat')).toBeNull();
-      expect(normalizeSubagent(null)).toBeNull();
-    });
-  });
 });

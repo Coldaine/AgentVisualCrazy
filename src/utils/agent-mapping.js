@@ -4,14 +4,11 @@
  * Maps agent names to OpenCode's native agent framework.
  *
  * OpenCode Native Agents (https://opencode.ai/docs/agents/):
- *
- * PRIMARY AGENTS (for main sidecar sessions):
+ *   - Chat: Reads auto, writes/bash ask permission (interactive default)
  *   - Build: Default primary agent with full tool access
- *   - Plan: Read-only primary agent for analysis and planning
- *
- * SUBAGENTS (spawned within sessions):
- *   - General: Full-access subagent for research and parallel tasks
- *   - Explore: Read-only subagent for codebase exploration
+ *   - Plan: Read-only agent for analysis and planning
+ *   - General: Full-access agent for research
+ *   - Explore: Read-only agent for codebase exploration
  *
  * Custom agents defined in ~/.config/opencode/agents/ or .opencode/agents/
  * are passed through directly to OpenCode.
@@ -25,15 +22,9 @@
 const PRIMARY_AGENTS = ['chat', 'build', 'plan'];
 
 /**
- * OpenCode's subagent names (spawned within sessions)
- * Note: OpenCode API expects lowercase agent names
- */
-const SUBAGENT_TYPES = ['general', 'explore'];
-
-/**
  * All OpenCode native agent names (lowercase)
  */
-const OPENCODE_AGENTS = [...PRIMARY_AGENTS, ...SUBAGENT_TYPES];
+const OPENCODE_AGENTS = [...PRIMARY_AGENTS, 'general', 'explore'];
 
 /**
  * Agents safe for headless (--no-ui) mode.
@@ -114,21 +105,6 @@ function isValidPrimaryAgent(agent) {
 }
 
 /**
- * Check if an agent name is valid for subagents
- *
- * @param {string} agent - Agent name to validate
- * @returns {boolean} True if valid subagent type (General or Explore only)
- */
-function isValidSubagent(agent) {
-  if (!agent || typeof agent !== 'string') {
-    return false;
-  }
-
-  const normalized = agent.toLowerCase();
-  return SUBAGENT_TYPES.some(type => type.toLowerCase() === normalized);
-}
-
-/**
  * Check if an agent name is valid (non-empty string)
  *
  * All non-empty agent names are considered valid because:
@@ -151,31 +127,12 @@ function isValidAgent(agent) {
   return agent.trim().length > 0;
 }
 
-/**
- * Get the normalized OpenCode subagent name
- *
- * @param {string} agent - Subagent type (General or Explore)
- * @returns {string|null} Normalized agent name or null if invalid
- */
-function normalizeSubagent(agent) {
-  if (!agent || typeof agent !== 'string') {
-    return null;
-  }
-
-  const normalized = agent.toLowerCase();
-  const match = SUBAGENT_TYPES.find(type => type.toLowerCase() === normalized);
-  return match || null;
-}
-
 module.exports = {
   PRIMARY_AGENTS,
-  SUBAGENT_TYPES,
   OPENCODE_AGENTS,
   HEADLESS_SAFE_AGENTS,
   mapAgentToOpenCode,
   isValidAgent,
   isHeadlessSafe,
-  isValidPrimaryAgent,
-  isValidSubagent,
-  normalizeSubagent
+  isValidPrimaryAgent
 };

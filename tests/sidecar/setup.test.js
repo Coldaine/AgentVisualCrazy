@@ -129,12 +129,12 @@ describe('Setup Wizard', () => {
       expect(saved.aliases).toEqual(cfg.aliases);
     });
 
-    it('should have 21+ aliases', () => {
+    it('should have 20+ aliases', () => {
       const { createDefaultConfig } = require('../../src/sidecar/setup');
       const cfg = createDefaultConfig('gemini');
 
       const aliasCount = Object.keys(cfg.aliases).length;
-      expect(aliasCount).toBeGreaterThanOrEqual(21);
+      expect(aliasCount).toBeGreaterThanOrEqual(20);
     });
 
     it('should accept any string as default model', () => {

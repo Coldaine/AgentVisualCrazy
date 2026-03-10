@@ -131,7 +131,7 @@ describe('Sidecar Config Module', () => {
       const aliases = config.getDefaultAliases();
 
       const expectedKeys = [
-        'gemini', 'gemini-pro', 'gemini-3.1',
+        'gemini', 'gemini-pro',
         'gpt', 'gpt-pro', 'codex',
         'claude', 'sonnet', 'opus', 'haiku',
         'deepseek',
@@ -146,10 +146,10 @@ describe('Sidecar Config Module', () => {
       }
     });
 
-    it('should map gemini to openrouter/google/gemini-3-flash-preview', () => {
+    it('should map gemini to openrouter/google/gemini-3.1-flash-lite-preview', () => {
       const config = loadModule();
       const aliases = config.getDefaultAliases();
-      expect(aliases.gemini).toBe('openrouter/google/gemini-3-flash-preview');
+      expect(aliases.gemini).toBe('openrouter/google/gemini-3.1-flash-lite-preview');
     });
 
     it('should map claude to openrouter/anthropic/claude-sonnet-4.6', () => {
@@ -164,10 +164,10 @@ describe('Sidecar Config Module', () => {
       expect(aliases.opus).toBe('openrouter/anthropic/claude-opus-4.6');
     });
 
-    it('should map gpt to openrouter/openai/gpt-5.2-chat', () => {
+    it('should map gpt to openrouter/openai/gpt-5.4', () => {
       const config = loadModule();
       const aliases = config.getDefaultAliases();
-      expect(aliases.gpt).toBe('openrouter/openai/gpt-5.2-chat');
+      expect(aliases.gpt).toBe('openrouter/openai/gpt-5.4');
     });
 
     it('should map deepseek to openrouter/deepseek/deepseek-v3.2', () => {
@@ -481,7 +481,7 @@ describe('Sidecar Config Module', () => {
     it('should return defaults when no config exists', () => {
       const config = loadModule();
       const aliases = config.getEffectiveAliases();
-      expect(aliases.gemini).toBe('openrouter/google/gemini-3-flash-preview');
+      expect(aliases.gemini).toBe('openrouter/google/gemini-3.1-flash-lite-preview');
       expect(aliases.opus).toBe('openrouter/anthropic/claude-opus-4.6');
     });
 

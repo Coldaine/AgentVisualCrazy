@@ -31,6 +31,7 @@ function getTools() {
   return [
   {
     name: 'sidecar_start',
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
     description:
       'Spawn a multi-model sidecar conversation with a different LLM ' +
       '(Gemini, GPT, etc.). Returns a task ID immediately. ' +
@@ -39,6 +40,11 @@ function getTools() {
       'progress live. It eliminates the polling problem entirely. ' +
       'Use HEADLESS (noUi: true) only for background automation the user does NOT ' +
       'need to monitor. When in doubt, use interactive. ' +
+      'EXCEPTION: When spawning multiple sidecars simultaneously ' +
+      '(e.g., user asks to query Gemini AND GPT at the same time), ' +
+      'ALWAYS use HEADLESS (noUi: true) for all of them unless the user ' +
+      'explicitly requests interactive. Opening multiple Electron windows ' +
+      'at once is disruptive. ' +
       'For headless mode, estimate task complexity and poll sidecar_status ' +
       'accordingly. sidecar_status responses include next_poll timing hints. ' +
       'For interactive mode, do not poll. Wait for the user to tell you ' +
@@ -99,6 +105,12 @@ function getTools() {
         'Claude Code session UUID for exact context matching. ' +
         'Prevents ambiguity when multiple sessions are active in the same project.'
       ),
+      windowPosition: z.enum(['right', 'left', 'center']).optional()
+        .default('right').describe(
+          'Where to place the sidecar window on screen. ' +
+          'right (default): flush against the right edge. ' +
+          'left: flush against the left edge. center: centered.'
+        ),
       project: z.string().optional().describe(
         'Optional project directory path. Auto-detected from working directory if omitted.'
       ),
@@ -106,6 +118,7 @@ function getTools() {
   },
   {
     name: 'sidecar_status',
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     description:
       'Check the status of a running sidecar task. Returns status ' +
       '(running/complete), elapsed time, and progress info. Primarily ' +
@@ -122,6 +135,7 @@ function getTools() {
   },
   {
     name: 'sidecar_read',
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     description:
       'Read the results of a completed sidecar task. Returns the summary ' +
       'by default, or full conversation history, or session metadata.',
@@ -139,6 +153,7 @@ function getTools() {
   },
   {
     name: 'sidecar_list',
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     description:
       'List all sidecar sessions for the current project. Shows task ID, ' +
       'model, status, age, and briefing excerpt.',
@@ -153,6 +168,7 @@ function getTools() {
   },
   {
     name: 'sidecar_resume',
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
     description:
       'Reopen a previous sidecar session with full conversation history ' +
       'preserved. The sidecar continues in the same OpenCode session. ' +
@@ -174,6 +190,7 @@ function getTools() {
   },
   {
     name: 'sidecar_continue',
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
     description:
       'Start a new sidecar session that inherits a previous session\'s ' +
       'conversation as context. The previous session\'s messages become ' +
@@ -208,6 +225,7 @@ function getTools() {
   },
   {
     name: 'sidecar_setup',
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     description:
       'Open the sidecar setup wizard to configure API keys and default ' +
       'model. Launches an interactive Electron window for configuration.',
@@ -215,6 +233,7 @@ function getTools() {
   },
   {
     name: 'sidecar_abort',
+    annotations: { readOnlyHint: false, destructiveHint: true, idempotentHint: true, openWorldHint: false },
     description:
       'Abort a running sidecar session. Stops the OpenCode agent ' +
       'immediately. Use when a sidecar is taking too long or is no ' +
@@ -230,6 +249,7 @@ function getTools() {
   },
   {
     name: 'sidecar_guide',
+    annotations: { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     description:
       'Get detailed usage instructions for sidecar — when to spawn ' +
       'sidecars, how to write good briefings, agent selection guidelines, ' +

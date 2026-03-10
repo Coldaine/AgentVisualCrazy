@@ -12,12 +12,13 @@
  * Spec Reference: §4.4 Electron Wrapper
  */
 
-const { app, BrowserWindow, BrowserView, globalShortcut, ipcMain } = require('electron');
+const { app, BrowserWindow, BrowserView, globalShortcut, ipcMain, screen } = require('electron');
 const path = require('path');
 const { logger } = require('../src/utils/logger');
 const { buildToolbarHTML, TOOLBAR_H, getBrandName } = require('./toolbar');
 const { createFoldHandler } = require('./fold');
 const { registerSetupHandlers } = require('./ipc-setup');
+const { computeWindowPosition } = require('./window-position');
 
 const ICON_PATH = path.join(__dirname, 'assets', 'icon.png');
 
@@ -52,6 +53,7 @@ const CLIENT = process.env.SIDECAR_CLIENT || 'code-local';
 const OPENCODE_PORT = parseInt(process.env.SIDECAR_OPENCODE_PORT || '4096', 10);
 const OPENCODE_SESSION_ID = process.env.SIDECAR_SESSION_ID;
 const FOLD_SHORTCUT = process.env.SIDECAR_FOLD_SHORTCUT || 'CommandOrControl+Shift+F';
+const WINDOW_POSITION = process.env.SIDECAR_WINDOW_POSITION || 'right';
 
 const OPENCODE_URL = `http://localhost:${OPENCODE_PORT}`;
 
@@ -79,8 +81,14 @@ const foldHandler = createFoldHandler({
 function createSidecarWindow() {
   const shortcutLabel = FOLD_SHORTCUT.replace('CommandOrControl', 'Cmd');
 
+  const WIN_W = 720;
+  const WIN_H = 850;
+  const { workArea } = screen.getPrimaryDisplay();
+  const { x: winX, y: winY } = computeWindowPosition(workArea, WIN_W, WIN_H, WINDOW_POSITION);
+
   mainWindow = new BrowserWindow({
-    width: 720, height: 850, minWidth: 550, minHeight: 600,
+    width: WIN_W, height: WIN_H, minWidth: 550, minHeight: 600,
+    x: winX, y: winY,
     show: false,
     frame: true, backgroundColor: '#2D2B2A',
     title: CLIENT === 'cowork' ? 'Openwork Sidecar' : 'Claude Sidecar',

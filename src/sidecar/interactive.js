@@ -23,7 +23,7 @@ function checkElectronAvailable() {
 
 /** Build environment variables for Electron process */
 function buildElectronEnv(taskId, model, project, nodeModulesBin, existingPath, options = {}) {
-  const { agent, isResume, conversation, mcp, client } = options;
+  const { agent, isResume, conversation, mcp, client, windowPosition } = options;
   const env = {
     ...process.env,
     PATH: `${nodeModulesBin}:${existingPath}`,
@@ -33,6 +33,7 @@ function buildElectronEnv(taskId, model, project, nodeModulesBin, existingPath, 
   };
 
   if (client) { env.SIDECAR_CLIENT = client; }
+  if (windowPosition) { env.SIDECAR_WINDOW_POSITION = windowPosition; }
 
   if (agent) {
     const agentConfig = mapAgentToOpenCode(agent);

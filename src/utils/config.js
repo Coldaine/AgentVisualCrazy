@@ -15,11 +15,10 @@ const crypto = require('crypto');
  * Maps short alias names to full OpenRouter model identifiers.
  */
 const DEFAULT_ALIASES = {
-  'gemini': 'openrouter/google/gemini-3-flash-preview',
-  'gemini-pro': 'openrouter/google/gemini-3-pro-preview',
-  'gemini-3.1': 'openrouter/google/gemini-3.1-pro-preview',
-  'gpt': 'openrouter/openai/gpt-5.2-chat',
-  'gpt-pro': 'openrouter/openai/gpt-5.2-pro',
+  'gemini': 'openrouter/google/gemini-3.1-flash-lite-preview',
+  'gemini-pro': 'openrouter/google/gemini-3.1-pro-preview',
+  'gpt': 'openrouter/openai/gpt-5.4',
+  'gpt-pro': 'openrouter/openai/gpt-5.4-pro',
   'codex': 'openrouter/openai/gpt-5.3-codex',
   'claude': 'openrouter/anthropic/claude-sonnet-4.6',
   'sonnet': 'openrouter/anthropic/claude-sonnet-4.6',

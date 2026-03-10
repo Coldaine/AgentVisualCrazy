@@ -28,7 +28,8 @@ const DEFAULTS = {
    'context-max-tokens': 80000,
    timeout: 15,
    'no-ui': false,
-   'summary-length': 'normal' // Default summary length
+   'summary-length': 'normal', // Default summary length
+   position: 'right' // Default window position
 };
 
 /**
@@ -267,64 +268,6 @@ function isValidDurationFormat(duration) {
 }
 
 /**
- * Validate arguments for the 'subagent' command
- * @param {object} args - Parsed arguments
- * @returns {{ valid: boolean, error?: string }}
- */
-function validateSubagentArgs(args) {
-  const subcommand = args._[1]; // subagent spawn|list|read
-
-  if (!subcommand) {
-    return { valid: false, error: 'Error: subagent command requires a subcommand (spawn, list, or read)' };
-  }
-
-  const validSubcommands = ['spawn', 'list', 'read'];
-  if (!validSubcommands.includes(subcommand)) {
-    return { valid: false, error: `Error: Invalid subagent subcommand: ${subcommand}. Use: spawn, list, or read` };
-  }
-
-  if (subcommand === 'spawn') {
-    // Required: --parent
-    if (!args.parent) {
-      return { valid: false, error: 'Error: --parent is required for subagent spawn' };
-    }
-
-    // Required: --agent (subagent type)
-    if (!args.agent) {
-      return { valid: false, error: 'Error: --agent is required for subagent spawn (General or Explore)' };
-    }
-
-    // Validate subagent type - only OpenCode native subagents allowed
-    const { isValidSubagent, SUBAGENT_TYPES } = require('./utils/agent-mapping');
-    if (!isValidSubagent(args.agent)) {
-      return { valid: false, error: `Error: Invalid subagent type: ${args.agent}. Use: ${SUBAGENT_TYPES.join(' or ')}` };
-    }
-
-    // Required: --briefing (or --prompt)
-    if (!args.briefing && !args.prompt) {
-      return { valid: false, error: 'Error: --briefing is required for subagent spawn' };
-    }
-  }
-
-  if (subcommand === 'list') {
-    // Required: --parent
-    if (!args.parent) {
-      return { valid: false, error: 'Error: --parent is required for subagent list' };
-    }
-  }
-
-  if (subcommand === 'read') {
-    // Subagent ID is required as positional arg
-    const subagentId = args._[2];
-    if (!subagentId) {
-      return { valid: false, error: 'Error: subagent ID is required for subagent read' };
-    }
-  }
-
-  return { valid: true };
-}
-
-/**
  * Get usage text
  */
 function getUsage() {
@@ -338,7 +281,6 @@ Commands:
   continue    New sidecar building on previous
   read        Output sidecar summary/conversation
   abort       Abort a running sidecar session
-  subagent    Manage sub-agents within a sidecar
   setup       Configure default model and aliases
     --api-keys               Open API key setup window
   update      Update to latest version
@@ -371,6 +313,7 @@ Options for 'start':
   --mcp-config <path>          Path to opencode.json with MCP config
   --no-mcp                       Don't inherit MCP servers from parent LLM
   --exclude-mcp <name>           Exclude specific MCP server (repeatable)
+  --position <pos>             Window position: right (default), left, center
 
 Options for 'list':
   --status <filter>            Filter by status (running, complete)
@@ -381,35 +324,16 @@ Options for 'read':
   --summary                    Show summary (default)
   --conversation               Show full conversation
 
-Subagent Commands:
-  subagent spawn               Spawn a new sub-agent
-    --parent <id>              Required. Parent sidecar ID
-    --agent <type>             Required. Subagent type (General or Explore)
-    --briefing <text>          Required. Task description
-
-  subagent list                List sub-agents for a sidecar
-    --parent <id>              Required. Parent sidecar ID
-    --status <filter>          Filter by status (running, completed, failed)
-
-  subagent read <id>           Read sub-agent results
-    --summary                  Show summary (default)
-    --conversation             Show full conversation
-
 OpenCode Agent Types:
-  PRIMARY AGENTS (for main sidecar sessions):
     Chat       Reads auto, writes/bash ask permission (interactive default)
     Build      Full tool access (headless default)
     Plan       Read-only analysis and planning
-
-  SUBAGENTS (spawned within sessions):
-    General    Full-access subagent for research
-    Explore    Read-only subagent for codebase exploration
 
   NOTE: --agent chat is interactive-only (incompatible with --no-ui).
   Headless mode defaults to build agent.
 
 Custom agents defined in ~/.config/opencode/agents/ or
-.opencode/agents/ are also supported for primary sessions.
+.opencode/agents/ are also supported.
 
 Examples:
   sidecar start --model google/gemini-2.5 --prompt "Debug auth issue"
@@ -418,17 +342,12 @@ Examples:
   sidecar list
   sidecar resume abc123
   sidecar read abc123 --conversation
-  sidecar subagent spawn --parent abc123 --agent Explore --briefing "Find API endpoints"
-  sidecar subagent spawn --parent abc123 --agent General --briefing "Research auth patterns"
-  sidecar subagent list --parent abc123
-  sidecar subagent read subagent-xyz --summary
 `;
 }
 
 module.exports = {
   parseArgs,
   validateStartArgs,
-  validateSubagentArgs,
   getUsage,
   DEFAULTS
 };

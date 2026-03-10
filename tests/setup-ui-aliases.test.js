@@ -10,7 +10,7 @@ const { buildAliasScript } = require('../electron/setup-ui-alias-script');
 
 describe('setup-ui-aliases', () => {
   describe('ALIAS_GROUPS', () => {
-    it('should cover all 21 DEFAULT_ALIASES keys', () => {
+    it('should cover all 20 DEFAULT_ALIASES keys', () => {
       const defaultKeys = Object.keys(getDefaultAliases());
       const groupedKeys = ALIAS_GROUPS.flatMap(g => g.keys);
       expect(groupedKeys.sort()).toEqual(defaultKeys.sort());
@@ -53,7 +53,7 @@ describe('setup-ui-aliases', () => {
       expect(matches).toHaveLength(7);
     });
 
-    it('should render all 21 alias rows with data-alias attributes', () => {
+    it('should render all 20 alias rows with data-alias attributes', () => {
       const defaultKeys = Object.keys(getDefaultAliases());
       defaultKeys.forEach(key => {
         expect(html).toContain(`data-alias="${key}"`);
@@ -69,8 +69,8 @@ describe('setup-ui-aliases', () => {
 
     it('should contain model strings in each row', () => {
       expect(html).toContain('class="alias-model"');
-      expect(html).toContain('openrouter/google/gemini-3-flash-preview');
-      expect(html).toContain('openrouter/openai/gpt-5.2-chat');
+      expect(html).toContain('openrouter/google/gemini-3.1-flash-lite-preview');
+      expect(html).toContain('openrouter/openai/gpt-5.4');
     });
 
     it('should contain arrow separators', () => {

@@ -5,7 +5,7 @@
  * Tests the argument parsing for all sidecar commands.
  */
 
-const { parseArgs, validateStartArgs, validateSubagentArgs } = require('../src/cli');
+const { parseArgs, validateStartArgs } = require('../src/cli');
 
 describe('CLI Argument Parser', () => {
   // Set up API keys for all tests to avoid validation failures
@@ -98,6 +98,26 @@ describe('CLI Argument Parser', () => {
     it('should default --no-ui to false', () => {
       const result = parseArgs(['start']);
       expect(result['no-ui']).toBe(false);
+    });
+
+    it('should parse --position option', () => {
+      const result = parseArgs(['start', '--position', 'right']);
+      expect(result.position).toBe('right');
+    });
+
+    it('should parse --position left', () => {
+      const result = parseArgs(['start', '--position', 'left']);
+      expect(result.position).toBe('left');
+    });
+
+    it('should parse --position center', () => {
+      const result = parseArgs(['start', '--position', 'center']);
+      expect(result.position).toBe('center');
+    });
+
+    it('should default --position to "right"', () => {
+      const result = parseArgs(['start']);
+      expect(result.position).toBe('right');
     });
 
     it('should parse --timeout option with default of 15', () => {
@@ -877,148 +897,4 @@ describe('CLI Argument Parser', () => {
     });
   });
 
-  describe('validateSubagentArgs', () => {
-    describe('subagent spawn', () => {
-      it('should validate valid spawn command', () => {
-        const args = {
-          _: ['subagent', 'spawn'],
-          parent: 'abc123',
-          agent: 'explore',
-          briefing: 'Find API endpoints'
-        };
-        const result = validateSubagentArgs(args);
-        expect(result.valid).toBe(true);
-      });
-
-      it('should reject spawn without --parent', () => {
-        const args = {
-          _: ['subagent', 'spawn'],
-          agent: 'explore',
-          briefing: 'Find API endpoints'
-        };
-        const result = validateSubagentArgs(args);
-        expect(result.valid).toBe(false);
-        expect(result.error).toContain('--parent');
-      });
-
-      it('should reject spawn without --agent', () => {
-        const args = {
-          _: ['subagent', 'spawn'],
-          parent: 'abc123',
-          briefing: 'Find API endpoints'
-        };
-        const result = validateSubagentArgs(args);
-        expect(result.valid).toBe(false);
-        expect(result.error).toContain('--agent');
-      });
-
-      it('should reject spawn without --briefing', () => {
-        const args = {
-          _: ['subagent', 'spawn'],
-          parent: 'abc123',
-          agent: 'explore'
-        };
-        const result = validateSubagentArgs(args);
-        expect(result.valid).toBe(false);
-        expect(result.error).toContain('--briefing');
-      });
-
-      it('should reject invalid agent type', () => {
-        const args = {
-          _: ['subagent', 'spawn'],
-          parent: 'abc123',
-          agent: 'invalid-agent',
-          briefing: 'Task'
-        };
-        const result = validateSubagentArgs(args);
-        expect(result.valid).toBe(false);
-        expect(result.error).toContain('Invalid subagent type');
-      });
-
-      it('should accept OpenCode native subagent types (General and Explore)', () => {
-        // Only General and Explore are valid subagent types
-        const validTypes = ['General', 'Explore', 'general', 'explore'];
-        validTypes.forEach(type => {
-          const args = {
-            _: ['subagent', 'spawn'],
-            parent: 'abc123',
-            agent: type,
-            briefing: 'Task'
-          };
-          const result = validateSubagentArgs(args);
-          expect(result.valid).toBe(true);
-        });
-      });
-
-      it('should reject removed agent types (security and test)', () => {
-        const removedTypes = ['security', 'test'];
-        removedTypes.forEach(type => {
-          const args = {
-            _: ['subagent', 'spawn'],
-            parent: 'abc123',
-            agent: type,
-            briefing: 'Task'
-          };
-          const result = validateSubagentArgs(args);
-          expect(result.valid).toBe(false);
-          expect(result.error).toContain('Invalid subagent type');
-        });
-      });
-    });
-
-    describe('subagent list', () => {
-      it('should validate valid list command', () => {
-        const args = {
-          _: ['subagent', 'list'],
-          parent: 'abc123'
-        };
-        const result = validateSubagentArgs(args);
-        expect(result.valid).toBe(true);
-      });
-
-      it('should reject list without --parent', () => {
-        const args = {
-          _: ['subagent', 'list']
-        };
-        const result = validateSubagentArgs(args);
-        expect(result.valid).toBe(false);
-        expect(result.error).toContain('--parent');
-      });
-    });
-
-    describe('subagent read', () => {
-      it('should validate valid read command', () => {
-        const args = {
-          _: ['subagent', 'read', 'subagent-xyz']
-        };
-        const result = validateSubagentArgs(args);
-        expect(result.valid).toBe(true);
-      });
-
-      it('should reject read without subagent ID', () => {
-        const args = {
-          _: ['subagent', 'read']
-        };
-        const result = validateSubagentArgs(args);
-        expect(result.valid).toBe(false);
-        expect(result.error).toContain('subagent ID');
-      });
-    });
-
-    describe('invalid subcommands', () => {
-      it('should reject missing subcommand', () => {
-        const args = { _: ['subagent'] };
-        const result = validateSubagentArgs(args);
-        expect(result.valid).toBe(false);
-        expect(result.error).toContain('requires a subcommand');
-      });
-
-      it('should reject invalid subcommand', () => {
-        const args = { _: ['subagent', 'invalid'] };
-        const result = validateSubagentArgs(args);
-        expect(result.valid).toBe(false);
-        expect(result.error).toContain('Invalid subagent subcommand');
-      });
-    });
-  });
 });

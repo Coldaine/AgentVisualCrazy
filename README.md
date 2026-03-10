@@ -6,7 +6,7 @@
 
 ![Claude Sidecar: Fork, Work, Fold](./docs/hero.png)
 
-Sidecar opens a real UI alongside Claude Code or Cowork, pre-loaded with your conversation context, connected to Gemini 3, GPT-5.4, DeepSeek, or any other model. You interact with the sidecar in parallel (fact-check Claude's work, get a second opinion, explore a tangent) then fold the results back when you're ready.
+Sidecar opens a real UI alongside Claude Code or Cowork, pre-loaded with your conversation context, connected to Gemini, GPT, DeepSeek, Qwen, Grok, or any other model. You interact with the sidecar in parallel (fact-check Claude's work, get a second opinion, explore a tangent) then fold the results back when you're ready.
 
 > **Supported clients:** Claude Code CLI and Claude Cowork are fully tested and supported. Claude Code web and Claude Desktop are experimental.
 
@@ -32,6 +32,7 @@ Sidecar opens a real UI alongside Claude Code or Cowork, pre-loaded with your co
 - [Agent Modes](#agent-modes)
 - [Models](#models)
 - [MCP Integration](#mcp-integration)
+- [Configuration](#configuration)
 - [Understanding Sidecar Output](#understanding-sidecar-output)
 - [Troubleshooting](#troubleshooting)
 - [Documentation](#documentation)
@@ -47,7 +48,7 @@ Sidecar is a **literal second window** that runs alongside your Claude Code or C
 
 1. **Shares your context.** Your current conversation history is automatically extracted and passed to the sidecar. No copy-pasting, no re-explaining.
 2. **Runs in parallel.** Your main Claude session keeps working while you interact with the sidecar. It's not sequential, it's simultaneous.
-3. **Connects to any model.** Gemini 3 Pro (1M context), GPT-5.4, DeepSeek R1, Grok: whatever's best for the job.
+3. **Connects to any model.** Gemini 3.1 Pro (1M context), GPT-5.4, DeepSeek v3.2, Qwen, Grok: whatever's best for the job.
 4. **Folds back cleanly.** When you're done, click FOLD and a structured summary returns to your main context. No noise, just results.
 
 ![What Is Sidecar: Fork and Fold](./docs/what-is-sidecar.png)
@@ -69,9 +70,10 @@ Need to explore a rabbit hole (trace a bug, read a huge file, research an API)? 
 While Claude implements a fix, spin up a sidecar to review the test coverage, audit security implications, or draft documentation, all at the same time.
 
 ### Leverage Model Strengths
-- **Gemini 3 Pro**: 1M token context for analyzing entire codebases
+- **Gemini 3.1 Pro**: 1M token context for analyzing entire codebases
 - **GPT-5.4**: Strong at code generation and refactoring
-- **DeepSeek R1**: Cost-effective reasoning at scale
+- **DeepSeek v3.2**: Cost-effective reasoning at scale
+- **Qwen 3.5**: High-quality open-weight reasoning
 - **Grok**: Fast iteration and broad knowledge
 
 ---
@@ -105,7 +107,7 @@ This launches a **graphical setup wizard** that walks you through everything:
 | Step | What It Does |
 |------|-------------|
 | **1. API Keys** | Enter keys for OpenRouter, Google, OpenAI, and/or Anthropic. Each key is validated live against the provider's API. Keys are stored locally at `~/.config/sidecar/.env` with restricted permissions (0600). |
-| **2. Default Model** | Choose your go-to model (Gemini 3 Flash, Gemini 3 Pro, GPT-5.4, Opus 4.6, or DeepSeek). This is what sidecar uses when you omit `--model`. |
+| **2. Default Model** | Choose your go-to model from 20+ aliases (Gemini, GPT, Opus, DeepSeek, Qwen, Grok, and more). This is what sidecar uses when you omit `--model`. |
 | **3. Model Routing** | Configure which provider serves each model. If you have both an OpenRouter key and a direct Google key, you can route Gemini through Google directly and everything else through OpenRouter. |
 | **4. Review** | Summary of your configuration before saving. |
 
@@ -114,7 +116,7 @@ This launches a **graphical setup wizard** that walks you through everything:
 You can also manage individual settings without re-running the full wizard:
 
 ```bash
-sidecar setup --add-alias fast=openrouter/google/gemini-3-flash-preview
+sidecar setup --add-alias fast=openrouter/google/gemini-3.1-flash-lite-preview
 ```
 
 ### 3. Verify
@@ -180,6 +182,14 @@ Sidecar detects its launch context and adapts:
 - **From Claude Code** (`--client code-local`): Engineering-focused (debug, implement, review)
 - **From Cowork** (`--client cowork`): General-purpose (research, analyze, write, brainstorm)
 
+### MCP Server Inheritance
+
+Sidecar automatically discovers MCP servers configured in your Claude Code session (`~/.claude.json`) and passes them through to the sidecar's OpenCode instance. Your sidecar has access to the same tools you do. Control this with:
+
+- `--no-mcp` disables MCP inheritance entirely
+- `--exclude-mcp <name>` excludes specific servers (repeatable)
+- `--mcp name=url` adds additional servers
+
 ### Safety Features
 
 - **Conflict detection**: Warns when files changed externally while the sidecar was running
@@ -228,18 +238,21 @@ sidecar start --model <model> --prompt "<task>"
 | Option | Description | Default |
 |--------|-------------|---------|
 | `--model` | Model to use (alias or full string) | Config default |
-| `--prompt` | Task description / briefing | *(required)* |
+| `--prompt` | Task description | *(required)* |
 | `--no-ui` | Headless autonomous mode | false |
-| `--agent` | Agent mode: `Chat`, `Plan`, `Build` | `Chat` |
+| `--agent` | Agent mode: `chat`, `plan`, `build` | `chat` |
 | `--timeout` | Headless timeout in minutes | 15 |
 | `--context-turns N` | Max conversation turns to include | 50 |
 | `--context-since` | Time filter: `30m`, `2h`, `1d` | |
 | `--context-max-tokens N` | Context size cap | 80000 |
+| `--no-context` | Skip parent conversation context | false |
 | `--thinking` | Reasoning effort: `none` `minimal` `low` `medium` `high` `xhigh` | `medium` |
 | `--summary-length` | Output verbosity: `brief` `normal` `verbose` | `normal` |
 | `--session-id` | Explicit Claude Code session ID | Most recent |
 | `--mcp` | Add MCP server: `name=url` or `name=command` | |
 | `--mcp-config` | Path to `opencode.json` with MCP config | |
+| `--no-mcp` | Don't inherit MCP servers from parent | false |
+| `--exclude-mcp` | Exclude specific MCP server (repeatable) | |
 | `--client` | Client context: `code-local` `cowork` (`code-web` experimental) | `code-local` |
 
 ### `sidecar list`: Browse Past Sessions
@@ -275,11 +288,19 @@ sidecar read <task_id> --conversation   # Full conversation
 sidecar read <task_id> --metadata       # Session metadata
 ```
 
+### `sidecar abort`: Stop a Running Session
+
+```bash
+sidecar abort <task_id>
+```
+
+Immediately stops a running sidecar session. The session status changes to `aborted`.
+
 ### `sidecar setup`: Configure Sidecar
 
 ```bash
 sidecar setup                                           # Full setup wizard (GUI)
-sidecar setup --add-alias fast=openrouter/google/gemini-3-flash-preview
+sidecar setup --add-alias fast=openrouter/google/gemini-3.1-flash-lite-preview
 ```
 
 Opens the graphical setup wizard for API keys, default model, model routing, and aliases. See [Getting Started](#2-run-setup) for details.
@@ -324,21 +345,35 @@ sidecar start --model gemini --agent Build --no-ui \
 
 ### Using Aliases (after `sidecar setup`)
 
-| Alias | Model |
-|-------|-------|
-| `gemini` | Gemini 3 Flash (fast, 1M context) |
-| `gemini-pro` | Gemini 3 Pro (deep analysis, 1M context) |
-| `gpt` | GPT-5.4 (code generation, refactoring) |
-| `opus` | Claude Opus 4.6 (complex reasoning) |
-| `deepseek` | DeepSeek R1 (cost-effective reasoning) |
-| *(omit `--model`)* | Your configured default |
+| Alias | Model | Notes |
+|-------|-------|-------|
+| `gemini` | Gemini 3.1 Flash Lite | Fast, cost-effective |
+| `gemini-pro` | Gemini 3.1 Pro | Deep analysis, 1M context |
+| `gpt` | GPT-5.4 | Code generation, refactoring |
+| `gpt-pro` | GPT-5.4 Pro | Extended reasoning |
+| `codex` | GPT-5.3 Codex | Code-specialized |
+| `claude` / `sonnet` | Claude Sonnet 4.6 | Balanced capability |
+| `opus` | Claude Opus 4.6 | Complex reasoning |
+| `haiku` | Claude Haiku 4.5 | Fast, lightweight |
+| `deepseek` | DeepSeek v3.2 | Cost-effective reasoning |
+| `qwen` | Qwen 3.5 397B | High-quality open-weight |
+| `qwen-coder` | Qwen 3 Coder | Code-specialized |
+| `qwen-flash` | Qwen 3.5 Flash | Fast inference |
+| `mistral` | Mistral Large | Strong European model |
+| `devstral` | Devstral | Code-focused Mistral |
+| `grok` | Grok 4.1 Fast | Fast iteration |
+| `kimi` | Kimi K2.5 | Multilingual |
+| `glm` | GLM-5 | Chinese-English bilingual |
+| `minimax` | MiniMax M2.5 | Multimodal |
+| `seed` | Seed 2.0 Mini | Lightweight |
+| *(omit `--model`)* | | Your configured default |
 
 ### Using Full Model Strings
 
 | Access | Format | Example |
 |--------|--------|---------|
-| OpenRouter | `openrouter/provider/model` | `openrouter/google/gemini-3-pro-preview` |
-| Direct Google | `google/model` | `google/gemini-3-flash` |
+| OpenRouter | `openrouter/provider/model` | `openrouter/google/gemini-3.1-pro-preview` |
+| Direct Google | `google/model` | `google/gemini-3.1-flash-lite-preview` |
 | Direct OpenAI | `openai/model` | `openai/gpt-5.4` |
 | Direct Anthropic | `anthropic/model` | `anthropic/claude-opus-4-6` |
 
@@ -367,10 +402,31 @@ claude mcp add-json sidecar '{"command":"npx","args":["-y","claude-sidecar@lates
 | `sidecar_list` | List past sessions |
 | `sidecar_resume` | Reopen a session |
 | `sidecar_continue` | New session building on previous |
+| `sidecar_abort` | Stop a running session |
 | `sidecar_setup` | Open setup wizard |
 | `sidecar_guide` | Get usage instructions |
 
 **Async pattern:** `sidecar_start` returns a task ID immediately. Poll with `sidecar_status`, then read results with `sidecar_read`. This is non-blocking: the calling agent can do other work while the sidecar runs.
+
+---
+
+## Configuration
+
+### Environment Variables
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `OPENROUTER_API_KEY` | API key for OpenRouter (multi-model access) | *(required)* |
+| `GEMINI_API_KEY` | Direct Google API key (bypasses OpenRouter) | |
+| `OPENAI_API_KEY` | Direct OpenAI API key | |
+| `ANTHROPIC_API_KEY` | Direct Anthropic API key | |
+| `LOG_LEVEL` | Logging verbosity: `error` `warn` `info` `debug` | `error` |
+| `SIDECAR_CONFIG_DIR` | Override config directory | `~/.config/sidecar` |
+| `SIDECAR_ENV_DIR` | Override `.env` file directory | |
+| `SIDECAR_TIMEOUT` | Default headless timeout in minutes | `15` |
+| `OPENCODE_COMMAND` | Override OpenCode binary path | `opencode` |
+
+API keys configured via `sidecar setup` are stored in `~/.config/sidecar/.env` with restricted permissions (0600). You can also set them as environment variables directly.
 
 ---
 
