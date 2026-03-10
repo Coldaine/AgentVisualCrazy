@@ -107,7 +107,7 @@ describe('api-key-store readwrite', () => {
       );
 
       const result = removeApiKey('openrouter');
-      expect(result).toEqual({ success: true });
+      expect(result.success).toBe(true);
 
       const content = fs.readFileSync(path.join(tmpDir, '.env'), 'utf-8');
       expect(content).not.toContain('OPENROUTER_API_KEY');
@@ -127,7 +127,7 @@ describe('api-key-store readwrite', () => {
 
     it('should return success when .env file does not exist', () => {
       const result = removeApiKey('openrouter');
-      expect(result).toEqual({ success: true });
+      expect(result.success).toBe(true);
     });
 
     it('should return error for unknown provider', () => {
@@ -157,6 +157,65 @@ describe('api-key-store readwrite', () => {
       expect(content).toContain('# Comment');
       expect(content).toContain('GEMINI_API_KEY=keep');
       expect(content).not.toContain('OPENROUTER_API_KEY');
+    });
+
+    it('should NOT auto-clean auth.json on removal', () => {
+      const authJsonPath = path.join(os.homedir(), '.local', 'share', 'opencode', 'auth.json');
+      let originalAuth = null;
+      try { originalAuth = fs.readFileSync(authJsonPath, 'utf-8'); } catch (_e) { /* no file */ }
+
+      try {
+        fs.mkdirSync(path.dirname(authJsonPath), { recursive: true });
+        fs.writeFileSync(authJsonPath, JSON.stringify({
+          openrouter: { type: 'api', key: 'sk-or-v1-stale' }
+        }));
+
+        fs.writeFileSync(
+          path.join(tmpDir, '.env'),
+          'OPENROUTER_API_KEY=sk-or-v1-stale\n'
+        );
+
+        const result = removeApiKey('openrouter');
+
+        // auth.json should still have the key (no auto-clean)
+        const authContent = JSON.parse(fs.readFileSync(authJsonPath, 'utf-8'));
+        expect(authContent.openrouter).toBeDefined();
+        // But result should indicate it is also in auth.json
+        expect(result.alsoInAuthJson).toBe(true);
+      } finally {
+        if (originalAuth !== null) {
+          fs.writeFileSync(authJsonPath, originalAuth, 'utf-8');
+        } else {
+          try { fs.unlinkSync(authJsonPath); } catch (_e) { /* ignore */ }
+        }
+      }
+    });
+
+    it('should return alsoInAuthJson: false when key not in auth.json', () => {
+      const authJsonPath = path.join(os.homedir(), '.local', 'share', 'opencode', 'auth.json');
+      let originalAuth = null;
+      try { originalAuth = fs.readFileSync(authJsonPath, 'utf-8'); } catch (_e) { /* no file */ }
+
+      try {
+        // Ensure auth.json exists but has NO google entry
+        fs.mkdirSync(path.dirname(authJsonPath), { recursive: true });
+        fs.writeFileSync(authJsonPath, JSON.stringify({}));
+
+        fs.writeFileSync(
+          path.join(tmpDir, '.env'),
+          'GEMINI_API_KEY=AIza-test\n'
+        );
+
+        const result = removeApiKey('google');
+        expect(result.success).toBe(true);
+        expect(result.alsoInAuthJson).toBe(false);
+      } finally {
+        if (originalAuth !== null) {
+          fs.writeFileSync(authJsonPath, originalAuth, 'utf-8');
+        } else {
+          try { fs.unlinkSync(authJsonPath); } catch (_e) { /* ignore */ }
+        }
+      }
     });
   });
 

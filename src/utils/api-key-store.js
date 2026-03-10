@@ -204,7 +204,9 @@ function removeApiKey(provider) {
   const envPath = getEnvPath();
   try {
     if (!fs.existsSync(envPath)) {
-      return { success: true };
+      const { checkAuthJson } = require('./auth-json');
+      delete process.env[envVar];
+      return { success: true, alsoInAuthJson: checkAuthJson(provider) };
     }
     const content = fs.readFileSync(envPath, 'utf-8');
     const lines = content.split('\n').filter(line => {
@@ -223,7 +225,10 @@ function removeApiKey(provider) {
   }
 
   delete process.env[envVar];
-  return { success: true };
+
+  // Check if key also exists in auth.json (caller decides whether to clean)
+  const { checkAuthJson } = require('./auth-json');
+  return { success: true, alsoInAuthJson: checkAuthJson(provider) };
 }
 
 /** Validate an API key by making a test request to the provider's API */
