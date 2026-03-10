@@ -31,49 +31,5 @@ jobs:
             https://github.com/anthropics/claude-code.git
 
           plugins: |
-            security-guidance@claude-code-plugins
-
-  review:
-    if: >
-      github.event_name == 'issue_comment' &&
-      github.event.issue.pull_request &&
-      contains(github.event.comment.body, '/review')
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: write
-      id-token: write
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: anthropics/claude-code-action@v1
-        with:
-          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
-          trigger_phrase: "/review"
-
-          plugin_marketplaces: |
-            https://github.com/anthropics/claude-code.git
-
-          plugins: |
             pr-review-toolkit@claude-code-plugins
             security-guidance@claude-code-plugins
-
-          prompt: |
-            You are performing a comprehensive PR review. Before starting:
-
-            1. Read all existing PR comments and review threads using gh CLI.
-               Other reviewers (especially CodeRabbit) may have already posted feedback.
-            2. Focus on what prior reviewers MISSED. Do not duplicate existing feedback.
-            3. Use the pr-review-toolkit plugin for comprehensive analysis.
-
-            Review priorities for this project:
-            - No file over 300 lines (hard limit)
-            - No function over 50 lines
-            - ESM modules (import/export, not require)
-            - JSDoc comments on public APIs
-            - Structured logging via src/utils/logger.js (not console.log)
-            - Tests written for any new functionality
-            - No secrets or API keys in code
-
-            Use inline suggestions (GitHub suggested changes) for actionable fixes.
-            Post a summary comment with your overall assessment.
