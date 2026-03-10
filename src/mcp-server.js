@@ -34,27 +34,17 @@ function textResult(text, isError) {
 }
 
 /**
- * Compute next poll recommendation for headless sessions.
- * @param {number} elapsedMs - Milliseconds since session start
- * @param {string} [stage] - Current lifecycle stage from progress.json
- * @returns {{ recommended_wait_seconds: number, hint: string }}
+ * Compute next poll hint for headless sessions.
+ * @returns {{ hint: string }}
  */
-function computeNextPoll(elapsedMs, stage) {
-  let recommended_wait_seconds;
-  if (stage === 'prompt_sent') {
-    recommended_wait_seconds = 30;
-  } else if (elapsedMs < 3 * 60 * 1000) {
-    recommended_wait_seconds = 45;
-  } else if (elapsedMs < 8 * 60 * 1000) {
-    recommended_wait_seconds = 30;
-  } else {
-    recommended_wait_seconds = 15;
-  }
+function computeNextPoll() {
   return {
-    recommended_wait_seconds,
-    hint: `Task is actively running. Wait ~${recommended_wait_seconds}s before next poll.`,
+    hint: 'Wait at least 30s before checking status again. Polling faster wastes context and does not speed up the task.',
   };
 }
+
+const HEADLESS_START_REMINDER = '<system-reminder>This sidecar is running headless. Wait at least 30s between sidecar_status calls. Polling faster wastes context and does not make the task complete sooner.</system-reminder>';
+const HEADLESS_STATUS_REMINDER = '<system-reminder>This sidecar is still running. Wait at least 30s before calling sidecar_status again. Polling faster wastes context and does not speed up the task.</system-reminder>';
 
 /** Spawn a sidecar CLI process (fire-and-forget) */
 function spawnSidecarProcess(args, sessionDir) {
@@ -125,16 +115,16 @@ const handlers = {
     const isHeadless = !!input.noUi;
     const mode = isHeadless ? 'headless' : 'interactive';
     const message = isHeadless
-      ? 'Sidecar started in headless mode. Estimate task complexity before polling: ' +
-        'quick tasks (questions, lookups) - first poll at 20s, then every 15-20s. ' +
-        'Medium tasks (code review, debugging) - first poll at 30s, then every 30s. ' +
-        'Heavy tasks (implementation, test generation, large refactors) - first poll at 45s, then every 45s. ' +
-        'Use sidecar_status to check progress.'
+      ? 'Sidecar started in headless mode. Use sidecar_status to check progress. Wait at least 30s between checks.'
       : 'Sidecar opened in interactive mode. Do NOT poll for status. ' +
         "Tell the user: 'Let me know when you're done with the sidecar and have clicked Fold.' " +
         'Then wait for the user to tell you. Use sidecar_read to get results once they confirm.';
 
-    return textResult(JSON.stringify({ taskId, status: 'running', mode, message }));
+    const body = JSON.stringify({ taskId, status: 'running', mode, message });
+    if (isHeadless) {
+      return { content: [{ type: 'text', text: body }, { type: 'text', text: HEADLESS_START_REMINDER }] };
+    }
+    return textResult(body);
   },
 
   async sidecar_status(input, project) {
@@ -159,18 +149,23 @@ const handlers = {
       taskId: metadata.taskId, status: metadata.status,
       elapsed: `${Math.floor(ms / 60000)}m ${Math.floor((ms % 60000) / 1000)}s`,
     };
+    if (metadata.model) { response.model = metadata.model; }
 
     if (metadata.status === 'running') {
       const progress = readProgress(sessionDir);
       Object.assign(response, progress);
       if (metadata.headless) {
-        response.next_poll = computeNextPoll(ms, progress.stage);
+        response.next_poll = computeNextPoll();
       }
     }
     if (metadata.status === 'crashed' || metadata.status === 'error') {
       response.reason = metadata.reason || 'Unknown error';
     }
-    return textResult(JSON.stringify(response));
+    const responseText = JSON.stringify(response);
+    if (metadata.status === 'running' && metadata.headless) {
+      return { content: [{ type: 'text', text: responseText }, { type: 'text', text: HEADLESS_STATUS_REMINDER }] };
+    }
+    return textResult(responseText);
   },
 
   async sidecar_read(input, project) {
@@ -194,7 +189,13 @@ const handlers = {
     if (!fs.existsSync(summaryPath)) {
       return textResult('No summary available (session may still be running or was not folded).');
     }
-    return textResult(fs.readFileSync(summaryPath, 'utf-8'));
+    const metaForRead = (() => {
+      try { return JSON.parse(fs.readFileSync(path.join(sessionDir, 'metadata.json'), 'utf-8')); }
+      catch { return {}; }
+    })();
+    const summaryText = fs.readFileSync(summaryPath, 'utf-8');
+    const header = metaForRead.model ? `**Model:** ${metaForRead.model}\n\n` : '';
+    return textResult(header + summaryText);
   },
 
   async sidecar_list(input, project) {

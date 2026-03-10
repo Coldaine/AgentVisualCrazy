@@ -489,9 +489,9 @@ describe('MCP Server Handlers', () => {
         const result = await handlers.sidecar_status({ taskId: 'hl1' }, tmpDir);
         const parsed = JSON.parse(result.content[0].text);
         expect(parsed).toHaveProperty('next_poll');
-        expect(parsed.next_poll).toHaveProperty('recommended_wait_seconds');
         expect(parsed.next_poll).toHaveProperty('hint');
-        expect(typeof parsed.next_poll.recommended_wait_seconds).toBe('number');
+        expect(parsed.next_poll.hint).toContain('at least 30s');
+        expect(parsed.next_poll).not.toHaveProperty('recommended_wait_seconds');
       } finally {
         fs.rmSync(tmpDir, { recursive: true });
       }
@@ -551,40 +551,93 @@ describe('MCP Server Handlers', () => {
       }
     });
 
-    test('recommended_wait_seconds is 30 for prompt_sent stage', async () => {
+    test('next_poll hint contains at-least-30s guidance', async () => {
       const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mcp-poll-'));
-      const sessDir = path.join(tmpDir, '.claude', 'sidecar_sessions', 'ps1');
+      const sessDir = path.join(tmpDir, '.claude', 'sidecar_sessions', 'ph1');
       fs.mkdirSync(sessDir, { recursive: true });
       fs.writeFileSync(path.join(sessDir, 'metadata.json'), JSON.stringify({
-        taskId: 'ps1', status: 'running', pid: process.pid,
+        taskId: 'ph1', status: 'running', pid: process.pid,
         headless: true, createdAt: new Date().toISOString(),
       }));
       fs.writeFileSync(path.join(sessDir, 'conversation.jsonl'), '');
-      fs.writeFileSync(path.join(sessDir, 'progress.json'), JSON.stringify({
-        stage: 'prompt_sent', updatedAt: new Date().toISOString(),
-      }));
       try {
-        const result = await handlers.sidecar_status({ taskId: 'ps1' }, tmpDir);
+        const result = await handlers.sidecar_status({ taskId: 'ph1' }, tmpDir);
         const parsed = JSON.parse(result.content[0].text);
-        expect(parsed.next_poll.recommended_wait_seconds).toBe(30);
+        expect(parsed.next_poll.hint).toContain('at least 30s');
       } finally {
         fs.rmSync(tmpDir, { recursive: true });
       }
     });
 
-    test('recommended_wait_seconds is 45 for receiving stage under 3 minutes', async () => {
+    test('headless running sidecar_status includes system-reminder content block', async () => {
       const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mcp-poll-'));
-      const sessDir = path.join(tmpDir, '.claude', 'sidecar_sessions', 'rc1');
+      const sessDir = path.join(tmpDir, '.claude', 'sidecar_sessions', 'sr2');
       fs.mkdirSync(sessDir, { recursive: true });
       fs.writeFileSync(path.join(sessDir, 'metadata.json'), JSON.stringify({
-        taskId: 'rc1', status: 'running', pid: process.pid,
+        taskId: 'sr2', status: 'running', pid: process.pid,
         headless: true, createdAt: new Date().toISOString(),
       }));
       fs.writeFileSync(path.join(sessDir, 'conversation.jsonl'), '');
       try {
-        const result = await handlers.sidecar_status({ taskId: 'rc1' }, tmpDir);
+        const result = await handlers.sidecar_status({ taskId: 'sr2' }, tmpDir);
+        expect(result.content).toHaveLength(2);
+        expect(result.content[1].text).toContain('<system-reminder>');
+        expect(result.content[1].text).toContain('at least 30s');
+      } finally {
+        fs.rmSync(tmpDir, { recursive: true });
+      }
+    });
+
+    test('interactive running sidecar_status has no system-reminder', async () => {
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mcp-poll-'));
+      const sessDir = path.join(tmpDir, '.claude', 'sidecar_sessions', 'sri2');
+      fs.mkdirSync(sessDir, { recursive: true });
+      fs.writeFileSync(path.join(sessDir, 'metadata.json'), JSON.stringify({
+        taskId: 'sri2', status: 'running', pid: process.pid,
+        headless: false, createdAt: new Date().toISOString(),
+      }));
+      fs.writeFileSync(path.join(sessDir, 'conversation.jsonl'), '');
+      try {
+        const result = await handlers.sidecar_status({ taskId: 'sri2' }, tmpDir);
+        expect(result.content).toHaveLength(1);
+        expect(result.content[0].text).not.toContain('<system-reminder>');
+      } finally {
+        fs.rmSync(tmpDir, { recursive: true });
+      }
+    });
+  });
+
+  describe('sidecar_status model field', () => {
+    test('includes model in status response when stored in metadata', async () => {
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mcp-model-'));
+      const sessDir = path.join(tmpDir, '.claude', 'sidecar_sessions', 'mdl1');
+      fs.mkdirSync(sessDir, { recursive: true });
+      fs.writeFileSync(path.join(sessDir, 'metadata.json'), JSON.stringify({
+        taskId: 'mdl1', status: 'complete',
+        model: 'openrouter/x-ai/grok-4.1-fast',
+        createdAt: new Date().toISOString(),
+      }));
+      try {
+        const result = await handlers.sidecar_status({ taskId: 'mdl1' }, tmpDir);
         const parsed = JSON.parse(result.content[0].text);
-        expect(parsed.next_poll.recommended_wait_seconds).toBe(45);
+        expect(parsed.model).toBe('openrouter/x-ai/grok-4.1-fast');
+      } finally {
+        fs.rmSync(tmpDir, { recursive: true });
+      }
+    });
+
+    test('omits model field when not stored in metadata', async () => {
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mcp-nomodel-'));
+      const sessDir = path.join(tmpDir, '.claude', 'sidecar_sessions', 'nomdl');
+      fs.mkdirSync(sessDir, { recursive: true });
+      fs.writeFileSync(path.join(sessDir, 'metadata.json'), JSON.stringify({
+        taskId: 'nomdl', status: 'complete',
+        createdAt: new Date().toISOString(),
+      }));
+      try {
+        const result = await handlers.sidecar_status({ taskId: 'nomdl' }, tmpDir);
+        const parsed = JSON.parse(result.content[0].text);
+        expect(parsed).not.toHaveProperty('model');
       } finally {
         fs.rmSync(tmpDir, { recursive: true });
       }
@@ -604,6 +657,37 @@ describe('MCP Server Handlers', () => {
         expect(result.isError).toBeUndefined();
         expect(result.content[0].text).toContain('Test Summary');
         expect(result.content[0].text).toContain('Results here.');
+      } finally {
+        fs.rmSync(tmpDir, { recursive: true });
+      }
+    });
+
+    test('summary prepends model when stored in metadata', async () => {
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mcp-readmdl-'));
+      const sessDir = path.join(tmpDir, '.claude', 'sidecar_sessions', 'rdmdl1');
+      fs.mkdirSync(sessDir, { recursive: true });
+      fs.writeFileSync(path.join(sessDir, 'metadata.json'), JSON.stringify({
+        model: 'openrouter/x-ai/grok-4.1-fast',
+      }));
+      fs.writeFileSync(path.join(sessDir, 'summary.md'), '## Results\n\nFound the bug.');
+      try {
+        const result = await handlers.sidecar_read({ taskId: 'rdmdl1' }, tmpDir);
+        expect(result.content[0].text).toContain('openrouter/x-ai/grok-4.1-fast');
+        expect(result.content[0].text).toContain('Found the bug.');
+      } finally {
+        fs.rmSync(tmpDir, { recursive: true });
+      }
+    });
+
+    test('summary works without model in metadata', async () => {
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mcp-readnomdl-'));
+      const sessDir = path.join(tmpDir, '.claude', 'sidecar_sessions', 'rdnomdl');
+      fs.mkdirSync(sessDir, { recursive: true });
+      fs.writeFileSync(path.join(sessDir, 'metadata.json'), '{}');
+      fs.writeFileSync(path.join(sessDir, 'summary.md'), '## Results\n\nAll good.');
+      try {
+        const result = await handlers.sidecar_read({ taskId: 'rdnomdl' }, tmpDir);
+        expect(result.content[0].text).toContain('All good.');
       } finally {
         fs.rmSync(tmpDir, { recursive: true });
       }
@@ -704,7 +788,7 @@ describe('MCP Server Handlers', () => {
       });
     });
 
-    test('returns headless mode message with complexity tiers when noUi is true', async () => {
+    test('returns headless mode message with at-least-30s guidance when noUi is true', async () => {
       let _capturedArgs;
       await jest.isolateModulesAsync(async () => {
         jest.doMock('child_process', () => ({
@@ -717,10 +801,32 @@ describe('MCP Server Handlers', () => {
         const result = await h.sidecar_start({ prompt: 'implement feature', noUi: true }, '/tmp');
         const parsed = JSON.parse(result.content[0].text);
         expect(parsed.mode).toBe('headless');
-        expect(parsed.message).toContain('complexity');
-        expect(parsed.message).toContain('20s');
-        expect(parsed.message).toContain('30s');
-        expect(parsed.message).toContain('45s');
+        expect(parsed.message).toContain('at least 30s');
+      });
+    });
+
+    test('headless sidecar_start response includes system-reminder content block', async () => {
+      await jest.isolateModulesAsync(async () => {
+        jest.doMock('child_process', () => ({
+          spawn: jest.fn(() => ({ pid: 12345, unref: jest.fn() })),
+        }));
+        const { handlers: h } = require('../src/mcp-server');
+        const result = await h.sidecar_start({ prompt: 'test task', noUi: true }, '/tmp');
+        expect(result.content).toHaveLength(2);
+        expect(result.content[1].text).toContain('<system-reminder>');
+        expect(result.content[1].text).toContain('at least 30s');
+      });
+    });
+
+    test('interactive sidecar_start response has no system-reminder', async () => {
+      await jest.isolateModulesAsync(async () => {
+        jest.doMock('child_process', () => ({
+          spawn: jest.fn(() => ({ pid: 12345, unref: jest.fn() })),
+        }));
+        const { handlers: h } = require('../src/mcp-server');
+        const result = await h.sidecar_start({ prompt: 'analyze auth', noUi: false }, '/tmp');
+        expect(result.content).toHaveLength(1);
+        expect(result.content[0].text).not.toContain('<system-reminder>');
       });
     });
   });
