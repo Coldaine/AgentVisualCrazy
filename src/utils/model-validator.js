@@ -12,6 +12,19 @@ const { readApiKeyValues } = require('./api-key-store');
 const { loadConfig, saveConfig, getConfigPath } = require('./config');
 const { logger } = require('./logger');
 
+/**
+ * Normalize a model ID to include the provider prefix.
+ * @param {string} provider - e.g. 'google', 'openai'
+ * @param {string} id - Model ID, may or may not have provider prefix
+ * @returns {string} Normalized ID with provider prefix
+ */
+function normalizeModelId(provider, id) {
+  if (id.startsWith(provider + '/')) {
+    return id;
+  }
+  return `${provider}/${id}`;
+}
+
 /** Alias-to-search-term mapping for filtering provider model lists */
 const ALIAS_SEARCH_TERMS = {
   'gemini': 'gemini', 'gemini-pro': 'gemini',
@@ -57,11 +70,11 @@ async function validateDirectModel(resolvedModel, alias, options = {}) {
   const relevant = filterRelevantModels(models, alias);
 
   if (options.headless || !process.stdin.isTTY) {
-    const list = relevant.slice(0, 10).map(m => `  ${m.id}`).join('\n');
+    const list = relevant.slice(0, 10).map(m => `  ${normalizeModelId(provider, m.id)}`).join('\n');
     throw new Error(
       `Model '${modelId}' not found on ${provider} API.\n` +
       `Available models:\n${list}\n` +
-      `Fix with: sidecar setup --add-alias ${alias}=${relevant[0]?.id || 'provider/model'}`
+      `Fix with: sidecar setup --add-alias ${alias}=${relevant[0] ? normalizeModelId(provider, relevant[0].id) : 'provider/model'}`
     );
   }
 
@@ -111,7 +124,7 @@ async function promptModelSelection(models, alias, provider, failedModelId) {
   }
 
   const selected = models[idx];
-  const newModel = selected.id;
+  const newModel = normalizeModelId(provider, selected.id);
 
   let config = loadConfig();
   if (!config) {
@@ -138,4 +151,4 @@ async function promptModelSelection(models, alias, provider, failedModelId) {
   return newModel;
 }
 
-module.exports = { validateDirectModel, filterRelevantModels };
+module.exports = { validateDirectModel, filterRelevantModels, normalizeModelId };

@@ -1,16 +1,14 @@
 /**
  * Sidecar Config Module
  *
- * Manages sidecar configuration: config directory resolution,
- * config file I/O, model alias resolution, config hashing,
- * and alias table formatting.
+ * Config directory resolution, file I/O, model alias resolution,
+ * config hashing, and alias table formatting.
  */
 
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const { PROVIDER_ENV_MAP } = require('./api-key-store');
-const { logger } = require('./logger');
+const { applyDirectApiFallback, autoRepairAlias } = require('./alias-resolver');
 
 /** Default model alias map — short names to full OpenRouter model identifiers */
 const DEFAULT_ALIASES = {
@@ -71,8 +69,21 @@ function loadConfig() {
   }
 }
 
-/** Save config data to disk, creating the directory if needed */
+/** Save config data to disk, creating the directory if needed. Strips invalid aliases. */
 function saveConfig(configData) {
+  if (configData && configData.aliases) {
+    const cleaned = {};
+    for (const [key, value] of Object.entries(configData.aliases)) {
+      if (key === 'null' || !value || typeof value !== 'string' || value === 'null') {
+        process.stderr.write(
+          `Notice: Removing invalid alias '${key}' (value: ${JSON.stringify(value)}) from config.\n`
+        );
+        continue;
+      }
+      cleaned[key] = value;
+    }
+    configData.aliases = cleaned;
+  }
   const configDir = getConfigDir();
   fs.mkdirSync(configDir, { recursive: true, mode: 0o700 });
   const configPath = getConfigPath();
@@ -82,24 +93,6 @@ function saveConfig(configData) {
 /** @returns {object} Copy of the default alias map */
 function getDefaultAliases() {
   return { ...DEFAULT_ALIASES };
-}
-
-/** Strip openrouter/ prefix when direct provider API key is available but OPENROUTER_API_KEY is not */
-function applyDirectApiFallback(model) {
-  if (!model.startsWith('openrouter/') || process.env.OPENROUTER_API_KEY) {
-    return model;
-  }
-  const direct = model.slice('openrouter/'.length);
-  const envVar = PROVIDER_ENV_MAP[direct.split('/')[0]];
-  if (envVar && process.env[envVar]) {
-    logger.warn({ msg: 'Using direct provider API (OPENROUTER_API_KEY not set)', original: model, resolved: direct });
-    process.stderr.write(
-      `Notice: Using direct ${direct.split('/')[0]} API (OPENROUTER_API_KEY not set). ` +
-      'Use --validate-model to verify model availability.\n'
-    );
-    return direct;
-  }
-  return model;
 }
 
 /**
@@ -130,7 +123,11 @@ function resolveModel(modelArg) {
 
     // Try to resolve as alias (user config + defaults)
     if (effectiveAliases[modelArg] !== undefined) {
-      return applyDirectApiFallback(effectiveAliases[modelArg]);
+      const resolved = effectiveAliases[modelArg];
+      if (!resolved || resolved === 'null') {
+        return autoRepairAlias(modelArg, config, DEFAULT_ALIASES, saveConfig);
+      }
+      return applyDirectApiFallback(resolved);
     }
 
     // Unknown alias
@@ -155,7 +152,11 @@ function resolveModel(modelArg) {
 
   // Default is an alias - resolve via user config + defaults
   if (effectiveAliases[defaultValue] !== undefined) {
-    return applyDirectApiFallback(effectiveAliases[defaultValue]);
+    const resolved = effectiveAliases[defaultValue];
+    if (!resolved || resolved === 'null') {
+      return autoRepairAlias(defaultValue, config, DEFAULT_ALIASES, saveConfig);
+    }
+    return applyDirectApiFallback(resolved);
   }
 
   // Default alias not found anywhere
