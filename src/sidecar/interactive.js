@@ -11,14 +11,20 @@ const { createSession, sendPromptAsync } = require('../opencode-client');
 const { mapAgentToOpenCode } = require('../utils/agent-mapping');
 const { logger } = require('../utils/logger');
 
+/** Get the Electron binary path via require('electron').
+ *  Works in all install contexts (global, local, npx hoisted).
+ *  @returns {string|null} Full path to Electron binary, or null if not installed */
+function getElectronPath() {
+  try {
+    return require('electron');
+  } catch {
+    return null;
+  }
+}
+
 /** Check if Electron is available (lazy loading guard) */
 function checkElectronAvailable() {
-  try {
-    require.resolve('electron');
-    return true;
-  } catch {
-    return false;
-  }
+  return getElectronPath() !== null;
 }
 
 /** Build environment variables for Electron process */
@@ -145,7 +151,7 @@ async function runInteractive(model, systemPrompt, userMessage, taskId, project,
   const serverPort = new URL(server.url).port;
 
   return new Promise((resolve, _reject) => {
-    const electronPath = path.join(__dirname, '..', '..', 'node_modules', '.bin', 'electron');
+    const electronPath = getElectronPath();
     const mainPath = path.join(__dirname, '..', '..', 'electron', 'main.js');
 
     const nodeModulesBin = path.join(__dirname, '..', '..', 'node_modules', '.bin');
@@ -179,6 +185,7 @@ async function runInteractive(model, systemPrompt, userMessage, taskId, project,
 }
 
 module.exports = {
+  getElectronPath,
   checkElectronAvailable,
   buildElectronEnv,
   handleElectronProcess,
