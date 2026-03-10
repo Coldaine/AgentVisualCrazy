@@ -141,3 +141,28 @@ describe('buildServerOptions port handling', () => {
     expect(opts).not.toHaveProperty('signal');
   });
 });
+
+describe('buildServerOptions provider model sync', () => {
+  it('includes provider.openrouter.models from sidecar aliases', () => {
+    const opts = buildServerOptions({});
+    const provider = opts.config.provider;
+
+    expect(provider).toBeDefined();
+    expect(provider.openrouter).toBeDefined();
+    expect(provider.openrouter.models).toBeDefined();
+
+    // Should include models from default aliases
+    expect(provider.openrouter.models['x-ai/grok-4.1-fast']).toBeDefined();
+    expect(provider.openrouter.models['anthropic/claude-opus-4.6']).toBeDefined();
+  });
+
+  it('includes provider models even when other options are set', () => {
+    const opts = buildServerOptions({
+      model: 'openrouter/x-ai/grok-4.1-fast',
+      systemPrompt: 'test',
+    });
+
+    expect(opts.config.provider.openrouter.models).toBeDefined();
+    expect(opts.config.model).toBe('openrouter/x-ai/grok-4.1-fast');
+  });
+});

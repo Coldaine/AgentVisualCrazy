@@ -258,6 +258,29 @@ function tryResolveModel(modelArg) {
   }
 }
 
+/** Build OpenCode provider.models config from sidecar aliases.
+ * @returns {object} e.g. { openrouter: { models: { "x-ai/grok-4.1-fast": {}, ... } } } */
+function buildProviderModels() {
+  const aliases = getEffectiveAliases();
+  const providers = {};
+
+  for (const fullModel of Object.values(aliases)) {
+    if (!fullModel || typeof fullModel !== 'string') { continue; }
+    const parts = fullModel.split('/');
+    if (parts.length < 2) { continue; }
+
+    const providerID = parts[0];
+    const modelID = parts.slice(1).join('/');
+
+    if (!providers[providerID]) {
+      providers[providerID] = { models: {} };
+    }
+    providers[providerID].models[modelID] = {};
+  }
+
+  return providers;
+}
+
 module.exports = {
   getConfigDir,
   getConfigPath,
@@ -271,4 +294,5 @@ module.exports = {
   getEffectiveAliases,
   formatAliasNames,
   tryResolveModel,
+  buildProviderModels,
 };

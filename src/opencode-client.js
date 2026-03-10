@@ -326,6 +326,11 @@ function buildServerOptions(options = {}) {
     config.model = options.model;
   }
 
+  // Sync sidecar aliases into OpenCode's provider.models so the UI
+  // model picker shows all configured models (single source of truth).
+  const { buildProviderModels } = require('./utils/config');
+  config.provider = buildProviderModels();
+
   // Register custom 'chat' agent: reads auto-approved, writes/bash require permission
   const chatAgent = {
     description: 'Conversational agent — reads are auto-approved, writes and commands require permission',

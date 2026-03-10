@@ -634,4 +634,64 @@ describe('Sidecar Config Module', () => {
       expect(loaded.aliases.test).toBe('provider/model-with-special_chars.v2');
     });
   });
+
+  describe('buildProviderModels', () => {
+    it('should group aliases by provider with model IDs as keys', () => {
+      const config = loadModule();
+      const result = config.buildProviderModels();
+
+      // All default aliases are openrouter, so we expect a single provider
+      expect(result).toHaveProperty('openrouter');
+      expect(result.openrouter).toHaveProperty('models');
+
+      // grok alias → openrouter/x-ai/grok-4.1-fast → key should be x-ai/grok-4.1-fast
+      expect(result.openrouter.models['x-ai/grok-4.1-fast']).toBeDefined();
+      // gemini alias
+      expect(result.openrouter.models['google/gemini-3.1-flash-lite-preview']).toBeDefined();
+    });
+
+    it('should include all default alias models', () => {
+      const config = loadModule();
+      const result = config.buildProviderModels();
+      const modelKeys = Object.keys(result.openrouter.models);
+
+      // Each unique model ID from defaults should be present
+      expect(modelKeys).toContain('anthropic/claude-opus-4.6');
+      expect(modelKeys).toContain('openai/gpt-5.3-codex');
+      expect(modelKeys).toContain('deepseek/deepseek-v3.2');
+    });
+
+    it('should include user-configured aliases', () => {
+      const data = {
+        aliases: { 'my-model': 'openrouter/custom/my-special-model' },
+      };
+      fs.writeFileSync(path.join(tempDir, 'config.json'), JSON.stringify(data));
+      const config = loadModule();
+      const result = config.buildProviderModels();
+
+      expect(result.openrouter.models).toHaveProperty('custom/my-special-model');
+    });
+
+    it('should handle non-openrouter providers', () => {
+      const data = {
+        aliases: { 'direct-gemini': 'google/gemini-2.5-flash' },
+      };
+      fs.writeFileSync(path.join(tempDir, 'config.json'), JSON.stringify(data));
+      const config = loadModule();
+      const result = config.buildProviderModels();
+
+      expect(result).toHaveProperty('google');
+      expect(result.google.models['gemini-2.5-flash']).toBeDefined();
+    });
+
+    it('should deduplicate models pointed to by multiple aliases', () => {
+      // claude and sonnet both map to the same model
+      const config = loadModule();
+      const result = config.buildProviderModels();
+      const modelKeys = Object.keys(result.openrouter.models);
+
+      const sonnetCount = modelKeys.filter(k => k === 'anthropic/claude-sonnet-4.6').length;
+      expect(sonnetCount).toBe(1);
+    });
+  });
 });

@@ -16,6 +16,11 @@ require('dotenv').config({ path: path.join(__dirname, '..', '.env'), quiet: true
 const homeDir = process.env.HOME || process.env.USERPROFILE;
 require('dotenv').config({ path: path.join(homeDir, '.config', 'sidecar', '.env'), override: false, quiet: true });
 
+// Sync OPENROUTER_API_KEY between .env and ~/.local/share/opencode/auth.json
+// so there is never a conflict between the two credential stores.
+const { syncOpenCodeAuth } = require('../src/utils/auth-sync');
+syncOpenCodeAuth();
+
 const { parseArgs, validateStartArgs, getUsage } = require('../src/cli');
 const { validateTaskId, safeSessionDir } = require('../src/utils/validators');
 
