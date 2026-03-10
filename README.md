@@ -14,6 +14,7 @@ Sidecar opens a real UI alongside Claude Code or Cowork, pre-loaded with your co
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue?labelColor=1A1C29)](./LICENSE)
 [![Node.js](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen?labelColor=1A1C29)](https://nodejs.org)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?labelColor=1A1C29)](./CONTRIBUTING.md)
+[![GitHub last commit](https://img.shields.io/github/last-commit/jrenaldi79/sidecar?labelColor=1A1C29)](https://github.com/jrenaldi79/sidecar/commits)
 [![GitHub stars](https://img.shields.io/github/stars/jrenaldi79/sidecar?style=social)](https://github.com/jrenaldi79/sidecar)
 
 </div>
