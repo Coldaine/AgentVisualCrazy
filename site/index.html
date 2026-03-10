@@ -99,6 +99,11 @@ h2{font-weight:700;font-size:clamp(1.9rem,3.5vw,2.6rem);letter-spacing:-.04em;li
 h2 span{color:#b5b5b3}
 .lead{color:#c5c5c3;font-size:1rem;max-width:480px;line-height:1.7;margin-top:.5rem}
 
+/* DEMO VIDEO */
+.demo-section{text-align:center;padding:4rem 2.5rem 5rem}
+.demo-video{max-width:800px;margin:2rem auto 0;border-radius:12px;overflow:hidden;border:1px solid var(--border);aspect-ratio:16/9;background:var(--s1)}
+.demo-video iframe{width:100%;height:100%;border:none}
+
 /* BORDERED CONTAINER (Daytona-style) */
 .grid3{display:grid;grid-template-columns:repeat(3,1fr);margin-top:3.5rem;border:1px solid var(--border);border-radius:12px;overflow:hidden}
 .g-cell{padding:2rem 2.2rem;border-right:1px solid var(--border)}
@@ -267,6 +272,7 @@ h2.v .w-anim{opacity:1;transform:none}
   <div class="nav-i">
     <a href="#" class="logo"><svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="16" height="16" rx="3" fill="#2D2B2A"/><path d="M3 2v12" stroke="#D97757" stroke-width="2" stroke-linecap="round"/><path d="M10 2v5c0 2-3 3-7 5" stroke="#D97757" stroke-width="2" stroke-linecap="round" stroke-opacity="0.6"/></svg>sidecar</a>
     <div class="nav-r">
+      <a href="#demo">Demo</a>
       <a href="#how">How It Works</a>
       <a href="#cases">Use Cases</a>
       <a href="#features">Features</a>
@@ -278,6 +284,7 @@ h2.v .w-anim{opacity:1;transform:none}
     </div>
   </div>
   <div class="mob-menu">
+    <a href="#demo">Demo</a>
     <a href="#how">How It Works</a>
     <a href="#cases">Use Cases</a>
     <a href="#features">Features</a>
@@ -418,6 +425,18 @@ h2.v .w-anim{opacity:1;transform:none}
   </div>
 </div>
 </div>
+
+<!-- DEMO VIDEO -->
+<section class="demo-section" id="demo">
+  <div class="w">
+    <div class="tag rv">See It In Action</div>
+    <h2 class="rv">Demo</h2>
+    <p class="lead rv" style="margin:0 auto">Watch Sidecar fork a conversation to Gemini, explore in parallel, and fold the results back into Claude Code.</p>
+    <div class="demo-video rv">
+      <iframe src="https://www.youtube.com/embed/Cl_RA8HAZJE" title="Claude Sidecar Demo" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen loading="lazy"></iframe>
+    </div>
+  </div>
+</section>
 
 <hr class="sep">
 
