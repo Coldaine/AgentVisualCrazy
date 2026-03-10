@@ -27,9 +27,8 @@ jobs:
           use_sticky_comment: "true"
 
           plugins: |
-            pr-review-toolkit@claude-plugins-official
-            security-guidance@claude-plugins-official
-            coderabbit@claude-plugins-official
+            pr-review-toolkit@claude-code-plugins
+            security-guidance@claude-code-plugins
 
           prompt: |
             You are reviewing a pull request. Before starting your review:
