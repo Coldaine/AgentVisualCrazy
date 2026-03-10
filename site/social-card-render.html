@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{width:1200px;height:630px;overflow:hidden;background:#0a0a0a;font-family:'Outfit',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+.card{position:relative;width:1200px;height:630px;overflow:hidden}
+.card::before{content:'';position:absolute;inset:0;background:radial-gradient(circle,rgba(255,255,255,0.08) 1px,transparent 1px);background-size:28px 28px}
+.card::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 50% 70% at 15% 55%,rgba(217,119,87,0.12) 0%,transparent 100%),radial-gradient(ellipse 45% 60% at 85% 40%,rgba(66,133,244,0.10) 0%,transparent 100%);pointer-events:none}
+.content{position:relative;z-index:1;width:100%;height:100%;padding:55px 80px}
+
+.logo{display:flex;align-items:center;gap:12px;margin-bottom:36px}
+.logo svg{width:36px;height:36px;flex-shrink:0}
+.logo span{font-weight:700;font-size:22px;color:#f5f5f3;letter-spacing:-0.5px}
+
+h1{font-weight:800;font-size:72px;line-height:0.95;letter-spacing:-3px;margin-bottom:16px}
+h1 .l1{color:#f5f5f3}
+h1 .l2{background:linear-gradient(135deg,#D97757,#E8A07C);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+
+.sub{font-size:24px;color:#a1a1a0;font-weight:400;margin-bottom:24px}
+
+.tags{display:flex;gap:15px;margin-bottom:36px}
+.tag{padding:6px 22px;border-radius:6px;font-family:'IBM Plex Mono',monospace;font-size:14px;font-weight:600}
+.tag-outline{border:1.2px solid #D97757;color:#D97757;background:transparent}
+.tag-fill{background:#D97757;color:#fff;border:1.2px solid #D97757}
+
+.install{display:inline-flex;align-items:center;gap:10px;padding:10px 20px;border-radius:7px;background:#111113;border:1px solid #2c2c30;font-family:'IBM Plex Mono',monospace;font-size:14px;color:#f5f5f3;margin-bottom:24px}
+.install .dollar{color:#666}
+
+.badges{display:flex;gap:10px}
+.badge{padding:4px 14px;border-radius:5px;background:#161618;border:0.8px solid #2c2c30;font-family:'IBM Plex Mono',monospace;font-size:9px;color:#a1a1a0}
+.badge-plus{color:#666}
+
+/* Diagram container */
+.diagram{position:absolute;right:40px;top:80px;z-index:2;width:500px;height:460px}
+
+/* Windows */
+.win{border-radius:10px;overflow:hidden;position:absolute}
+.win-cc{width:210px;height:170px;background:linear-gradient(180deg,#1c1c1f,#161618);border:1.2px solid #2c2c30;left:0;top:100px}
+.win-sc{width:190px;height:140px;background:linear-gradient(180deg,#1c1c1f,#161618);border:1.2px solid #D97757;right:0;top:0}
+.titlebar{height:28px;background:#1c1c1f;display:flex;align-items:center;padding:0 12px;gap:6px}
+.dot{width:8px;height:8px;border-radius:50%}
+.dot-r{background:#e25555;opacity:0.6}
+.dot-y{background:#e2a855;opacity:0.6}
+.dot-g{background:#55c255;opacity:0.6}
+.titlebar span{font-family:'IBM Plex Mono',monospace;font-size:10px;font-weight:600;color:#a1a1a0;margin-left:auto;margin-right:auto}
+.titlebar-sc span{color:#D97757}
+.lines{padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.line{height:3px;border-radius:1.5px;background:#2c2c30}
+.line-accent{background:rgba(217,119,87,0.25)}
+.fold-box{margin:6px 14px;padding:8px 14px;border-radius:5px;background:rgba(217,119,87,0.08);border:0.8px solid #D97757;text-align:center}
+.fold-box p{font-family:'IBM Plex Mono',monospace;font-size:9px}
+.fold-box .f1{color:#D97757}
+.fold-box .f2{color:#e8a07c;font-size:8px}
+.model-tag{display:inline-block;margin:6px 12px;padding:3px 12px;border-radius:4px;background:rgba(74,222,128,0.1);border:0.8px solid rgba(74,222,128,0.3);font-family:'IBM Plex Mono',monospace;font-size:9px;color:#4ade80}
+.fold-btn{position:absolute;bottom:10px;right:14px;padding:5px 18px;border-radius:5px;background:#D97757;font-family:'Outfit',sans-serif;font-size:11px;font-weight:600;color:#fff}
+
+/* SVG arrows overlay */
+.arrows-svg{position:absolute;left:0;top:0;width:100%;height:100%;z-index:3;pointer-events:none}
+</style>
+</head>
+<body>
+<div class="card">
+<div class="content">
+  <div class="logo">
+    <svg viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"><rect width="16" height="16" rx="3" fill="#2D2B2A"/><path d="M3 2v12" stroke="#D97757" stroke-width="2" stroke-linecap="round"/><path d="M10 2v5c0 2-3 3-7 5" stroke="#D97757" stroke-width="2" stroke-linecap="round" stroke-opacity="0.6"/></svg>
+    <span>sidecar</span>
+  </div>
+
+  <h1><span class="l1">Claude</span><br><span class="l2">Sidecar</span></h1>
+  <p class="sub">A parallel AI window for Claude Code and Cowork.</p>
+
+  <div class="tags">
+    <span class="tag tag-outline">Fork</span>
+    <span class="tag tag-outline">Work</span>
+    <span class="tag tag-fill">Fold</span>
+  </div>
+
+  <div class="install"><span class="dollar">$</span> npm install -g claude-sidecar</div>
+
+  <div class="badges">
+    <span class="badge">Gemini</span>
+    <span class="badge">GPT</span>
+    <span class="badge">DeepSeek</span>
+    <span class="badge">Qwen</span>
+    <span class="badge">Grok</span>
+    <span class="badge">Claude</span>
+    <span class="badge badge-plus">+</span>
+  </div>
+</div>
+
+<!-- Right side diagram -->
+<div class="diagram">
+  <!-- Claude Code window -->
+  <div class="win win-cc">
+    <div class="titlebar">
+      <div class="dot dot-r"></div><div class="dot dot-y"></div><div class="dot dot-g"></div>
+      <span>Claude Code</span>
+    </div>
+    <div class="lines">
+      <div class="line" style="width:80px"></div>
+      <div class="line" style="width:130px"></div>
+      <div class="line" style="width:60px"></div>
+      <div class="line line-accent" style="width:100px"></div>
+      <div class="line line-accent" style="width:150px"></div>
+    </div>
+    <div class="fold-box">
+      <p class="f1">FOLD summary received</p>
+      <p class="f2">3 findings, 2 recommendations</p>
+    </div>
+  </div>
+
+  <!-- Sidecar window -->
+  <div class="win win-sc">
+    <div class="titlebar titlebar-sc">
+      <span>Sidecar</span>
+    </div>
+    <div class="model-tag">Gemini Pro</div>
+    <div class="lines" style="padding-top:2px">
+      <div class="line" style="width:110px"></div>
+      <div class="line" style="width:150px"></div>
+      <div class="line" style="width:80px"></div>
+    </div>
+    <div class="fold-btn">Fold</div>
+  </div>
+
+  <!-- SVG arrows between windows -->
+  <svg class="arrows-svg" viewBox="0 0 500 460" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <marker id="arrow-fork" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="8" markerHeight="6" orient="auto">
+        <path d="M0 0 L10 4 L0 8Z" fill="#D97757"/>
+      </marker>
+      <marker id="arrow-fold" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="8" markerHeight="6" orient="auto">
+        <path d="M0 0 L10 4 L0 8Z" fill="#666"/>
+      </marker>
+    </defs>
+    <!-- Fork arrow: Claude Code → Sidecar (upper path, going right) -->
+    <path d="M 215 125 L 305 55" stroke="#D97757" stroke-width="2" stroke-dasharray="7,5" fill="none" marker-end="url(#arrow-fork)"/>
+    <text x="240" y="72" font-family="IBM Plex Mono,monospace" font-size="10" fill="#D97757" font-weight="600" letter-spacing="0.5">fork</text>
+    <!-- Fold arrow: Sidecar → Claude Code (lower path, going left) -->
+    <path d="M 305 155 L 215 215" stroke="#666" stroke-width="1.6" stroke-dasharray="7,5" fill="none" marker-end="url(#arrow-fold)"/>
+    <text x="240" y="205" font-family="IBM Plex Mono,monospace" font-size="10" fill="#666" font-weight="600" letter-spacing="0.5">fold</text>
+  </svg>
+</div>
+</div>
+</body>
+</html>
