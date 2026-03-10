@@ -39,12 +39,12 @@ function textResult(text, isError) {
  */
 function computeNextPoll() {
   return {
-    hint: 'Wait at least 30s before checking status again. Polling faster wastes context and does not speed up the task.',
+    hint: 'Each unnecessary poll burns context window tokens for zero benefit. Be disciplined: wait at least 30s.',
   };
 }
 
-const HEADLESS_START_REMINDER = '<system-reminder>This sidecar is running headless. Wait at least 30s between sidecar_status calls. Polling faster wastes context and does not make the task complete sooner.</system-reminder>';
-const HEADLESS_STATUS_REMINDER = '<system-reminder>This sidecar is still running. Wait at least 30s before calling sidecar_status again. Polling faster wastes context and does not speed up the task.</system-reminder>';
+const HEADLESS_START_REMINDER = '<system-reminder>Every sidecar_status call costs context window tokens. Unnecessary polls burn your budget without making the task finish faster. Be disciplined: wait at least 30s between status checks. Do other useful work while waiting.</system-reminder>';
+const HEADLESS_STATUS_REMINDER = '<system-reminder>This sidecar is still running. Each poll costs context tokens for zero benefit. Be disciplined: wait at least 30s before checking again. Do other useful work while waiting.</system-reminder>';
 
 /** Spawn a sidecar CLI process (fire-and-forget) */
 function spawnSidecarProcess(args, sessionDir) {
@@ -115,7 +115,7 @@ const handlers = {
     const isHeadless = !!input.noUi;
     const mode = isHeadless ? 'headless' : 'interactive';
     const message = isHeadless
-      ? 'Sidecar started in headless mode. Use sidecar_status to check progress. Wait at least 30s between checks.'
+      ? 'Sidecar started in headless mode. Use sidecar_status to check progress, but be disciplined: each poll burns context tokens. Wait at least 30s between checks.'
       : 'Sidecar opened in interactive mode. Do NOT poll for status. ' +
         "Tell the user: 'Let me know when you're done with the sidecar and have clicked Fold.' " +
         'Then wait for the user to tell you. Use sidecar_read to get results once they confirm.';
