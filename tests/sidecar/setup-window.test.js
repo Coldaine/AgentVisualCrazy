@@ -9,6 +9,13 @@ const { spawn } = require('child_process');
 const path = require('path');
 
 jest.mock('child_process');
+jest.mock('../../src/utils/logger', () => ({
+  logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }
+}));
+jest.mock('../../src/sidecar/interactive', () => ({
+  getElectronPath: () => '/mock/path/to/Electron',
+  checkElectronAvailable: () => true,
+}));
 
 const { launchSetupWindow } = require('../../src/sidecar/setup-window');
 
@@ -107,11 +114,26 @@ describe('setup-window', () => {
     expect(result).toEqual({ success: false, error: 'Setup window closed without completing' });
   });
 
-  it('should pass electron path from node_modules', () => {
+  it('should use getElectronPath() for electron binary', () => {
     launchSetupWindow();
 
     const electronPath = spawn.mock.calls[0][0];
-    expect(electronPath).toContain('node_modules');
-    expect(electronPath).toContain('electron');
+    expect(electronPath).toBe('/mock/path/to/Electron');
+  });
+
+  it('should resolve with failure when electron is not installed', async () => {
+    jest.resetModules();
+    jest.mock('child_process');
+    jest.mock('../../src/utils/logger', () => ({
+      logger: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() }
+    }));
+    jest.mock('../../src/sidecar/interactive', () => ({
+      getElectronPath: () => null,
+      checkElectronAvailable: () => false,
+    }));
+    const { launchSetupWindow: freshLaunch } = require('../../src/sidecar/setup-window');
+
+    const result = await freshLaunch();
+    expect(result).toEqual({ success: false, error: 'Electron not installed' });
   });
 });

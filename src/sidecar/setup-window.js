@@ -9,6 +9,7 @@
 const { spawn } = require('child_process');
 const path = require('path');
 const { logger } = require('../utils/logger');
+const { getElectronPath } = require('./interactive');
 
 /**
  * Launch the Electron setup window for API key entry
@@ -16,7 +17,11 @@ const { logger } = require('../utils/logger');
  */
 function launchSetupWindow() {
   return new Promise((resolve) => {
-    const electronPath = path.join(__dirname, '..', '..', 'node_modules', '.bin', 'electron');
+    const electronPath = getElectronPath();
+    if (!electronPath) {
+      resolve({ success: false, error: 'Electron not installed' });
+      return;
+    }
     const mainPath = path.join(__dirname, '..', '..', 'electron', 'main.js');
 
     const env = {
