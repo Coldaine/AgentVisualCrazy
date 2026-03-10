@@ -117,6 +117,8 @@ function getDefaultAliases() {
 function resolveModel(modelArg) {
   const config = loadConfig();
 
+  const effectiveAliases = getEffectiveAliases();
+
   // If modelArg is provided
   if (modelArg !== undefined && modelArg !== null) {
     // Full model string with slash - return as-is
@@ -124,10 +126,9 @@ function resolveModel(modelArg) {
       return modelArg;
     }
 
-    // Try to resolve as alias
-    const aliases = (config && config.aliases) || {};
-    if (aliases[modelArg] !== undefined) {
-      return aliases[modelArg];
+    // Try to resolve as alias (user config + defaults)
+    if (effectiveAliases[modelArg] !== undefined) {
+      return effectiveAliases[modelArg];
     }
 
     // Unknown alias
@@ -150,13 +151,12 @@ function resolveModel(modelArg) {
     return defaultValue;
   }
 
-  // Default is an alias - resolve it
-  const aliases = (config && config.aliases) || {};
-  if (aliases[defaultValue] !== undefined) {
-    return aliases[defaultValue];
+  // Default is an alias - resolve via user config + defaults
+  if (effectiveAliases[defaultValue] !== undefined) {
+    return effectiveAliases[defaultValue];
   }
 
-  // Default alias not found in aliases map
+  // Default alias not found anywhere
   throw new Error(
     `Default alias '${defaultValue}' not found in aliases. Run 'sidecar setup' to fix configuration.`
   );

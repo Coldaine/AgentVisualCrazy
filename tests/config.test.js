@@ -280,9 +280,48 @@ describe('Sidecar Config Module', () => {
       const data = { default: 'gemini', aliases: {} };
       fs.writeFileSync(path.join(tempDir, 'config.json'), JSON.stringify(data));
       const config = loadModule();
-      // 'gemini' has no slash, not in aliases -> throw mentioning sidecar setup
-      expect(() => config.resolveModel('gemini')).toThrow(/sidecar setup/i);
+      // 'gemini' is in DEFAULT_ALIASES so should resolve even with empty user aliases
+      const result = config.resolveModel('gemini');
+      expect(result).toBe(config.getDefaultAliases().gemini);
     });
+
+    it('should resolve default alias (grok) when not in user config but exists in defaults', () => {
+      const data = { default: 'gemini', aliases: { gemini: 'openrouter/google/gemini-3-flash-preview' } };
+      fs.writeFileSync(path.join(tempDir, 'config.json'), JSON.stringify(data));
+      const config = loadModule();
+      const result = config.resolveModel('grok');
+      expect(result).toBe('openrouter/x-ai/grok-4.1-fast');
+    });
+
+    it('should resolve default alias (grok) with no config file at all', () => {
+      const config = loadModule();
+      const result = config.resolveModel('grok');
+      expect(result).toBe('openrouter/x-ai/grok-4.1-fast');
+    });
+
+    it('should resolve default from DEFAULT_ALIASES when user config default points to a built-in alias', () => {
+      const data = { default: 'grok', aliases: {} };
+      fs.writeFileSync(path.join(tempDir, 'config.json'), JSON.stringify(data));
+      const config = loadModule();
+      const result = config.resolveModel(undefined);
+      expect(result).toBe('openrouter/x-ai/grok-4.1-fast');
+    });
+
+    it('should still throw for truly unknown aliases not in defaults or user config', () => {
+      const config = loadModule();
+      expect(() => config.resolveModel('notamodel')).toThrow(/sidecar setup/i);
+    });
+  });
+
+  describe('resolveModel - all default aliases resolve without config file', () => {
+    it.each(Object.entries(require('../src/utils/config').getDefaultAliases()))(
+      'resolves "%s" → "%s"',
+      (alias, expectedModel) => {
+        const config = loadModule();
+        // No config file written — relies entirely on DEFAULT_ALIASES fallback
+        expect(config.resolveModel(alias)).toBe(expectedModel);
+      }
+    );
   });
 
   describe('computeConfigHash', () => {

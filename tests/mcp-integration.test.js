@@ -335,10 +335,12 @@ describe('MCP Server Integration', () => {
       fs.writeFileSync(path.join(dirB, 'summary.md'), 'Summary for session B');
 
       const resultA = await handlers.sidecar_read({ taskId: 'sessionA' }, tmpDir);
-      expect(resultA.content[0].text).toBe('Summary for session A');
+      expect(resultA.content[0].text).toContain('Summary for session A');
+      expect(resultA.content[0].text).toContain('gemini');
 
       const resultB = await handlers.sidecar_read({ taskId: 'sessionB' }, tmpDir);
-      expect(resultB.content[0].text).toBe('Summary for session B');
+      expect(resultB.content[0].text).toContain('Summary for session B');
+      expect(resultB.content[0].text).toContain('opus');
     });
   });
 

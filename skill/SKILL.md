@@ -82,9 +82,9 @@ sidecar start --model openrouter/google/gemini-2.5-flash --prompt "Say hello" --
 **Model names with OpenRouter:**
 When using OpenRouter, prefix the model with `openrouter/`:
 ```bash
-sidecar start --model openrouter/google/gemini-2.5-flash --prompt "..."
-sidecar start --model openrouter/openai/gpt-4o --prompt "..."
-sidecar start --model openrouter/anthropic/claude-sonnet-4 --prompt "..."
+sidecar start --model gemini --prompt "..."
+sidecar start --model gpt --prompt "..."
+sidecar start --model claude --prompt "..."
 ```
 
 ### Option B: Direct API Keys (Provider-Specific)
@@ -111,9 +111,9 @@ Add these to your shell profile (`~/.bashrc`, `~/.zshrc`) for persistence.
 **Model names with direct API keys:**
 When using direct API keys, use the provider/model format WITHOUT the `openrouter/` prefix:
 ```bash
-sidecar start --model google/gemini-2.5-flash --prompt "..."
-sidecar start --model openai/gpt-4o --prompt "..."
-sidecar start --model anthropic/claude-sonnet-4 --prompt "..."
+sidecar start --model google/gemini-3.1-flash-lite-preview --prompt "..."
+sidecar start --model openai/gpt-4.1 --prompt "..."
+sidecar start --model anthropic/claude-sonnet-4-6 --prompt "..."
 ```
 
 ### Model Naming Summary
@@ -122,7 +122,7 @@ sidecar start --model anthropic/claude-sonnet-4 --prompt "..."
 |-----------------|-------------------|---------|
 | OpenRouter | `openrouter/provider/model` | `openrouter/google/gemini-2.5-flash` |
 | Direct Google API | `google/model` | `google/gemini-2.5-flash` |
-| Direct OpenAI API | `openai/model` | `openai/gpt-4o` |
+| Direct OpenAI API | `openai/model` | `openai/gpt-4.1` |
 | Direct Anthropic API | `anthropic/model` | `anthropic/claude-sonnet-4` |
 
 **Important:** The model name format tells the SDK which authentication to use:
