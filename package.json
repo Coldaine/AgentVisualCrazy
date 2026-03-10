@@ -21,7 +21,8 @@
     "url": "https://github.com/jrenaldi79/sidecar"
   },
   "bin": {
-    "sidecar": "./bin/sidecar.js"
+    "sidecar": "./bin/sidecar.js",
+    "claude-sidecar": "./bin/sidecar.js"
   },
   "main": "src/index.js",
   "exports": {
