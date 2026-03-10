@@ -7,18 +7,11 @@
  * Routes commands to appropriate handlers.
  */
 
-// Load environment variables from .env files
 const path = require('path');
-require('dotenv').config({ path: path.join(__dirname, '..', '.env'), quiet: true });
 
-// Also load API keys from ~/.config/sidecar/.env (override: false = project .env takes precedence)
+// Load API keys from ~/.config/sidecar/.env (single source of truth)
 const homeDir = process.env.HOME || process.env.USERPROFILE;
-require('dotenv').config({ path: path.join(homeDir, '.config', 'sidecar', '.env'), override: false, quiet: true });
-
-// Sync OPENROUTER_API_KEY between .env and ~/.local/share/opencode/auth.json
-// so there is never a conflict between the two credential stores.
-const { syncOpenCodeAuth } = require('../src/utils/auth-sync');
-syncOpenCodeAuth();
+require('dotenv').config({ path: path.join(homeDir, '.config', 'sidecar', '.env'), quiet: true });
 
 const { parseArgs, validateStartArgs, getUsage } = require('../src/cli');
 const { validateTaskId } = require('../src/utils/validators');
