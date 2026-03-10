@@ -14,7 +14,7 @@ describe('CLI Argument Parser', () => {
   beforeAll(() => {
     // Set default API keys so existing tests pass
     process.env.OPENROUTER_API_KEY = 'test-key';
-    process.env.GEMINI_API_KEY = 'test-key';
+    process.env.GOOGLE_GENERATIVE_AI_API_KEY = 'test-key';
     process.env.OPENAI_API_KEY = 'test-key';
     process.env.ANTHROPIC_API_KEY = 'test-key';
     process.env.DEEPSEEK_API_KEY = 'test-key';
@@ -467,7 +467,7 @@ describe('CLI Argument Parser', () => {
     beforeEach(() => {
       // Set up default API keys so other tests pass
       process.env.OPENROUTER_API_KEY = 'test-key';
-      process.env.GEMINI_API_KEY = 'test-key';
+      process.env.GOOGLE_GENERATIVE_AI_API_KEY = 'test-key';
       process.env.OPENAI_API_KEY = 'test-key';
       process.env.ANTHROPIC_API_KEY = 'test-key';
       process.env.DEEPSEEK_API_KEY = 'test-key';
@@ -804,14 +804,14 @@ describe('CLI Argument Parser', () => {
         expect(result.error).toContain('OPENROUTER_API_KEY');
       });
 
-      it('should error when GEMINI_API_KEY is missing for google model', () => {
-        delete process.env.GEMINI_API_KEY;
+      it('should error when GOOGLE_GENERATIVE_AI_API_KEY is missing for google model', () => {
+        delete process.env.GOOGLE_GENERATIVE_AI_API_KEY;
         const result = validateStartArgs({
           model: 'google/gemini-2.5-flash',
           prompt: 'Test task'
         });
         expect(result.valid).toBe(false);
-        expect(result.error).toContain('GEMINI_API_KEY');
+        expect(result.error).toContain('GOOGLE_GENERATIVE_AI_API_KEY');
       });
 
       it('should error when OPENAI_API_KEY is missing for openai model', () => {

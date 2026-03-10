@@ -66,7 +66,7 @@ describe('CLI Process: unknown command', () => {
 describe('CLI Process: start validation errors', () => {
   it('exits 1 when --prompt is missing', async () => {
     const { stderr, code } = await runCli(['start', '--model', 'google/gemini-2.5-flash'], {
-      env: { OPENROUTER_API_KEY: 'test', GEMINI_API_KEY: 'test' },
+      env: { OPENROUTER_API_KEY: 'test', GOOGLE_GENERATIVE_AI_API_KEY: 'test' },
     });
     expect(code).toBe(1);
     expect(stderr).toContain('--prompt');

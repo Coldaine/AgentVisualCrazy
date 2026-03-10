@@ -36,8 +36,9 @@ describe('Null Alias Defense', () => {
     tempDir = fs.mkdtempSync(path.join(os.tmpdir(), 'sidecar-null-alias-'));
     originalEnv = { ...process.env };
     process.env.SIDECAR_CONFIG_DIR = tempDir;
+    process.env.SIDECAR_ENV_DIR = tempDir;
     delete process.env.OPENROUTER_API_KEY;
-    delete process.env.GEMINI_API_KEY;
+    delete process.env.GOOGLE_GENERATIVE_AI_API_KEY;
     delete process.env.OPENAI_API_KEY;
     delete process.env.ANTHROPIC_API_KEY;
     delete process.env.DEEPSEEK_API_KEY;

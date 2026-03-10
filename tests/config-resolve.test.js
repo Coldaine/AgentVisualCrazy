@@ -20,7 +20,7 @@ describe('Sidecar Config Module - Model Resolution', () => {
     process.env.SIDECAR_ENV_DIR = tempDir;
     // Clear API keys to ensure deterministic fallback behavior
     delete process.env.OPENROUTER_API_KEY;
-    delete process.env.GEMINI_API_KEY;
+    delete process.env.GOOGLE_GENERATIVE_AI_API_KEY;
     delete process.env.OPENAI_API_KEY;
     delete process.env.ANTHROPIC_API_KEY;
     delete process.env.DEEPSEEK_API_KEY;
@@ -170,8 +170,8 @@ describe('Sidecar Config Module - Model Resolution', () => {
       stderrSpy.mockRestore();
     });
 
-    it('should fall back to google/ when GEMINI_API_KEY is set but OPENROUTER_API_KEY is not', () => {
-      process.env.GEMINI_API_KEY = 'test-gemini-key';
+    it('should fall back to google/ when GOOGLE_GENERATIVE_AI_API_KEY is set but OPENROUTER_API_KEY is not', () => {
+      process.env.GOOGLE_GENERATIVE_AI_API_KEY = 'test-gemini-key';
       jest.resetModules();
       const config = loadModule();
       const result = config.resolveModel('gemini');
@@ -204,7 +204,7 @@ describe('Sidecar Config Module - Model Resolution', () => {
 
     it('should prefer OpenRouter when both OPENROUTER_API_KEY and direct key are set', () => {
       process.env.OPENROUTER_API_KEY = 'test-openrouter-key';
-      process.env.GEMINI_API_KEY = 'test-gemini-key';
+      process.env.GOOGLE_GENERATIVE_AI_API_KEY = 'test-gemini-key';
       jest.resetModules();
       const config = loadModule();
       const result = config.resolveModel('gemini');
@@ -218,7 +218,7 @@ describe('Sidecar Config Module - Model Resolution', () => {
     });
 
     it('should not apply fallback to explicit model strings with slash', () => {
-      process.env.GEMINI_API_KEY = 'test-gemini-key';
+      process.env.GOOGLE_GENERATIVE_AI_API_KEY = 'test-gemini-key';
       jest.resetModules();
       const config = loadModule();
       const result = config.resolveModel('openrouter/google/gemini-3.1-flash-lite-preview');
@@ -232,7 +232,7 @@ describe('Sidecar Config Module - Model Resolution', () => {
     });
 
     it('should apply fallback to default alias resolution', () => {
-      process.env.GEMINI_API_KEY = 'test-gemini-key';
+      process.env.GOOGLE_GENERATIVE_AI_API_KEY = 'test-gemini-key';
       const data = { default: 'gemini', aliases: {} };
       fs.writeFileSync(path.join(tempDir, 'config.json'), JSON.stringify(data));
       jest.resetModules();
@@ -242,7 +242,7 @@ describe('Sidecar Config Module - Model Resolution', () => {
     });
 
     it('should not apply fallback to explicit default model strings', () => {
-      process.env.GEMINI_API_KEY = 'test-gemini-key';
+      process.env.GOOGLE_GENERATIVE_AI_API_KEY = 'test-gemini-key';
       const data = { default: 'openrouter/google/gemini-3.1-flash-lite-preview', aliases: {} };
       fs.writeFileSync(path.join(tempDir, 'config.json'), JSON.stringify(data));
       jest.resetModules();
@@ -254,7 +254,7 @@ describe('Sidecar Config Module - Model Resolution', () => {
 
   describe('detectFallback', () => {
     it('should return true when alias resolved via fallback', () => {
-      process.env.GEMINI_API_KEY = 'test-key';
+      process.env.GOOGLE_GENERATIVE_AI_API_KEY = 'test-key';
       jest.resetModules();
       const config = loadModule();
       expect(config.detectFallback('gemini', 'google/gemini-3.1-flash-lite-preview')).toBe(true);

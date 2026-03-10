@@ -285,9 +285,6 @@ describe('startSidecar includeContext option', () => {
     jest.mock('../../src/utils/agent-mapping', () => ({
       mapAgentToOpenCode: jest.fn(() => ({ agent: 'Build' }))
     }));
-    jest.mock('../../src/utils/config', () => ({
-      checkConfigChanged: jest.fn(() => ({ changed: false }))
-    }));
     jest.mock('../../src/utils/mcp-discovery', () => ({
       discoverParentMcps: jest.fn(() => null)
     }));

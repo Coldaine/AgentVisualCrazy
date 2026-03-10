@@ -8,7 +8,7 @@
 jest.mock('../src/utils/api-key-store', () => ({
   PROVIDER_ENV_MAP: {
     openrouter: 'OPENROUTER_API_KEY',
-    google: 'GEMINI_API_KEY',
+    google: 'GOOGLE_GENERATIVE_AI_API_KEY',
     openai: 'OPENAI_API_KEY',
     anthropic: 'ANTHROPIC_API_KEY',
     deepseek: 'DEEPSEEK_API_KEY',
@@ -36,7 +36,7 @@ describe('applyDirectApiFallback with persisted keys', () => {
 
     // Clear all relevant env vars
     delete process.env.OPENROUTER_API_KEY;
-    delete process.env.GEMINI_API_KEY;
+    delete process.env.GOOGLE_GENERATIVE_AI_API_KEY;
     delete process.env.OPENAI_API_KEY;
     delete process.env.ANTHROPIC_API_KEY;
     delete process.env.DEEPSEEK_API_KEY;
@@ -57,7 +57,7 @@ describe('applyDirectApiFallback with persisted keys', () => {
     jest.mock('../src/utils/api-key-store', () => ({
       PROVIDER_ENV_MAP: {
         openrouter: 'OPENROUTER_API_KEY',
-        google: 'GEMINI_API_KEY',
+        google: 'GOOGLE_GENERATIVE_AI_API_KEY',
         openai: 'OPENAI_API_KEY',
         anthropic: 'ANTHROPIC_API_KEY',
         deepseek: 'DEEPSEEK_API_KEY',
@@ -109,7 +109,7 @@ describe('applyDirectApiFallback with persisted keys', () => {
   });
 
   it('should still check process.env for provider key fallback', () => {
-    process.env.GEMINI_API_KEY = 'google-env-key';
+    process.env.GOOGLE_GENERATIVE_AI_API_KEY = 'google-env-key';
     readApiKeyValues.mockReturnValue({});
 
     const spy = jest.spyOn(process.stderr, 'write').mockImplementation(() => true);
@@ -139,7 +139,7 @@ describe('applyDirectApiFallback un-mocked integration', () => {
 
     // Clear all relevant env vars
     delete process.env.OPENROUTER_API_KEY;
-    delete process.env.GEMINI_API_KEY;
+    delete process.env.GOOGLE_GENERATIVE_AI_API_KEY;
     delete process.env.OPENAI_API_KEY;
     delete process.env.ANTHROPIC_API_KEY;
     delete process.env.DEEPSEEK_API_KEY;
@@ -167,7 +167,7 @@ describe('applyDirectApiFallback un-mocked integration', () => {
     // Write a real .env file with a Google API key (no openrouter key)
     fs.writeFileSync(
       path.join(tempEnvDir, '.env'),
-      'GEMINI_API_KEY=real-google-key-from-env-file\n'
+      'GOOGLE_GENERATIVE_AI_API_KEY=real-google-key-from-env-file\n'
     );
 
     // Reset modules and unmock api-key-store so the real implementation runs

@@ -39,12 +39,13 @@ function textResult(text, isError) {
  */
 function computeNextPoll() {
   return {
-    hint: 'Each unnecessary poll burns context window tokens for zero benefit. Be disciplined: wait at least 30s.',
+    hint: 'Run `sleep 25` in your shell before calling sidecar_status again. This enforces the wait and prevents token-wasting rapid polls.',
+    wait_command: 'sleep 25',
   };
 }
 
-const HEADLESS_START_REMINDER = '<system-reminder>Every sidecar_status call costs context window tokens. Unnecessary polls burn your budget without making the task finish faster. Be disciplined: wait at least 30s between status checks. Do other useful work while waiting.</system-reminder>';
-const HEADLESS_STATUS_REMINDER = '<system-reminder>This sidecar is still running. Each poll costs context tokens for zero benefit. Be disciplined: wait at least 30s before checking again. Do other useful work while waiting.</system-reminder>';
+const HEADLESS_START_REMINDER = '<system-reminder>IMPORTANT: Before calling sidecar_status, you MUST run `sleep 25` in your shell first. This enforces the polling interval and prevents token waste. Do other useful work while waiting, or run `sleep 25` to block until the next poll window.</system-reminder>';
+const HEADLESS_STATUS_REMINDER = '<system-reminder>IMPORTANT: This sidecar is still running. Before calling sidecar_status again, you MUST run `sleep 25` in your shell first. Each premature poll wastes context tokens for zero benefit. Run `sleep 25` now, then check again.</system-reminder>';
 
 /** Spawn a sidecar CLI process (fire-and-forget) */
 function spawnSidecarProcess(args, sessionDir) {
@@ -115,7 +116,7 @@ const handlers = {
     const isHeadless = !!input.noUi;
     const mode = isHeadless ? 'headless' : 'interactive';
     const message = isHeadless
-      ? 'Sidecar started in headless mode. Use sidecar_status to check progress, but be disciplined: each poll burns context tokens. Wait at least 30s between checks.'
+      ? 'Sidecar started in headless mode. Use sidecar_status to check progress.'
       : 'Sidecar opened in interactive mode. Do NOT poll for status. ' +
         "Tell the user: 'Let me know when you're done with the sidecar and have clicked Fold.' " +
         'Then wait for the user to tell you. Use sidecar_read to get results once they confirm.';

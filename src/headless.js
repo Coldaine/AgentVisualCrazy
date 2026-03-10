@@ -421,8 +421,9 @@ async function runHeadless(model, systemPrompt, userMessage, taskId, project, ti
       }
     }
 
-    // Log why the polling loop exited (error level so it always appears in debug.log)
-    logger.error('Polling loop exited', {
+    // Log why the polling loop exited
+    const logLevel = (completed && !sessionError) ? 'info' : 'error';
+    logger[logLevel]('Polling loop exited', {
       taskId,
       completed,
       aborted,

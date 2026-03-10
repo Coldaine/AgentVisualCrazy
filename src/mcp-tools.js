@@ -43,8 +43,8 @@ function getTools() {
       'ALWAYS use HEADLESS (noUi: true) for all of them unless the user ' +
       'explicitly requests interactive. Opening multiple Electron windows ' +
       'at once is disruptive. ' +
-      'For headless mode, estimate task complexity and poll sidecar_status ' +
-      'accordingly. sidecar_status responses include next_poll timing hints. ' +
+      'For headless mode, ALWAYS run `sleep 25` in your shell before each ' +
+      'sidecar_status call to enforce the polling interval. ' +
       'For interactive mode, do not poll. Wait for the user to tell you ' +
       'they\'ve clicked Fold, then use sidecar_read. ' +
       'Call sidecar_guide first if you need help choosing a model or writing a good briefing.' +
@@ -282,13 +282,13 @@ Sidecar spawns parallel conversations with different LLMs and folds results back
 
 ### Headless Mode (noUi: true)
 1. sidecar_start with model + prompt + noUi: true -> get task ID
-2. Estimate task complexity from your briefing:
-   - Quick (questions, lookups, short analysis): first poll at 20s, then every 15-20s
-   - Medium (code review, debugging, research): first poll at 30s, then every 30s
-   - Heavy (implementation, test generation, large refactors): first poll at 45s, then every 45s
+2. Run \`sleep 25\` in your shell (this enforces the polling interval)
 3. sidecar_status to check progress
-4. sidecar_read to get the summary once complete
-5. Act on findings
+4. If still running, run \`sleep 25\` again before each subsequent sidecar_status call
+5. sidecar_read to get the summary once complete
+6. Act on findings
+
+**IMPORTANT:** Always run \`sleep 25\` before every sidecar_status call. This is not optional. Each premature poll wastes context tokens for zero benefit. The sleep command enforces the wait mechanically.
 
 ### Interactive Mode (noUi: false, default)
 1. sidecar_start with model + prompt -> get task ID

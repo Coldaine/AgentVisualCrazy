@@ -119,7 +119,7 @@ function main() {
   console.log('');
   console.log('[claude-sidecar] Setup:');
   console.log('  - Configure API: Run `sidecar setup` or set API keys directly');
-  console.log('  - API keys: OPENROUTER_API_KEY, GEMINI_API_KEY, OPENAI_API_KEY, etc.');
+  console.log('  - API keys: OPENROUTER_API_KEY, GOOGLE_GENERATIVE_AI_API_KEY, OPENAI_API_KEY, etc.');
 }
 
 // Only run main when executed directly (not when required for testing)

@@ -420,7 +420,7 @@ claude mcp add-json sidecar '{"command":"npx","args":["-y","claude-sidecar@lates
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `OPENROUTER_API_KEY` | API key for OpenRouter (multi-model access) | *(required)* |
-| `GEMINI_API_KEY` | Direct Google API key (bypasses OpenRouter) | |
+| `GOOGLE_GENERATIVE_AI_API_KEY` | Direct Google API key (bypasses OpenRouter) | |
 | `OPENAI_API_KEY` | Direct OpenAI API key | |
 | `ANTHROPIC_API_KEY` | Direct Anthropic API key | |
 | `LOG_LEVEL` | Logging verbosity: `error` `warn` `info` `debug` | `error` |

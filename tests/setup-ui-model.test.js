@@ -126,6 +126,75 @@ describe('setup-ui-model', () => {
         const toggleHtml = html.slice(toggleIdx, toggleEnd);
         expect(toggleHtml).toContain('route-pill active');
       });
+
+      it('should disable model when no configured key matches any route', () => {
+        // only google key — deepseek only has openrouter route → unavailable
+        const configuredKeys = { google: true };
+        const html = buildModelStepHTML(MODEL_CHOICES, undefined, configuredKeys);
+        const deepseekIdx = html.indexOf('value="deepseek"');
+        const cardStart = html.lastIndexOf('<label', deepseekIdx);
+        const cardEnd = html.indexOf('</label>', deepseekIdx);
+        const cardHtml = html.slice(cardStart, cardEnd);
+        expect(cardHtml).toContain('model-unavailable');
+        expect(cardHtml).toContain('disabled');
+      });
+
+      it('should not disable model when at least one route has a configured key', () => {
+        // google key configured — gemini has google route → available
+        const configuredKeys = { google: true };
+        const html = buildModelStepHTML(MODEL_CHOICES, undefined, configuredKeys);
+        const geminiIdx = html.indexOf('value="gemini"');
+        const cardStart = html.lastIndexOf('<label', geminiIdx);
+        const cardEnd = html.indexOf('</label>', geminiIdx);
+        const cardHtml = html.slice(cardStart, cardEnd);
+        expect(cardHtml).not.toContain('model-unavailable');
+        expect(cardHtml).not.toContain('disabled');
+      });
+
+      it('should show static text with available provider instead of first provider', () => {
+        // only google key — gemini static should say "via Google AI" not "via OpenRouter"
+        const configuredKeys = { google: true };
+        const html = buildModelStepHTML(MODEL_CHOICES, undefined, configuredKeys);
+        const geminiIdx = html.indexOf('value="gemini"');
+        const cardEnd = html.indexOf('</label>', geminiIdx);
+        const cardHtml = html.slice(geminiIdx, cardEnd);
+        expect(cardHtml).toContain('via Google AI');
+      });
+
+      it('should auto-select first available model when selectedAlias is unavailable', () => {
+        // only google key — gpt has no google route, gemini does
+        const configuredKeys = { google: true };
+        const html = buildModelStepHTML(MODEL_CHOICES, 'gpt', configuredKeys);
+        // gpt should NOT be checked (unavailable)
+        const gptIdx = html.indexOf('value="gpt"');
+        const gptContext = html.slice(Math.max(0, gptIdx - 100), gptIdx + 50);
+        expect(gptContext).not.toContain('checked');
+        // gemini (first available) should be checked
+        const geminiIdx = html.indexOf('value="gemini"');
+        const geminiContext = html.slice(Math.max(0, geminiIdx - 100), geminiIdx + 50);
+        expect(geminiContext).toContain('checked');
+      });
+
+      it('should show "No API key" message on unavailable models', () => {
+        const configuredKeys = { google: true };
+        const html = buildModelStepHTML(MODEL_CHOICES, undefined, configuredKeys);
+        const gptIdx = html.indexOf('value="gpt"');
+        const cardEnd = html.indexOf('</label>', gptIdx);
+        const cardHtml = html.slice(gptIdx, cardEnd);
+        expect(cardHtml).toContain('no-key-hint');
+      });
+
+      it('should mark first available pill as active when openrouter key missing', () => {
+        // only google key — gemini pills should have google as active
+        const configuredKeys = { google: true };
+        const html = buildModelStepHTML(MODEL_CHOICES, undefined, configuredKeys);
+        const geminiToggle = html.match(/route-toggle[^>]*data-alias="gemini"[^>]*>(.*?)<\/span>/s);
+        if (geminiToggle) {
+          const pills = geminiToggle[1];
+          // google pill should be active, openrouter pill should not
+          expect(pills).toMatch(/data-provider="google"[^>]*>Google AI<\/button>/);
+        }
+      });
     });
   });
 

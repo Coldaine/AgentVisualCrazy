@@ -5,7 +5,6 @@
 
 const crypto = require('crypto');
 const fs = require('fs');
-const path = require('path');
 
 const { buildContext } = require('./context-builder');
 const {
@@ -22,7 +21,6 @@ const { runHeadless } = require('../headless');
 const { logger } = require('../utils/logger');
 const { loadMcpConfig, parseMcpSpec } = require('../opencode-client');
 const { mapAgentToOpenCode } = require('../utils/agent-mapping');
-const { checkConfigChanged } = require('../utils/config');
 const { discoverParentMcps } = require('../utils/mcp-discovery');
 
 /** Generate a unique 8-character hex task ID */
@@ -159,19 +157,6 @@ async function startSidecar(options) {
   const reasoning = thinking ? { effort: thinking } : undefined;
 
   logger.info('Starting task', { taskId, model, mode: effectiveHeadless ? 'headless' : 'interactive' });
-
-  // Check for config changes and emit update data to stderr
-  const claudeMdPath = path.join(effectiveProject, 'CLAUDE.md');
-  let currentHash = null;
-  if (fs.existsSync(claudeMdPath)) {
-    const content = fs.readFileSync(claudeMdPath, 'utf-8');
-    const match = content.match(/<!-- sidecar-config-hash: ([0-9a-f]+) -->/);
-    if (match) { currentHash = match[1]; }
-  }
-  const configCheck = checkConfigChanged(currentHash);
-  if (configCheck.changed) {
-    process.stderr.write(`\n[SIDECAR_CONFIG_UPDATE] Model configuration has changed.\nAction: Replace the "Model Aliases" section in CLAUDE.md (near the top, after the title) with the content below.\nIf no "Model Aliases" section exists, add it after the title line.\nThe hash comment tracks config changes — do not remove it.\n\n${configCheck.updateData}\n\n`);
-  }
 
   const context = includeContext !== false
     ? buildContext(effectiveProject, effectiveSession, { contextTurns, contextSince, contextMaxTokens, sessionDir, client, coworkProcess })

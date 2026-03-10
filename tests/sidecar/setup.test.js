@@ -36,7 +36,7 @@ describe('Setup Wizard', () => {
     process.env.SIDECAR_ENV_DIR = envDir;
     // Clear API key env vars
     delete process.env.OPENROUTER_API_KEY;
-    delete process.env.GEMINI_API_KEY;
+    delete process.env.GOOGLE_GENERATIVE_AI_API_KEY;
     delete process.env.OPENAI_API_KEY;
     delete process.env.ANTHROPIC_API_KEY;
   });
@@ -164,7 +164,7 @@ describe('Setup Wizard', () => {
     it('should detect Google key from .env file', () => {
       fs.writeFileSync(
         path.join(envDir, '.env'),
-        'GEMINI_API_KEY=AIza-test-key\n'
+        'GOOGLE_GENERATIVE_AI_API_KEY=AIza-test-key\n'
       );
 
       const { detectApiKeys } = require('../../src/sidecar/setup');
@@ -194,8 +194,8 @@ describe('Setup Wizard', () => {
       expect(result.openrouter).toBe(true);
     });
 
-    it('should detect env var keys (GEMINI_API_KEY)', () => {
-      process.env.GEMINI_API_KEY = 'AIza-env-key';
+    it('should detect env var keys (GOOGLE_GENERATIVE_AI_API_KEY)', () => {
+      process.env.GOOGLE_GENERATIVE_AI_API_KEY = 'AIza-env-key';
 
       const { detectApiKeys } = require('../../src/sidecar/setup');
       const result = detectApiKeys();
@@ -246,7 +246,7 @@ describe('Setup Wizard', () => {
 
       fs.writeFileSync(
         path.join(envDir, '.env'),
-        'GEMINI_API_KEY=AIza-test\n'
+        'GOOGLE_GENERATIVE_AI_API_KEY=AIza-test\n'
       );
 
       const { detectApiKeys } = require('../../src/sidecar/setup');

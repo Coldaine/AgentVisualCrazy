@@ -93,7 +93,7 @@ Use this if you have API keys directly from Google, OpenAI, or Anthropic.
 
 **For Google Gemini:**
 ```bash
-export GEMINI_API_KEY=your-google-api-key
+export GOOGLE_GENERATIVE_AI_API_KEY=your-google-api-key
 ```
 
 **For OpenAI:**
@@ -127,7 +127,7 @@ sidecar start --model anthropic/<model-name> --prompt "..."
 
 **Important:** The model name format tells the SDK which authentication to use:
 - `openrouter/...` → Uses OpenRouter API key from auth.json
-- `google/...` → Uses `GEMINI_API_KEY` environment variable
+- `google/...` → Uses `GOOGLE_GENERATIVE_AI_API_KEY` environment variable
 - `openai/...` → Uses `OPENAI_API_KEY` environment variable
 - `anthropic/...` → Uses `ANTHROPIC_API_KEY` environment variable
 
@@ -256,7 +256,7 @@ The CLI validates all inputs **before** launching the sidecar. Invalid inputs fa
 | Model Prefix | Required Env Var | Example |
 |--------------|------------------|---------|
 | `openrouter/...` | `OPENROUTER_API_KEY` | `export OPENROUTER_API_KEY=sk-or-...` |
-| `google/...` | `GEMINI_API_KEY` | `export GEMINI_API_KEY=...` |
+| `google/...` | `GOOGLE_GENERATIVE_AI_API_KEY` | `export GOOGLE_GENERATIVE_AI_API_KEY=...` |
 | `openai/...` | `OPENAI_API_KEY` | `export OPENAI_API_KEY=sk-...` |
 | `anthropic/...` | `ANTHROPIC_API_KEY` | `export ANTHROPIC_API_KEY=sk-ant-...` |
 | `deepseek/...` | `DEEPSEEK_API_KEY` | `export DEEPSEEK_API_KEY=...` |
@@ -896,7 +896,7 @@ cat ~/.local/share/opencode/auth.json
 
 For direct API keys:
 ```bash
-echo $GEMINI_API_KEY    # For Google models
+echo $GOOGLE_GENERATIVE_AI_API_KEY    # For Google models
 echo $OPENAI_API_KEY    # For OpenAI models
 echo $ANTHROPIC_API_KEY # For Anthropic models
 ```
@@ -988,7 +988,7 @@ The API key for the model's provider is not set:
 export OPENROUTER_API_KEY=sk-or-your-key
 
 # For Google models (google/...)
-export GEMINI_API_KEY=your-google-key
+export GOOGLE_GENERATIVE_AI_API_KEY=your-google-key
 
 # For OpenAI models (openai/...)
 export OPENAI_API_KEY=sk-your-openai-key
@@ -1010,5 +1010,5 @@ sidecar start --model gemini --prompt "Task"
 1. [ ] Install sidecar: `npm install -g claude-sidecar`
 2. [ ] Configure API access (choose one):
    - [ ] OpenRouter: Create `~/.local/share/opencode/auth.json` with your key
-   - [ ] Direct API: Set environment variable (`GEMINI_API_KEY`, etc.)
+   - [ ] Direct API: Set environment variable (`GOOGLE_GENERATIVE_AI_API_KEY`, etc.)
 3. [ ] Test sidecar: `sidecar start --model <your-model> --prompt "Hello" --no-ui`

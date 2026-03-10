@@ -490,7 +490,7 @@ describe('MCP Server Handlers', () => {
         const parsed = JSON.parse(result.content[0].text);
         expect(parsed).toHaveProperty('next_poll');
         expect(parsed.next_poll).toHaveProperty('hint');
-        expect(parsed.next_poll.hint).toContain('at least 30s');
+        expect(parsed.next_poll.hint).toContain('sleep 25');
         expect(parsed.next_poll).not.toHaveProperty('recommended_wait_seconds');
       } finally {
         fs.rmSync(tmpDir, { recursive: true });
@@ -563,7 +563,7 @@ describe('MCP Server Handlers', () => {
       try {
         const result = await handlers.sidecar_status({ taskId: 'ph1' }, tmpDir);
         const parsed = JSON.parse(result.content[0].text);
-        expect(parsed.next_poll.hint).toContain('at least 30s');
+        expect(parsed.next_poll.hint).toContain('sleep 25');
       } finally {
         fs.rmSync(tmpDir, { recursive: true });
       }
@@ -582,7 +582,7 @@ describe('MCP Server Handlers', () => {
         const result = await handlers.sidecar_status({ taskId: 'sr2' }, tmpDir);
         expect(result.content).toHaveLength(2);
         expect(result.content[1].text).toContain('<system-reminder>');
-        expect(result.content[1].text).toContain('at least 30s');
+        expect(result.content[1].text).toContain('sleep 25');
       } finally {
         fs.rmSync(tmpDir, { recursive: true });
       }
@@ -801,7 +801,7 @@ describe('MCP Server Handlers', () => {
         const result = await h.sidecar_start({ prompt: 'implement feature', noUi: true, model: 'google/gemini-test' }, '/tmp');
         const parsed = JSON.parse(result.content[0].text);
         expect(parsed.mode).toBe('headless');
-        expect(parsed.message).toContain('at least 30s');
+        expect(parsed.message).toContain('headless');
       });
     });
 
@@ -814,7 +814,7 @@ describe('MCP Server Handlers', () => {
         const result = await h.sidecar_start({ prompt: 'test task', noUi: true, model: 'google/gemini-test' }, '/tmp');
         expect(result.content).toHaveLength(2);
         expect(result.content[1].text).toContain('<system-reminder>');
-        expect(result.content[1].text).toContain('at least 30s');
+        expect(result.content[1].text).toContain('sleep 25');
       });
     });
 

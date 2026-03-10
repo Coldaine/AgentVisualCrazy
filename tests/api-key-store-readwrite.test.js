@@ -26,7 +26,7 @@ describe('api-key-store readwrite', () => {
     process.env.SIDECAR_ENV_DIR = tmpDir;
     // Clear relevant env vars so they don't leak between tests
     delete process.env.OPENROUTER_API_KEY;
-    delete process.env.GEMINI_API_KEY;
+    delete process.env.GOOGLE_GENERATIVE_AI_API_KEY;
     delete process.env.OPENAI_API_KEY;
     delete process.env.ANTHROPIC_API_KEY;
     delete process.env.DEEPSEEK_API_KEY;
@@ -72,7 +72,7 @@ describe('api-key-store readwrite', () => {
     it('should handle short keys (< 8 chars) without masking', () => {
       fs.writeFileSync(
         path.join(tmpDir, '.env'),
-        'GEMINI_API_KEY=short\n'
+        'GOOGLE_GENERATIVE_AI_API_KEY=short\n'
       );
 
       const result = readApiKeyHints();
@@ -91,7 +91,7 @@ describe('api-key-store readwrite', () => {
     it('should mask keys with exactly 8 chars (no bullets)', () => {
       fs.writeFileSync(
         path.join(tmpDir, '.env'),
-        'GEMINI_API_KEY=12345678\n'
+        'GOOGLE_GENERATIVE_AI_API_KEY=12345678\n'
       );
 
       const result = readApiKeyHints();
@@ -103,7 +103,7 @@ describe('api-key-store readwrite', () => {
     it('should remove a key from .env file', () => {
       fs.writeFileSync(
         path.join(tmpDir, '.env'),
-        'OPENROUTER_API_KEY=sk-or-remove\nGEMINI_API_KEY=goog-keep\n'
+        'OPENROUTER_API_KEY=sk-or-remove\nGOOGLE_GENERATIVE_AI_API_KEY=goog-keep\n'
       );
 
       const result = removeApiKey('openrouter');
@@ -111,7 +111,7 @@ describe('api-key-store readwrite', () => {
 
       const content = fs.readFileSync(path.join(tmpDir, '.env'), 'utf-8');
       expect(content).not.toContain('OPENROUTER_API_KEY');
-      expect(content).toContain('GEMINI_API_KEY=goog-keep');
+      expect(content).toContain('GOOGLE_GENERATIVE_AI_API_KEY=goog-keep');
     });
 
     it('should delete from process.env', () => {
@@ -149,13 +149,13 @@ describe('api-key-store readwrite', () => {
     it('should preserve remaining content after removal', () => {
       fs.writeFileSync(
         path.join(tmpDir, '.env'),
-        '# Comment\nOPENROUTER_API_KEY=sk-or-remove\nGEMINI_API_KEY=keep\n'
+        '# Comment\nOPENROUTER_API_KEY=sk-or-remove\nGOOGLE_GENERATIVE_AI_API_KEY=keep\n'
       );
 
       removeApiKey('openrouter');
       const content = fs.readFileSync(path.join(tmpDir, '.env'), 'utf-8');
       expect(content).toContain('# Comment');
-      expect(content).toContain('GEMINI_API_KEY=keep');
+      expect(content).toContain('GOOGLE_GENERATIVE_AI_API_KEY=keep');
       expect(content).not.toContain('OPENROUTER_API_KEY');
     });
 
@@ -203,7 +203,7 @@ describe('api-key-store readwrite', () => {
 
         fs.writeFileSync(
           path.join(tmpDir, '.env'),
-          'GEMINI_API_KEY=AIza-test\n'
+          'GOOGLE_GENERATIVE_AI_API_KEY=AIza-test\n'
         );
 
         const result = removeApiKey('google');
@@ -228,7 +228,7 @@ describe('api-key-store readwrite', () => {
     it('should return actual key strings from .env file', () => {
       fs.writeFileSync(
         path.join(tmpDir, '.env'),
-        'OPENROUTER_API_KEY=sk-or-real-key\nGEMINI_API_KEY=AIza-real-key\n'
+        'OPENROUTER_API_KEY=sk-or-real-key\nGOOGLE_GENERATIVE_AI_API_KEY=AIza-real-key\n'
       );
 
       const result = readApiKeyValues();

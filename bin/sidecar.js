@@ -13,6 +13,11 @@ const path = require('path');
 const homeDir = process.env.HOME || process.env.USERPROFILE;
 require('dotenv').config({ path: path.join(homeDir, '.config', 'sidecar', '.env'), quiet: true });
 
+// Migrate legacy env var: GEMINI_API_KEY -> GOOGLE_GENERATIVE_AI_API_KEY
+if (process.env.GEMINI_API_KEY && !process.env.GOOGLE_GENERATIVE_AI_API_KEY) {
+  process.env.GOOGLE_GENERATIVE_AI_API_KEY = process.env.GEMINI_API_KEY;
+}
+
 const { parseArgs, validateStartArgs, getUsage } = require('../src/cli');
 const { validateTaskId } = require('../src/utils/validators');
 const { resolveModelFromArgs, validateFallbackModel } = require('../src/utils/start-helpers');

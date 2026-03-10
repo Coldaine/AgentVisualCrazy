@@ -26,7 +26,7 @@ describe('api-key-store', () => {
     process.env.SIDECAR_ENV_DIR = tmpDir;
     // Clear relevant env vars so they don't leak between tests
     delete process.env.OPENROUTER_API_KEY;
-    delete process.env.GEMINI_API_KEY;
+    delete process.env.GOOGLE_GENERATIVE_AI_API_KEY;
     delete process.env.OPENAI_API_KEY;
     delete process.env.ANTHROPIC_API_KEY;
     delete process.env.DEEPSEEK_API_KEY;
@@ -40,7 +40,7 @@ describe('api-key-store', () => {
   describe('PROVIDER_ENV_MAP', () => {
     it('should map provider IDs to env var names', () => {
       expect(PROVIDER_ENV_MAP.openrouter).toBe('OPENROUTER_API_KEY');
-      expect(PROVIDER_ENV_MAP.google).toBe('GEMINI_API_KEY');
+      expect(PROVIDER_ENV_MAP.google).toBe('GOOGLE_GENERATIVE_AI_API_KEY');
       expect(PROVIDER_ENV_MAP.openai).toBe('OPENAI_API_KEY');
       expect(PROVIDER_ENV_MAP.anthropic).toBe('ANTHROPIC_API_KEY');
       expect(PROVIDER_ENV_MAP.deepseek).toBe('DEEPSEEK_API_KEY');
@@ -80,7 +80,7 @@ describe('api-key-store', () => {
     it('should detect keys from .env file', () => {
       fs.writeFileSync(
         path.join(tmpDir, '.env'),
-        'OPENROUTER_API_KEY=sk-or-test-123\nGEMINI_API_KEY=AIza-test\n'
+        'OPENROUTER_API_KEY=sk-or-test-123\nGOOGLE_GENERATIVE_AI_API_KEY=AIza-test\n'
       );
 
       const result = readApiKeys();
@@ -172,12 +172,12 @@ describe('api-key-store', () => {
     it('should preserve existing keys when adding a new provider', () => {
       fs.writeFileSync(
         path.join(tmpDir, '.env'),
-        'GEMINI_API_KEY=goog-key\n'
+        'GOOGLE_GENERATIVE_AI_API_KEY=goog-key\n'
       );
 
       saveApiKey('openrouter', 'sk-or-new');
       const content = fs.readFileSync(path.join(tmpDir, '.env'), 'utf-8');
-      expect(content).toContain('GEMINI_API_KEY=goog-key');
+      expect(content).toContain('GOOGLE_GENERATIVE_AI_API_KEY=goog-key');
       expect(content).toContain('OPENROUTER_API_KEY=sk-or-new');
     });
 
@@ -227,7 +227,7 @@ describe('api-key-store', () => {
     it('should map provider to correct env var name', () => {
       saveApiKey('google', 'AIza-test');
       const content = fs.readFileSync(path.join(tmpDir, '.env'), 'utf-8');
-      expect(content).toContain('GEMINI_API_KEY=AIza-test');
+      expect(content).toContain('GOOGLE_GENERATIVE_AI_API_KEY=AIza-test');
     });
 
     it('should save deepseek key with correct env var name', () => {
@@ -237,6 +237,40 @@ describe('api-key-store', () => {
       const content = fs.readFileSync(path.join(tmpDir, '.env'), 'utf-8');
       expect(content).toContain('DEEPSEEK_API_KEY=sk-deepseek-test-456');
       expect(process.env.DEEPSEEK_API_KEY).toBe('sk-deepseek-test-456');
+    });
+  });
+
+  describe('legacy key migration', () => {
+    it('should auto-migrate GEMINI_API_KEY to GOOGLE_GENERATIVE_AI_API_KEY', () => {
+      // Write .env with the old key name
+      fs.writeFileSync(
+        path.join(tmpDir, '.env'),
+        'GEMINI_API_KEY=AIza-legacy-key\n'
+      );
+
+      // readApiKeys triggers loadEnvEntries which auto-migrates
+      const result = readApiKeys();
+      expect(result.google).toBe(true);
+
+      // File should be rewritten with the new key name
+      const content = fs.readFileSync(path.join(tmpDir, '.env'), 'utf-8');
+      expect(content).toContain('GOOGLE_GENERATIVE_AI_API_KEY=AIza-legacy-key');
+      expect(content).not.toContain('GEMINI_API_KEY');
+    });
+
+    it('should not migrate when new key already exists', () => {
+      fs.writeFileSync(
+        path.join(tmpDir, '.env'),
+        'GEMINI_API_KEY=old-key\nGOOGLE_GENERATIVE_AI_API_KEY=new-key\n'
+      );
+
+      const result = readApiKeys();
+      expect(result.google).toBe(true);
+
+      // File should be unchanged (new key takes precedence)
+      const content = fs.readFileSync(path.join(tmpDir, '.env'), 'utf-8');
+      expect(content).toContain('GOOGLE_GENERATIVE_AI_API_KEY=new-key');
+      expect(content).toContain('GEMINI_API_KEY=old-key');
     });
   });
 

@@ -19,7 +19,7 @@ describe('Sidecar Config Module - Hashing & Alias Table', () => {
     process.env.SIDECAR_CONFIG_DIR = tempDir;
     // Clear API keys to ensure deterministic fallback behavior
     delete process.env.OPENROUTER_API_KEY;
-    delete process.env.GEMINI_API_KEY;
+    delete process.env.GOOGLE_GENERATIVE_AI_API_KEY;
     delete process.env.OPENAI_API_KEY;
     delete process.env.ANTHROPIC_API_KEY;
     delete process.env.DEEPSEEK_API_KEY;

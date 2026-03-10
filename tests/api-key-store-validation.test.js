@@ -29,7 +29,7 @@ describe('api-key-store validation', () => {
     process.env.SIDECAR_ENV_DIR = tmpDir;
     // Clear relevant env vars so they don't leak between tests
     delete process.env.OPENROUTER_API_KEY;
-    delete process.env.GEMINI_API_KEY;
+    delete process.env.GOOGLE_GENERATIVE_AI_API_KEY;
     delete process.env.OPENAI_API_KEY;
     delete process.env.ANTHROPIC_API_KEY;
     delete process.env.DEEPSEEK_API_KEY;

@@ -4,42 +4,20 @@
  */
 const fs = require('fs');
 const path = require('path');
-const https = require('https');
+const { validateApiKey, validateOpenRouterKey, VALIDATION_ENDPOINTS } = require('./api-key-validation');
 
 /** Maps provider IDs to environment variable names */
 const PROVIDER_ENV_MAP = {
   openrouter: 'OPENROUTER_API_KEY',
-  google: 'GEMINI_API_KEY',
+  google: 'GOOGLE_GENERATIVE_AI_API_KEY',
   openai: 'OPENAI_API_KEY',
   anthropic: 'ANTHROPIC_API_KEY',
   deepseek: 'DEEPSEEK_API_KEY'
 };
 
-/** Validation endpoints per provider */
-const VALIDATION_ENDPOINTS = {
-  openrouter: {
-    url: 'https://openrouter.ai/api/v1/models',
-    authHeader: (key) => ({ 'Authorization': `Bearer ${key}` })
-  },
-  openai: {
-    url: 'https://api.openai.com/v1/models',
-    authHeader: (key) => ({ 'Authorization': `Bearer ${key}` })
-  },
-  anthropic: {
-    url: 'https://api.anthropic.com/v1/messages',
-    authHeader: (key) => ({
-      'x-api-key': key,
-      'anthropic-version': '2023-06-01'
-    })
-  },
-  google: {
-    url: 'https://generativelanguage.googleapis.com/v1beta/models',
-    authHeader: () => ({})
-  },
-  deepseek: {
-    url: 'https://api.deepseek.com/models',
-    authHeader: (key) => ({ 'Authorization': `Bearer ${key}` })
-  }
+/** Legacy key names that have been renamed (old -> new) */
+const LEGACY_KEY_NAMES = {
+  'GEMINI_API_KEY': 'GOOGLE_GENERATIVE_AI_API_KEY'
 };
 
 /** Get the path to the .env file */
@@ -75,7 +53,21 @@ function parseEnvContent(content) {
   return entries;
 }
 
-/** Load .env file entries */
+/** Migrate a legacy key name in a .env file (best-effort, one-time) */
+function migrateEnvFileKey(envPath, oldName, newName) {
+  try {
+    const content = fs.readFileSync(envPath, 'utf-8');
+    const re = new RegExp(`^${oldName}=`, 'm');
+    const updated = content.replace(re, `${newName}=`);
+    if (updated !== content) {
+      fs.writeFileSync(envPath, updated, { mode: 0o600 });
+    }
+  } catch (_err) {
+    // Best effort
+  }
+}
+
+/** Load .env file entries (auto-migrates legacy key names) */
 function loadEnvEntries() {
   const envPath = getEnvPath();
   let fileEntries = new Map();
@@ -83,6 +75,14 @@ function loadEnvEntries() {
     if (fs.existsSync(envPath)) {
       const content = fs.readFileSync(envPath, 'utf-8');
       fileEntries = parseEnvContent(content);
+      // Auto-migrate legacy key names
+      for (const [oldName, newName] of Object.entries(LEGACY_KEY_NAMES)) {
+        if (fileEntries.has(oldName) && !fileEntries.has(newName)) {
+          fileEntries.set(newName, fileEntries.get(oldName));
+          fileEntries.delete(oldName);
+          migrateEnvFileKey(envPath, oldName, newName);
+        }
+      }
     }
   } catch (_err) {
     // Ignore read errors
@@ -231,59 +231,6 @@ function removeApiKey(provider) {
   return { success: true, alsoInAuthJson: checkAuthJson(provider) };
 }
 
-/** Validate an API key by making a test request to the provider's API */
-function validateApiKey(provider, key) {
-  if (!key || key.trim().length === 0) {
-    return Promise.resolve({ valid: false, error: 'API key is required' });
-  }
-
-  const endpoint = VALIDATION_ENDPOINTS[provider];
-  if (!endpoint) {
-    return Promise.resolve({ valid: false, error: `Unknown provider: ${provider}` });
-  }
-
-  const trimmedKey = key.trim();
-
-  // Google uses query param auth, not header
-  let url = endpoint.url;
-  if (provider === 'google') {
-    url = `${endpoint.url}?key=${trimmedKey}`;
-  }
-
-  const headers = endpoint.authHeader(trimmedKey);
-
-  return new Promise((resolve) => {
-    const req = https.get(url, { headers }, (res) => {
-      res.on('data', () => {});
-      res.on('end', () => {
-        // Anthropic returns 401 for invalid key, 400/405 for valid key with no body
-        if (provider === 'anthropic') {
-          if (res.statusCode === 401) {
-            resolve({ valid: false, error: 'Invalid API key (401)' });
-          } else {
-            resolve({ valid: true });
-          }
-          return;
-        }
-
-        if (res.statusCode === 200) {
-          resolve({ valid: true });
-        } else if (res.statusCode === 401 || res.statusCode === 403) {
-          resolve({ valid: false, error: `Invalid API key (${res.statusCode})` });
-        } else {
-          resolve({ valid: false, error: `Unexpected response (${res.statusCode})` });
-        }
-      });
-    });
-    req.on('error', (err) => {
-      resolve({ valid: false, error: err.message });
-    });
-  });
-}
-
-// Backwards compat alias
-const validateOpenRouterKey = validateApiKey;
-
 module.exports = {
   getEnvPath,
   readApiKeys,
@@ -294,5 +241,6 @@ module.exports = {
   validateApiKey,
   validateOpenRouterKey,
   PROVIDER_ENV_MAP,
+  LEGACY_KEY_NAMES,
   VALIDATION_ENDPOINTS
 };
