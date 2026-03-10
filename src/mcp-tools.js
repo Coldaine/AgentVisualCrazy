@@ -33,15 +33,13 @@ function getTools() {
     name: 'sidecar_start',
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
     description:
-      'Spawn a multi-model sidecar conversation with a different LLM ' +
-      '(Gemini, GPT, etc.). Returns a task ID immediately. ' +
+      'Spawn a sidecar conversation with a different LLM. Returns a task ID immediately. ' +
       'Mode selection: use INTERACTIVE (default, noUi: false) for research, ' +
       'exploration, analysis, and any task where the user benefits from watching ' +
       'progress live. It eliminates the polling problem entirely. ' +
       'Use HEADLESS (noUi: true) only for background automation the user does NOT ' +
       'need to monitor. When in doubt, use interactive. ' +
-      'EXCEPTION: When spawning multiple sidecars simultaneously ' +
-      '(e.g., user asks to query Gemini AND GPT at the same time), ' +
+      'EXCEPTION: When spawning multiple sidecars simultaneously, ' +
       'ALWAYS use HEADLESS (noUi: true) for all of them unless the user ' +
       'explicitly requests interactive. Opening multiple Electron windows ' +
       'at once is disruptive. ' +
@@ -49,13 +47,12 @@ function getTools() {
       'accordingly. sidecar_status responses include next_poll timing hints. ' +
       'For interactive mode, do not poll. Wait for the user to tell you ' +
       'they\'ve clicked Fold, then use sidecar_read. ' +
-      'Call sidecar_guide first if you need help choosing models or writing a good briefing.' +
+      'Call sidecar_guide first if you need help choosing a model or writing a good briefing.' +
       ' Pass includeContext: false when the briefing is fully self-contained.',
     inputSchema: {
       model: safeModel.optional().describe(
-        `Model alias (${aliasNames}) or full ID ` +
-        '(openrouter/google/gemini-3-flash-preview). ' +
-        'If omitted, uses the configured default model.'
+        `Short alias (${aliasNames}) or full provider/model ID. ` +
+        'If omitted, uses the configured default. Call sidecar_guide to see all aliases.'
       ),
       prompt: z.string().describe(
         'Detailed task briefing. Include: objective, background, ' +
@@ -204,7 +201,7 @@ function getTools() {
         'New task description for the continuation.'
       ),
       model: safeModel.optional().describe(
-        `Override model (${aliasNames}). Defaults to the original session's model.`
+        `Override model — short alias (${aliasNames}) or full provider/model ID. Defaults to the original session's model.`
       ),
       noUi: z.boolean().optional().default(false).describe(
         'Run headless. Default false (opens Electron window).'
@@ -315,7 +312,7 @@ Include: Objective, Background, Files of interest, Success criteria, Constraints
 |-------|-------|
 ${aliasRows}
 
-Or use full IDs: openrouter/google/gemini-3-flash-preview
+Or use full IDs in provider/model format (e.g., openrouter/provider/model-id).
 Run sidecar_setup to configure defaults and add custom aliases.
 
 ## Session Matching

@@ -59,13 +59,44 @@ describe('MCP Tool Definitions', () => {
     }
   });
 
-  test('model description contains actual alias names', () => {
+  test('model description contains dynamic alias keys', () => {
     const startTool = TOOLS.find(t => t.name === 'sidecar_start');
     const modelDesc = startTool.inputSchema.model.description;
     expect(modelDesc).toContain('codex');
     expect(modelDesc).toContain('opus');
     expect(modelDesc).toContain('gemini');
     expect(modelDesc).toContain('deepseek');
+  });
+
+  test('sidecar_start description does not contain brand or model names', () => {
+    const startTool = TOOLS.find(t => t.name === 'sidecar_start');
+    const desc = startTool.description.toLowerCase();
+    expect(desc).not.toContain('gemini');
+    expect(desc).not.toContain('gpt');
+    expect(desc).not.toContain('openrouter');
+    expect(desc).not.toContain('anthropic');
+  });
+
+  test('model param description does not contain specific model IDs', () => {
+    const startTool = TOOLS.find(t => t.name === 'sidecar_start');
+    const modelDesc = startTool.inputSchema.model.description;
+    // Strip the parenthesized alias list before checking — alias names like
+    // "gemini-3.1" are fine, but full IDs like "openrouter/google/gemini-3-flash-preview" are not
+    const descWithoutAliases = modelDesc.replace(/\([^)]+\)/g, '');
+    expect(descWithoutAliases).not.toMatch(/openrouter\//);
+    expect(descWithoutAliases).not.toMatch(/gemini-\d/);
+    expect(descWithoutAliases).not.toMatch(/gpt-\d/);
+  });
+
+  test('sidecar_guide guide text does not contain hardcoded model IDs in prose', () => {
+    const guide = getGuideText();
+    // The alias table rows are fine (dynamic), but prose should not name specific models
+    const linesWithoutTable = guide.split('\n')
+      .filter(l => !l.startsWith('|') && !l.startsWith('${'));
+    const prose = linesWithoutTable.join('\n');
+    expect(prose).not.toMatch(/gemini-\d/);
+    expect(prose).not.toMatch(/gpt-\d/);
+    expect(prose).not.toContain('gemini-3-flash-preview');
   });
 
   describe('sidecar_start', () => {
