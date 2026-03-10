@@ -1,5 +1,5 @@
 # CLAUDE.md
-<!-- Last updated: 2026-03-08 -->
+<!-- Last updated: 2026-03-09 -->
 
 This file provides guidance to Claude Code when working with code in this repository.
 
@@ -198,7 +198,8 @@ sidecar/
 │   │   └── cowork-agent-prompt.js  # Cowork client agent prompt (replaces SE base)
 │   └── utils/                   # Utility modules
 │       ├── agent-mapping.js     # OpenCode agent mapping & validation
-│       ├── config.js            # Config loading, alias resolution, hash detection
+│       ├── auth-sync.js         # Sync OPENROUTER_API_KEY between .env and auth.json
+│       ├── config.js            # Config loading, alias resolution, provider model sync
 │       ├── validators.js        # CLI input validation helpers
 │       ├── logger.js            # Structured logging
 │       ├── path-setup.js        # PATH configuration for OpenCode
@@ -227,6 +228,8 @@ sidecar/
 │   ├── mcp-server.test.js
 │   ├── mcp-integration.test.js
 │   ├── postinstall.test.js
+│   ├── auth-sync.test.js
+│   ├── opencode-client-cowork.test.js
 │   ├── sidecar/                 # Tests for modular sidecar operations
 │   │   ├── start.test.js
 │   │   ├── resume.test.js
@@ -318,7 +321,8 @@ sidecar/
 | `drift.js` | Context staleness | `calculateDrift()`, `isDriftSignificant()`, `countTurnsSince()` |
 | `session.js` | Session resolution | Primary (explicit ID) / Fallback (most recent mtime) |
 | `utils/agent-mapping.js` | OpenCode agent mapping | `mapAgentToOpenCode()`, `isValidAgent()`, `OPENCODE_AGENTS` |
-| `utils/config.js` | Config loading, alias resolution, hash detection | `loadConfig()`, `saveConfig()`, `resolveModel()`, `computeConfigHash()` |
+| `utils/auth-sync.js` | Sync API keys between .env and auth.json | `syncOpenCodeAuth()` |
+| `utils/config.js` | Config loading, alias resolution, provider model sync | `loadConfig()`, `saveConfig()`, `resolveModel()`, `buildProviderModels()` |
 | `utils/model-router.js` | Subagent model routing | `resolveModel()`, `getConfiguredCheapModel()`, `isRoutingEnabled()` |
 | `utils/agent-model-config.js` | Model config persistence | `loadConfig()`, `saveConfig()`, `getModelForAgent()`, `setAgentModel()` |
 | `utils/validators.js` | CLI input validation | `validateBriefingContent()`, `validateProjectPath()`, `validateApiKey()` |
@@ -445,6 +449,8 @@ Use `src/utils/logger.js` (levels: error/warn/info/debug). Logs go to stderr to 
 | `mcp-headless-lifecycle.test.js` | MCP headless lifecycle | Start, poll, progress, crash, abort, read |
 | `mcp-discovery.test.js` | MCP discovery | Plugin chain, `~/.claude.json` mcpServers, merge priority, sidecar exclusion |
 | `mcp-repomix-e2e.integration.test.js` | MCP E2E (real LLM + repomix) | Real discovery → headless sidecar → repomix tool call |
+| `auth-sync.test.js` | Auth sync | Matching keys no-op, conflict resolution, bidirectional sync |
+| `opencode-client-cowork.test.js` | OpenCode client config | Client-aware prompt, systemPrompt, port handling, provider model sync |
 | `updater.test.js` | Update checker | Mock states, performUpdate spawn, CLI integration |
 | `evals/tests/transcript_parser.test.js` | Stream-json parsing | Tool call extraction, token usage, error capture |
 | `evals/tests/evaluator.test.js` | Eval criteria | Programmatic checks (7 types), LLM-as-judge prompt/response |
