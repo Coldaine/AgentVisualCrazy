@@ -100,16 +100,56 @@ function buildKeysScript() {
     if (!selectedProvider) { return; }
     removeBtn.disabled = true;
     try {
-      await window.sidecarSetup.invoke('sidecar:remove-key', selectedProvider.id);
+      var res = await window.sidecarSetup.invoke('sidecar:remove-key', selectedProvider.id);
       delete configuredKeys[selectedProvider.id]; delete keyHints[selectedProvider.id];
       var c = document.getElementById('check-' + selectedProvider.id);
       if (c) { c.textContent = ''; }
       keyInput.value = ''; keyInput.type = 'password'; keyValid = false; setInputState(null);
       statusMsg.textContent = 'Key removed'; statusMsg.className = 'status-testing';
       removeBtn.style.display = 'none'; updateNextState();
+
+      // Phase 2: if key also in OpenCode auth.json, prompt user
+      if (res && res.alsoInAuthJson) {
+        showConfirmDialog(
+          'This key also exists in OpenCode. Remove it from OpenCode too?',
+          async function() {
+            await window.sidecarSetup.invoke('sidecar:remove-from-opencode', selectedProvider.id);
+          }
+        );
+      }
     } catch (_e) { statusMsg.textContent = 'Failed to remove'; statusMsg.className = 'status-invalid'; }
     removeBtn.disabled = false;
-  });`;
+  });
+
+  function showConfirmDialog(message, onConfirm) {
+    var overlay = document.createElement('div');
+    overlay.className = 'confirm-overlay';
+    var box = document.createElement('div');
+    box.className = 'confirm-box';
+    var p = document.createElement('p');
+    p.textContent = message;
+    box.appendChild(p);
+    var btns = document.createElement('div');
+    btns.className = 'confirm-btns';
+    var noBtn = document.createElement('button');
+    noBtn.className = 'secondary';
+    noBtn.textContent = 'Sidecar only';
+    var yesBtn = document.createElement('button');
+    yesBtn.className = 'primary';
+    yesBtn.textContent = 'Remove from both';
+    btns.appendChild(noBtn);
+    btns.appendChild(yesBtn);
+    box.appendChild(btns);
+    overlay.appendChild(box);
+    document.body.appendChild(overlay);
+    yesBtn.addEventListener('click', async function() {
+      await onConfirm();
+      overlay.remove();
+    });
+    noBtn.addEventListener('click', function() {
+      overlay.remove();
+    });
+  }`;
 }
 
 module.exports = { buildKeysScript };

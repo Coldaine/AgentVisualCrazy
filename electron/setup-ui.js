@@ -29,7 +29,7 @@ function buildSetupHTML(options = {}) {
   <div class="header"><svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M3 2v12" stroke="#D97757" stroke-width="2" stroke-linecap="round"/><path d="M10 2v5c0 2-3 3-7 5" stroke="#D97757" stroke-width="2" stroke-linecap="round" stroke-opacity="0.6"/></svg><span class="header-title">${brandName} Setup</span></div>
   <div class="progress-bar"><div class="progress-step active" id="step-1"><span class="progress-dot">1</span><span>API Keys</span></div><div class="progress-connector"></div><div class="progress-step" id="step-2"><span class="progress-dot">2</span><span>Models</span></div><div class="progress-connector"></div><div class="progress-step" id="step-3"><span class="progress-dot">3</span><span>Routing</span></div><div class="progress-connector"></div><div class="progress-step" id="step-4"><span class="progress-dot">4</span><span>Review</span></div></div>
   <div class="content">
-    <div class="wizard-step visible" id="wizard-step-1">${keysHtml}</div>
+    <div class="wizard-step visible" id="wizard-step-1"><div id="import-notice"></div>${keysHtml}</div>
     <div class="wizard-step" id="wizard-step-2">${modelHtml}</div>
     <div class="wizard-step" id="wizard-step-3">${aliasHtml}</div>
     <div class="wizard-step" id="wizard-step-4">
@@ -85,6 +85,20 @@ function buildWizardScript(providersJson, modelChoicesJson, providerNamesJson, d
         });
         if (data.hints) { keyHints = data.hints; }
         updateNextState();
+        if (data.imported && data.imported.length > 0) {
+          var notice = document.getElementById('import-notice');
+          if (notice) {
+            var noticeDiv = document.createElement('div');
+            noticeDiv.className = 'import-notice';
+            noticeDiv.textContent = 'Imported ' + data.imported.length + ' key(s) from OpenCode: ' + data.imported.join(', ');
+            var dismissBtn = document.createElement('span');
+            dismissBtn.className = 'dismiss';
+            dismissBtn.textContent = String.fromCharCode(0xD7);
+            dismissBtn.addEventListener('click', function() { notice.removeChild(noticeDiv); });
+            noticeDiv.appendChild(dismissBtn);
+            notice.appendChild(noticeDiv);
+          }
+        }
       }
     } catch (_e) {}
   })();
@@ -140,7 +154,10 @@ function buildWizardScript(providersJson, modelChoicesJson, providerNamesJson, d
     finishBtn.style.display = step === 4 ? '' : 'none';
     if (step === 4) { buildReview(); }
     if (step === 2) { updateRoutingPills(); }
-    if (step === 3 && !window.availableModels) { fetchAvailableModels(); }
+    if (step === 3) {
+      updateAliasRoutes();
+      if (!window.availableModels) { fetchAvailableModels(); }
+    }
     updateNextState();
   }
 
@@ -151,10 +168,44 @@ function buildWizardScript(providersJson, modelChoicesJson, providerNamesJson, d
   }
 
   function updateRoutingPills() {
+    var hasAnyKey = Object.values(configuredKeys).some(function(v) { return v; });
+    var firstAvailableAlias = null;
     modelChoicesData.forEach(function(mc) {
       var provs = Object.keys(mc.routes);
-      if (provs.length < 2) { return; }
       var available = provs.filter(function(p) { return configuredKeys[p]; });
+      var card = document.querySelector('.model-card input[value="' + mc.alias + '"]');
+      var cardLabel = card ? card.closest('.model-card') : null;
+      var isAvailable = !hasAnyKey || available.length > 0;
+
+      // Enable/disable the model card
+      if (card) {
+        card.disabled = !isAvailable;
+        if (cardLabel) {
+          cardLabel.classList.toggle('model-unavailable', !isAvailable);
+        }
+      }
+      if (isAvailable && !firstAvailableAlias) { firstAvailableAlias = mc.alias; }
+
+      // Update "no key" hint visibility
+      var noKeyHint = cardLabel ? cardLabel.querySelector('.no-key-hint') : null;
+      if (!isAvailable && !noKeyHint && cardLabel) {
+        var hint = document.createElement('span');
+        hint.className = 'no-key-hint';
+        hint.textContent = 'No API key configured';
+        cardLabel.appendChild(hint);
+      } else if (isAvailable && noKeyHint) {
+        noKeyHint.remove();
+      }
+
+      // Auto-switch routing if selected provider's key was removed
+      var currentRoute = routingChoices[mc.alias];
+      if (currentRoute && !configuredKeys[currentRoute] && available.length > 0) {
+        routingChoices[mc.alias] = available[0];
+      }
+
+      // Update route toggle/static/pills
+      if (provs.length < 2) { return; }
+      var bestProvider = available.length > 0 ? available[0] : provs[0];
       var toggle = document.querySelector('.route-toggle[data-alias="' + mc.alias + '"]');
       var staticEl = document.querySelector('.route-static[data-alias="' + mc.alias + '"]');
       if (!toggle) { return; }
@@ -163,12 +214,79 @@ function buildWizardScript(providersJson, modelChoicesJson, providerNamesJson, d
         if (staticEl) { staticEl.style.display = 'none'; }
       } else {
         toggle.style.display = 'none';
-        if (staticEl) { staticEl.style.display = ''; }
+        if (staticEl) {
+          staticEl.style.display = '';
+          staticEl.textContent = 'via ' + (providerNamesData[bestProvider] || bestProvider);
+        }
       }
-      var selected = routingChoices[mc.alias] || 'openrouter';
+      var selected = routingChoices[mc.alias] || bestProvider;
       toggle.querySelectorAll('.route-pill').forEach(function(pill) {
         pill.classList.toggle('active', pill.getAttribute('data-provider') === selected);
       });
+    });
+
+    // Auto-select first available model if current selection is disabled
+    var checkedRadio = document.querySelector('input[name="default-model"]:checked');
+    if (checkedRadio && checkedRadio.disabled && firstAvailableAlias) {
+      var newRadio = document.querySelector('input[name="default-model"][value="' + firstAvailableAlias + '"]');
+      if (newRadio) { newRadio.checked = true; }
+    }
+    if (!checkedRadio && firstAvailableAlias) {
+      var fallback = document.querySelector('input[name="default-model"][value="' + firstAvailableAlias + '"]');
+      if (fallback) { fallback.checked = true; }
+    }
+  }
+
+  function updateAliasRoutes() {
+    var hasAnyKey = Object.values(configuredKeys).some(function(v) { return v; });
+    if (!hasAnyKey) { return; }
+    // Build lookup: alias → best model string, only using providers with keys
+    var routedModels = {};
+    modelChoicesData.forEach(function(mc) {
+      var prov = routingChoices[mc.alias];
+      // Only use cached routing choice if that provider's key still exists
+      if (prov && mc.routes[prov] && configuredKeys[prov]) {
+        routedModels[mc.alias] = mc.routes[prov];
+      } else {
+        // Pick first provider with a configured key
+        var provs = Object.keys(mc.routes);
+        for (var i = 0; i < provs.length; i++) {
+          if (configuredKeys[provs[i]]) {
+            routedModels[mc.alias] = mc.routes[provs[i]];
+            routingChoices[mc.alias] = provs[i]; // Update cached choice
+            break;
+          }
+        }
+      }
+    });
+    // Update the example box
+    var exampleModel = document.querySelector('.example-model');
+    if (exampleModel && routedModels.gemini) {
+      exampleModel.textContent = routedModels.gemini;
+    }
+    document.querySelectorAll('.alias-row').forEach(function(row) {
+      var alias = row.getAttribute('data-alias');
+      if (!alias || row.classList.contains('alias-deleted')) { return; }
+      if (row.querySelector('.alias-model-select')) { return; }
+      var modelSpan = row.querySelector('.alias-model');
+      if (!modelSpan) { return; }
+      // For MODEL_CHOICES aliases: update text to match available routing
+      if (routedModels[alias]) {
+        modelSpan.textContent = routedModels[alias];
+        aliasEdits[alias] = routedModels[alias];
+        row.classList.remove('alias-no-key');
+        return;
+      }
+      // Check if the model's provider has a configured key
+      var model = aliasEdits[alias] || modelSpan.textContent;
+      var prefix = model.split('/')[0];
+      var noKey = false;
+      if (prefix === 'openrouter') {
+        noKey = !configuredKeys.openrouter;
+      } else if (configuredKeys.hasOwnProperty(prefix)) {
+        noKey = !configuredKeys[prefix];
+      }
+      row.classList.toggle('alias-no-key', noKey);
     });
   }
 
@@ -180,7 +298,11 @@ function buildWizardScript(providersJson, modelChoicesJson, providerNamesJson, d
     document.getElementById('review-model').textContent = r ? r.value : 'Not selected';
     var routeLines = [];
     modelChoicesData.forEach(function(mc) {
-      var prov = routingChoices[mc.alias] || 'openrouter';
+      var prov = routingChoices[mc.alias];
+      if (!prov) {
+        var provs = Object.keys(mc.routes);
+        prov = provs.find(function(p) { return configuredKeys[p]; }) || provs[0];
+      }
       var provName = providerNamesData[prov] || prov;
       routeLines.push(mc.alias + ' \\u2192 ' + provName);
     });
@@ -214,7 +336,11 @@ function buildWizardScript(providersJson, modelChoicesJson, providerNamesJson, d
       var dm = r ? r.value : 'gemini';
       var routingOverrides = {};
       modelChoicesData.forEach(function(mc) {
-        var prov = routingChoices[mc.alias] || 'openrouter';
+        var prov = routingChoices[mc.alias];
+        if (!prov) {
+          var provs = Object.keys(mc.routes);
+          prov = provs.find(function(p) { return configuredKeys[p]; }) || provs[0];
+        }
         routingOverrides[mc.alias] = mc.routes[prov];
       });
       Object.keys(aliasEdits).forEach(function(k) {

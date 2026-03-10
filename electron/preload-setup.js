@@ -15,6 +15,7 @@ contextBridge.exposeInMainWorld('sidecarSetup', {
       'sidecar:validate-key',
       'sidecar:save-key',
       'sidecar:remove-key',
+      'sidecar:remove-from-opencode',
       'sidecar:setup-done',
       'sidecar:save-config',
       'sidecar:get-config',

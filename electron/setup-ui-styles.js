@@ -143,9 +143,16 @@ function buildWizardCSS() {
   }
   .model-card:hover { border-color: #5A5550; }
   .model-card:has(input:checked) { border-color: #D97757; background: #352E2B; }
+  .model-card.model-unavailable {
+    opacity: 0.45; cursor: not-allowed; border-color: #2A2826;
+  }
+  .model-card.model-unavailable:hover { border-color: #2A2826; }
   .model-card input[type="radio"] { accent-color: #D97757; }
   .model-alias { color: #E8E0D8; font-weight: 500; font-size: 13px; min-width: 80px; }
   .model-label { color: #A09B96; font-size: 12px; }
+  .no-key-hint {
+    margin-left: auto; font-size: 10px; color: #7A756F; font-style: italic;
+  }
 
   /* Route toggle (Step 2) */
   .route-toggle {
@@ -263,6 +270,39 @@ function buildWizardCSS() {
   }
   .alias-add-btn:hover { border-color: #D97757; color: #D97757; }
   .alias-row.alias-deleted { text-decoration: line-through; opacity: 0.4; pointer-events: none; }
+  .alias-row.alias-no-key { opacity: 0.45; }
+  .alias-row.alias-no-key .alias-model::after {
+    content: ' (no key)'; color: #7A756F; font-style: italic; font-size: 10px;
+  }
+
+  /* Import notice banner */
+  .import-notice {
+    background: #3D3A38; border: 1px solid #D97757; border-radius: 6px;
+    padding: 8px 12px; margin-bottom: 12px; font-size: 11px;
+    color: #D97757; display: flex; align-items: center; gap: 8px;
+  }
+  .import-notice .dismiss { cursor: pointer; margin-left: auto; opacity: 0.6; }
+  .import-notice .dismiss:hover { opacity: 1; }
+
+  /* Confirm dialog */
+  .confirm-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.5); display: flex; align-items: center;
+    justify-content: center; z-index: 100;
+  }
+  .confirm-box {
+    background: #2D2B2A; border: 1px solid #3D3A38; border-radius: 8px;
+    padding: 20px; max-width: 360px; text-align: center;
+  }
+  .confirm-box p { margin-bottom: 16px; font-size: 13px; }
+  .confirm-btns { display: flex; gap: 8px; justify-content: center; }
+  .confirm-btns button {
+    padding: 6px 16px; border-radius: 4px; border: 1px solid #3D3A38;
+    background: #3D3A38; color: #E8E0D8; cursor: pointer; font-size: 12px;
+  }
+  .confirm-btns button.primary {
+    background: #D97757; border-color: #D97757; color: #1A1918;
+  }
 
   /* Review (Step 4) */
   .review-section { margin-bottom: 14px; }
