@@ -16,6 +16,10 @@
 <meta name="twitter:title" content="Claude Sidecar: A Parallel AI Window for Claude Code and Cowork">
 <meta name="twitter:description" content="Fork conversations to Gemini, GPT, DeepSeek, or any model while Claude keeps working. Full context sharing, parallel exploration, structured fold-back.">
 <meta name="twitter:image" content="https://claudesidecar.ai/social-card.png">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="icon" type="image/png" sizes="192x192" href="favicon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
@@ -79,8 +83,9 @@ nav.nav-vis{transform:none}
 .hero-wrap::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(217,119,87,.05) 0%,transparent 35%,transparent 65%,#0a0a0a 100%),radial-gradient(ellipse 120% 100% at 50% 50%,transparent 52%,rgba(0,0,0,.22) 100%);pointer-events:none}
 .hero{position:relative;z-index:1;max-width:var(--mw);margin:0 auto;padding:5rem 2.5rem 5rem;display:grid;grid-template-columns:1fr 1fr;gap:4rem;align-items:center}
 .hero-text{max-width:480px}
-.hero-tag{display:inline-flex;align-items:center;gap:.45rem;font-family:'IBM Plex Mono',monospace;font-size:.7rem;color:var(--t3);margin-bottom:1.8rem;letter-spacing:.03em}
+.hero-tag{display:inline-flex;align-items:center;gap:.45rem;font-family:'IBM Plex Mono',monospace;font-size:.7rem;color:var(--t3);margin-bottom:1.8rem;letter-spacing:.03em;flex-wrap:wrap}
 .hero-tag::before{display:none}
+#release-pill:hover{background:rgba(217,119,87,.2);border-color:rgba(217,119,87,.35)}
 h1{font-weight:800;font-size:clamp(3.4rem,5.5vw,5.2rem);line-height:.92;letter-spacing:-.05em;margin-bottom:1.4rem}
 h1 em{font-style:normal;background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
 .hero-sub{font-size:clamp(1.5rem,2.8vw,2.1rem);font-weight:700;letter-spacing:-.03em;line-height:1;margin-bottom:1.4rem;color:var(--t1)}
@@ -316,6 +321,10 @@ h2.v .w-anim{opacity:1;transform:none}
         <svg width="11" height="11" viewBox="0 0 12 12" fill="currentColor"><rect x="0" y="0" width="5.2" height="5.2" rx=".4"/><rect x="6.8" y="0" width="5.2" height="5.2" rx=".4"/><rect x="0" y="6.8" width="5.2" height="5.2" rx=".4"/><rect x="6.8" y="6.8" width="5.2" height="5.2" rx=".4"/></svg>
         Windows soon
       </span>
+      <a id="release-pill" target="_blank" rel="noopener" style="display:none;align-items:center;gap:.35rem;background:rgba(217,119,87,.12);color:var(--accent2);padding:.3rem .7rem;border-radius:5px;font-weight:600;font-size:.72rem;border:1px solid rgba(217,119,87,.2);text-decoration:none;transition:background .15s,border-color .15s">
+        <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor"><path d="M2.5 7.775V2.75a.25.25 0 01.25-.25h5.025a.25.25 0 01.177.073l6.25 6.25a.25.25 0 010 .354l-5.025 5.025a.25.25 0 01-.354 0l-6.25-6.25a.25.25 0 01-.073-.177zm-1.5 0V2.75C1 1.784 1.784 1 2.75 1h5.025c.464 0 .91.184 1.238.513l6.25 6.25a1.75 1.75 0 010 2.474l-5.026 5.026a1.75 1.75 0 01-2.474 0l-6.25-6.25A1.75 1.75 0 011 7.775zM6 5a1 1 0 100 2 1 1 0 000-2z"/></svg>
+        <span id="release-version"></span>
+      </a>
     </div>
     <h1 class="rv">Claude <em>Sidecar</em></h1>
     <p class="hero-sub rv">Fork. Work. <span style="background:linear-gradient(135deg,var(--accent),var(--accent2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text">Fold.</span></p>
@@ -1283,6 +1292,32 @@ document.querySelectorAll('h2').forEach(h2=>{
   const r=h2.getBoundingClientRect();
   if(r.top<window.innerHeight+50){h2.classList.add('v')}else{io.observe(h2)}
 });
+/* Latest GitHub release pill */
+(function(){
+  var CACHE_KEY='sidecar_release';
+  var REPO='jrenaldi79/sidecar';
+  var pill=document.getElementById('release-pill');
+  var ver=document.getElementById('release-version');
+  if(!pill||!ver){return}
+  function show(data){
+    ver.textContent=data.tag;
+    pill.href=data.url;
+    pill.title=data.name||data.tag;
+    pill.style.display='inline-flex';
+  }
+  try{
+    var cached=sessionStorage.getItem(CACHE_KEY);
+    if(cached){show(JSON.parse(cached));return}
+  }catch(e){}
+  fetch('https://api.github.com/repos/'+REPO+'/releases/latest')
+    .then(function(r){if(!r.ok){throw new Error(r.status)}return r.json()})
+    .then(function(d){
+      var data={tag:d.tag_name,url:d.html_url,name:d.name||d.tag_name};
+      show(data);
+      try{sessionStorage.setItem(CACHE_KEY,JSON.stringify(data))}catch(e){}
+    })
+    .catch(function(){});
+})();
 </script>
 </body>
 </html>
