@@ -29,9 +29,13 @@ function launchSetupWindow() {
       SIDECAR_MODE: 'setup'
     };
 
-    logger.info('Launching setup window');
+    const debugPort = process.env.SIDECAR_DEBUG_PORT || '9222';
+    logger.info('Launching setup window', { debugPort });
 
-    const proc = spawn(electronPath, [mainPath], {
+    const proc = spawn(electronPath, [
+      `--remote-debugging-port=${debugPort}`,
+      mainPath
+    ], {
       env,
       stdio: ['ignore', 'pipe', 'pipe']
     });
