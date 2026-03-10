@@ -76,7 +76,7 @@ EOF
 
 **Step 3: Verify setup**
 ```bash
-sidecar start --model openrouter/google/gemini-2.5-flash --prompt "Say hello" --no-ui
+sidecar start --model gemini --prompt "Say hello" --no-ui
 ```
 
 **Model names with OpenRouter:**
@@ -111,19 +111,19 @@ Add these to your shell profile (`~/.bashrc`, `~/.zshrc`) for persistence.
 **Model names with direct API keys:**
 When using direct API keys, use the provider/model format WITHOUT the `openrouter/` prefix:
 ```bash
-sidecar start --model google/gemini-3.1-flash-lite-preview --prompt "..."
-sidecar start --model openai/gpt-4.1 --prompt "..."
-sidecar start --model anthropic/claude-sonnet-4-6 --prompt "..."
+sidecar start --model google/<model-name> --prompt "..."
+sidecar start --model openai/<model-name> --prompt "..."
+sidecar start --model anthropic/<model-name> --prompt "..."
 ```
 
 ### Model Naming Summary
 
 | Provider Access | Model Name Format | Example |
 |-----------------|-------------------|---------|
-| OpenRouter | `openrouter/provider/model` | `openrouter/google/gemini-2.5-flash` |
-| Direct Google API | `google/model` | `google/gemini-2.5-flash` |
-| Direct OpenAI API | `openai/model` | `openai/gpt-4.1` |
-| Direct Anthropic API | `anthropic/model` | `anthropic/claude-sonnet-4` |
+| OpenRouter | `openrouter/provider/model` | `openrouter/google/<model-name>` |
+| Direct Google API | `google/model` | `google/<model-name>` |
+| Direct OpenAI API | `openai/model` | `openai/<model-name>` |
+| Direct Anthropic API | `anthropic/model` | `anthropic/<model-name>` |
 
 **Important:** The model name format tells the SDK which authentication to use:
 - `openrouter/...` → Uses OpenRouter API key from auth.json
@@ -268,20 +268,20 @@ If you receive a validation error, fix the input and retry:
 ```bash
 # Error: --session-id 'abc123' not found
 # Fix: Use 'current' or omit --session
-sidecar start --model openrouter/google/gemini-2.5-flash --prompt "Task" --session-id current
+sidecar start --model gemini --prompt "Task" --session-id current
 
 # Error: --agent cannot be empty
 # Fix: Use a valid OpenCode agent
-sidecar start --model openrouter/google/gemini-2.5-flash --prompt "Task" --agent Build
+sidecar start --model gemini --prompt "Task" --agent Build
 
 # Error: --prompt cannot be empty
 # Fix: Provide a non-empty briefing
-sidecar start --model openrouter/google/gemini-2.5-flash --prompt "Detailed task description"
+sidecar start --model gemini --prompt "Detailed task description"
 
 # Error: OPENROUTER_API_KEY environment variable is required
 # Fix: Set the API key for your provider
 export OPENROUTER_API_KEY=sk-or-your-key
-sidecar start --model openrouter/google/gemini-2.5-flash --prompt "Task"
+sidecar start --model gemini --prompt "Task"
 ```
 
 ### List Past Sidecars
@@ -396,14 +396,14 @@ sidecar subagent read <subagent-id> --conversation  # Show full conversation
 
 ### Model Selection
 
-Use short aliases when a default is configured (`sidecar setup`):
-- `--model gemini` -- Google Gemini 3 Flash (fast, 1M context)
-- `--model opus` -- Claude Opus 4.6 (deep analysis)
-- `--model gpt` -- OpenAI GPT-5.2
-- `--model deepseek` -- DeepSeek v3.2
+Use short aliases (run `sidecar guide` to see all available aliases and their current model IDs):
+- `--model gemini` -- Google Gemini (fast, large context)
+- `--model opus` -- Claude Opus (deep analysis)
+- `--model gpt` -- OpenAI GPT
+- `--model deepseek` -- DeepSeek
 - Omit `--model` entirely to use your configured default
 
-Full model strings still work: `--model openrouter/google/gemini-3-flash-preview`
+Full model strings also work: `--model openrouter/provider/model-id`
 
 ### Verifying Model Names
 
@@ -485,7 +485,7 @@ You create the briefing—it should be a comprehensive handoff document:
 
 ```bash
 sidecar start \
-  --model openrouter/google/gemini-2.5-pro \
+  --model gemini-pro \
   --session-id "abc123-def456" \
   --prompt "## Task Briefing
 
@@ -683,7 +683,7 @@ sidecar start --model gemini --prompt "..." --agent chat --no-ui
 
 ```bash
 sidecar start \
-  --model google/gemini-2.5-flash \
+  --model gemini \
   --prompt "Generate unit tests for src/utils/. Use Jest." \
   --no-ui \
   --timeout 20
@@ -702,7 +702,7 @@ sidecar start \
 **Example invocation pattern:**
 ```
 Bash tool:
-  command: "sidecar start --model openrouter/google/gemini-2.5-flash --prompt '...' --no-ui"
+  command: "sidecar start --model gemini --prompt '...' --no-ui"
   run_in_background: true
 ```
 
@@ -783,7 +783,7 @@ If a relevant sidecar exists:
 ```bash
 # Default Chat mode — can read freely, asks before writing
 sidecar start \
-  --model openrouter/openai/o3-mini \
+  --model gpt \
   --session-id "$(ls -t ~/.claude/projects/-Users-john-myproject/*.jsonl | head -1 | xargs basename .jsonl)" \
   --prompt "## Debug Memory Leak
 
@@ -930,11 +930,11 @@ Debug output may be leaking to stdout. Check for console.log statements if you'v
 The briefing must contain actual content:
 ```bash
 # Wrong
-sidecar start --model openrouter/google/gemini-2.5-flash --prompt ""
-sidecar start --model openrouter/google/gemini-2.5-flash --prompt "   "
+sidecar start --model gemini --prompt ""
+sidecar start --model gemini --prompt "   "
 
 # Right
-sidecar start --model openrouter/google/gemini-2.5-flash --prompt "Debug the auth issue in TokenManager.ts"
+sidecar start --model gemini --prompt "Debug the auth issue in TokenManager.ts"
 ```
 
 **"Error: --session-id '<id>' not found"**
@@ -949,7 +949,7 @@ The explicit session ID doesn't exist. Either:
 sidecar list
 
 # Use most recent session
-sidecar start --model openrouter/google/gemini-2.5-flash --prompt "Task"
+sidecar start --model gemini --prompt "Task"
 ```
 
 **"Error: --cwd path does not exist"**
@@ -1000,7 +1000,7 @@ export ANTHROPIC_API_KEY=sk-ant-your-key
 export DEEPSEEK_API_KEY=your-deepseek-key
 
 # Then retry
-sidecar start --model openrouter/google/gemini-2.5-flash --prompt "Task"
+sidecar start --model gemini --prompt "Task"
 ```
 
 ---
