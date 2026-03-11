@@ -83,6 +83,8 @@ npm test -- --coverage             # Coverage report
 ```bash
 node scripts/check-secrets.js        # Scan staged files for secrets
 node scripts/check-file-sizes.js     # Check staged files against 300-line limit
+node scripts/generate-docs.js        # Regenerate auto sections in CLAUDE.md
+node scripts/generate-docs.js --check # Verify auto sections are current (CI mode)
 node scripts/validate-docs.js        # Pre-commit: warn if CLAUDE.md may need update
 node scripts/validate-docs.js --full # Full: compare CLAUDE.md against codebase
 npm run validate-docs                # Alias for --full mode
@@ -159,7 +161,7 @@ In headless mode, the agent outputs `[SIDECAR_FOLD]` autonomously when done, and
 
 The Electron shell (`electron/main.js`) uses a **BrowserView** to avoid CSS conflicts between the OpenCode SPA and the sidecar toolbar:
 
-- **BrowserView** (top): Loads the OpenCode web UI at `http://localhost:<port>`. Gets its own physical viewport — no CSS interference with the host window.
+- **BrowserView** (top): Loads the OpenCode web UI at `http://localhost:<port>`. Gets its own physical viewport, no CSS interference with the host window.
 - **Main window** (bottom 40px): Renders the sidecar toolbar (branding, task ID, timer, Fold button) via a `data:` URL.
 - On resize, `updateContentBounds()` adjusts the BrowserView to fill `height - 40px`.
 
@@ -169,193 +171,242 @@ This replaced earlier CSS-based approaches (`padding-bottom`, `calc(100dvh - 40p
 
 ## Directory Structure
 
-```
-sidecar/
-├── bin/
-│   └── sidecar.js               # CLI entry point
-├── src/
-│   ├── index.js                 # Main API re-exports (thin module ~82 lines)
-│   ├── cli.js                   # Command-line argument parsing
-│   ├── mcp-server.js            # MCP server (stdio transport, tool handlers)
-│   ├── mcp-tools.js             # MCP tool definitions (Zod schemas)
-│   ├── sidecar/                 # Core sidecar operations (modular)
-│   │   ├── start.js             # startSidecar(), runInteractive(), generateTaskId()
-│   │   ├── resume.js            # resumeSidecar(), checkFileDrift()
-│   │   ├── continue.js          # continueSidecar(), loadPreviousSession()
-│   │   ├── read.js              # readSidecar(), listSidecars(), formatAge()
-│   │   ├── context-builder.js   # buildContext(), parseDuration()
-│   │   ├── session-utils.js     # Shared utilities (SessionPaths, finalizeSession, etc.)
-│   │   ├── interactive.js      # Interactive mode (Electron GUI session)
-│   │   ├── progress.js          # Session progress reader (message counts, latest activity)
-│   │   ├── crash-handler.js     # Crash recovery (updates metadata on uncaught exceptions)
-│   │   └── setup.js             # addAlias(), createDefaultConfig(), runInteractiveSetup()
-│   ├── context.js               # Context extraction & filtering
-│   ├── session-manager.js       # Session persistence & metadata
-│   ├── prompt-builder.js        # System prompt construction
-│   ├── headless.js              # Headless mode runner (OpenCode HTTP API)
-│   ├── conflict.js              # File conflict detection
-│   ├── drift.js                 # Context drift calculation
-│   ├── session.js               # Session file resolution
-│   ├── jsonl-parser.js          # JSONL parsing & formatting
-│   ├── prompts/                 # Prompt modules
-│   │   └── cowork-agent-prompt.js  # Cowork client agent prompt (replaces SE base)
-│   └── utils/                   # Utility modules
-│       ├── agent-mapping.js     # OpenCode agent mapping & validation
-│       ├── auth-json.js         # Read-only import from OpenCode auth.json
-│       ├── config.js            # Config loading, alias resolution, provider model sync
-│       ├── validators.js        # CLI input validation helpers
-│       ├── logger.js            # Structured logging
-│       ├── model-fetcher.js      # Fetch model lists from provider APIs
-│       ├── model-validator.js   # Validate fallback models exist on provider API
-│       ├── path-setup.js        # PATH configuration for OpenCode
-│       └── server-setup.js      # Server port management
+<!-- AUTO:tree -->
+bin/
+└── sidecar.js  # Sidecar CLI Entry Point
+src/
+├── prompts/
+│   └── cowork-agent-prompt.js  # Cowork Agent Prompt
+├── sidecar/
+│   ├── context-builder.js  # Context Builder Module
+│   ├── continue.js  # Load previous session data (metadata, summary, conversation)
+│   ├── crash-handler.js  # Crash Handler - Updates metadata to 'error' on uncaught exceptions
+│   ├── interactive.js  # Check if Electron is available (lazy loading guard)
+│   ├── progress.js  # Lifecycle stage labels
+│   ├── read.js  # Sidecar Read Operations Module
+│   ├── resume.js  # Load session metadata from session directory
+│   ├── session-utils.js  # Standard heartbeat interval in milliseconds
+│   ├── setup-window.js  # Setup Window Launcher
+│   ├── setup.js  # Sidecar Setup Wizard
+│   └── start.js  # Generate a unique 8-character hex task ID
+├── utils/
+│   ├── agent-mapping.js  # * All OpenCode native agent names (lowercase)
+│   ├── alias-resolver.js  # Alias Resolver Utilities
+│   ├── api-key-store.js  # Maps provider IDs to environment variable names
+│   ├── api-key-validation.js  # Validation endpoints per provider
+│   ├── auth-json.js  # Known provider IDs that map to sidecar's PROVIDER_ENV_MAP
+│   ├── config.js  # Default model alias map — short names to full OpenRouter model identifiers
+│   ├── logger.js  # Structured Logger Module
+│   ├── mcp-discovery.js  # MCP Discovery - Discovers MCP servers from parent LLM configuration
+│   ├── mcp-validators.js  # MCP Validators
+│   ├── model-fetcher.js  # Hardcoded Anthropic models (no public listing endpoint)
+│   ├── model-validator.js  # Alias-to-search-term mapping for filtering provider model lists
+│   ├── path-setup.js  # Ensures that the project's node_modules/.bin directory is included in the PATH.
+│   ├── server-setup.js  # Server Setup Utilities
+│   ├── start-helpers.js  # Start Command Helpers
+│   ├── thinking-validators.js  # Thinking Level Validators
+│   ├── updater.js  # @type {import('update-notifier').UpdateNotifier|null}
+│   └── validators.js  # * Provider to API key mapping
+├── cli-handlers.js  # CLI Command Handlers
+├── cli.js  # * Default values per spec §4.1
+├── conflict.js  # File Conflict Detection Module
+├── context-compression.js  # Context Compression Module
+├── context.js  # Context Filtering Module
+├── drift.js  # Context Drift Detection Module
+├── environment.js  # Environment Detection Module
+├── headless.js  # * Default timeout: 15 minutes per spec §6.2
+├── index.js  # Claude Sidecar - Main Module
+├── jsonl-parser.js  # JSONL Parser
+├── mcp-server.js  # @module mcp-server — Sidecar MCP Server (stdio transport)
+├── mcp-tools.js  # Zod pattern for safe task IDs (alphanumeric, hyphens, underscores only)
+├── opencode-client.js  # OpenCode SDK Client Wrapper
+├── prompt-builder.js  # System Prompt Builder
+├── session-manager.js  # * Session status constants
+└── session.js  # Session Resolver
+electron/
+├── assets/
+│   ├── icon.png
+│   └── icon.svg
+├── fold.js  # Fold Logic
+├── ipc-setup.js  # IPC Setup Handlers
+├── main.js  # Sidecar Electron Shell - v3
+├── preload-setup.js  # Sidecar Preload - Setup Mode
+├── preload.js  # Sidecar Preload - v3 Minimal
+├── setup-ui-alias-script.js  # Setup UI - Alias Editor Script
+├── setup-ui-aliases.js  # Grouping metadata for the 20 default aliases
+├── setup-ui-keys-script.js  # Setup UI - Step 1 Key Management Script
+├── setup-ui-keys.js  # Provider metadata for the setup form
+├── setup-ui-model.js  # @type {Array<{alias: string, label: string, routes: Object<string,string>}>}
+├── setup-ui-styles.js  # Setup UI - Shared CSS Styles
+├── setup-ui.js  # Setup UI - Wizard Orchestrator: API Keys → Models → Aliases → Review
+├── summary.js  # Summary Generation via OpenCode API
+├── toolbar.js  # Sidecar Toolbar HTML Builder
+└── window-position.js  # Window Position Calculator
+tests/
 ├── electron/
-│   ├── main.js                  # BrowserView shell (OpenCode UI + toolbar)
-│   ├── main-legacy.js           # Old custom UI version (kept for reference)
-│   ├── preload.js               # IPC bridge (fold action)
-│   ├── preload-v2.js            # IPC bridge for legacy custom UI
-│   ├── inject.css               # Legacy styling overrides
-│   └── ui/                      # Legacy custom chat UI (unused in v3)
-│       ├── index.html           # Main HTML
-│       ├── renderer.js          # Chat logic + model picker integration
-│       ├── model-picker.js      # Model selection module
-│       └── styles.css           # UI styles
-├── tests/                       # Jest test suite (run npm test for current count)
-│   ├── cli.test.js
-│   ├── config.test.js
-│   ├── config-fallback.test.js
-│   ├── config-hash.test.js
-│   ├── config-null-alias.test.js
-│   ├── config-resolve.test.js
-│   ├── context.test.js
-│   ├── session-manager.test.js
-│   ├── conflict.test.js
-│   ├── drift.test.js
-│   ├── headless.test.js
-│   ├── prompt-builder.test.js
-│   ├── e2e.test.js
-│   ├── mcp-tools.test.js
-│   ├── mcp-server.test.js
-│   ├── postinstall.test.js
-│   ├── auth-json.test.js
-│   ├── opencode-client-cowork.test.js
-│   ├── model-validator.test.js
-│   ├── model-fetcher.test.js
-│   ├── sidecar/                 # Tests for modular sidecar operations
-│   │   ├── start.test.js
-│   │   ├── resume.test.js
-│   │   ├── continue.test.js
-│   │   ├── read.test.js
-│   │   ├── context-builder.test.js
-│   │   ├── session-utils.test.js
-│   │   ├── progress.test.js
-│   │   └── exit-handler.test.js
-│   ├── mcp-discovery-integration.test.js  # buildMcpConfig merge + CLI parsing
-│   ├── mcp-headless-lifecycle.test.js  # Full MCP headless lifecycle
-│   ├── cli-headless-e2e.integration.test.js  # CLI headless E2E (real LLM)
-│   ├── electron-headless-mode.test.js  # Electron headless mode source check
-│   ├── electron-toolbar-e2e.integration.test.js  # Electron CDP E2E (real LLM)
-│   ├── helpers/                 # Test helpers
-│   │   ├── cdp-client.js        # CDP WebSocket helper for Electron testing
-│   │   ├── cdp-client.test.js   # CDP helper unit tests
-│   │   └── start-server.js      # OpenCode server starter (child process)
-│   ├── screenshots/             # CDP screenshots (gitignored)
-│   ├── scripts/                 # Enforcement script tests
-│   │   ├── check-secrets.test.js
-│   │   ├── check-file-sizes.test.js
-│   │   └── validate-docs.test.js
-│   └── ...
-├── skill/
-│   └── SKILL.md                 # Claude Code skill integration
-├── evals/                       # Agentic eval system (see evals/README.md)
-│   ├── run_eval.js              # CLI orchestrator
-│   ├── claude_runner.js         # Sandbox creation, Claude process spawning
-│   ├── transcript_parser.js     # Parse stream-json output
-│   ├── evaluator.js             # Programmatic checks + LLM-as-judge
-│   ├── result_writer.js         # Write results, format summary
-│   ├── eval_tasks.json          # Eval task definitions (3 scenarios)
-│   ├── fixtures/                # Seed projects per eval scenario
-│   ├── tests/                   # Eval unit tests (25 tests, 4 suites)
-│   └── workspace/               # Output (gitignored)
+│   └── window-position.test.js  # Window Position Tests
+├── helpers/
+│   ├── cdp-client.js  # CDP Client - Thin Chrome DevTools Protocol helper for E2E tests.
+│   ├── cdp-client.test.js
+│   └── start-server.js  # Helper script: starts a real OpenCode server and prints connection info.
+├── prompts/
+│   └── cowork-agent-prompt.test.js
 ├── scripts/
-│   ├── check-secrets.js         # Pre-commit secret detection
-│   ├── check-file-sizes.js      # Pre-commit file size enforcement
-│   ├── validate-docs.js         # CLAUDE.md drift detection
-│   ├── postinstall.js           # Auto-install skill + MCP registration
-│   ├── integration-test.sh      # E2E integration tests
-│   └── sync-agent-docs.js       # Sync CLAUDE.md → GEMINI.md, AGENTS.md
-├── .husky/
-│   ├── pre-commit               # lint-staged + secrets + file size + doc drift
-│   └── pre-push                 # Full test suite (cached by SHA) + npm audit
-├── docs/
-│   ├── scaffolding/             # Portable enforcement kit (copy to new projects)
-│   └── plans/                   # Design and implementation plans
-├── package.json
-├── jest.config.js
-├── .eslintrc.js
-├── CLAUDE.md                    # This file (primary)
-├── GEMINI.md                    # Symlink → CLAUDE.md
-└── AGENTS.md                    # Symlink → CLAUDE.md
-```
+│   ├── check-file-sizes.test.js  # File Size Enforcement Script Tests
+│   ├── check-secrets.test.js  # Secret Detection Script Tests
+│   ├── generate-docs.test.js  # Create a temp directory for each test, cleaned up after.
+│   └── validate-docs.test.js  # CLAUDE.md Drift Detection Script Tests
+├── sidecar/
+│   ├── config-change-flow.test.js  # Config Change Detection Flow Tests
+│   ├── context-builder.test.js  # Context Builder Tests
+│   ├── electron-guard.test.js  # Electron Lazy Loading Guard Tests
+│   ├── exit-handler.test.js  # Crash Handler Tests
+│   ├── interactive.test.js  # Interactive Mode Tests
+│   ├── progress.test.js  # Progress Reader Tests
+│   ├── resume.test.js  # Sidecar Resume Tests
+│   ├── session-utils.test.js  # Session Utils Tests
+│   ├── setup-window.test.js  # Tests for src/sidecar/setup-window.js
+│   ├── setup.test.js  # Setup Wizard Tests
+│   └── start.test.js  # Sidecar Start Tests
+├── agent-mapping.test.js  # Agent Mapping Tests
+├── api-key-store-readwrite.test.js  # Tests for src/utils/api-key-store.js — hints, values, and removal
+├── api-key-store-validation.test.js  # Tests for src/utils/api-key-store.js — validation and endpoints
+├── api-key-store.test.js  # Tests for src/utils/api-key-store.js
+├── auth-json.test.js  # Tests for src/utils/auth-json.js
+├── cli-handler.integration.test.js  # Helper: run sidecar CLI and return { stdout, stderr, code }
+├── cli-headless-e2e.integration.test.js  # Run a sidecar CLI command and return { stdout, stderr, exitCode }
+├── cli-process.integration.test.js  # Helper: run sidecar CLI and return { stdout, stderr, code }
+├── cli.test.js  # CLI Argument Parser Tests
+├── config-fallback.test.js  # Config Direct API Fallback Tests
+├── config-hash.test.js  # Sidecar Config Module Tests - Hashing & Alias Table
+├── config-null-alias.test.js  # Null Alias Defense Tests
+├── config-resolve.test.js  # Sidecar Config Module Tests - Model Resolution
+├── config.test.js  # Sidecar Config Module Tests
+├── conflict.test.js  # File Conflict Detection Tests
+├── context-compression.test.js  # Context Compression Module Tests
+├── context.test.js  # Context Filtering Tests
+├── drift.test.js  # Context Drift Detection Tests
+├── e2e.test.js  # End-to-End Tests for Claude Sidecar
+├── electron-headless-mode.test.js
+├── electron-toolbar-e2e.integration.test.js  # Electron Toolbar E2E Integration Test
+├── environment.test.js  # Environment Detection Tests
+├── fold-nudge.test.js
+├── headless.test.js  # Tests for headless mode runner
+├── index.test.js  # Tests for main index module
+├── jsonl-parser.test.js  # JSONL Parser Tests
+├── mcp-discovery-integration.test.js  # MCP buildMcpConfig Integration Tests
+├── mcp-discovery.test.js  # MCP Discovery Tests
+├── mcp-headless-e2e.integration.test.js  # Spawn real MCP server and provide JSON-RPC send/receive methods
+├── mcp-headless-lifecycle.test.js  # Create a session directory with metadata.json
+├── mcp-model-validation.test.js  # MCP Model Validation Tests
+├── mcp-project-dir.test.js
+├── mcp-protocol.integration.test.js  # MCP Protocol Integration Tests
+├── mcp-repomix-e2e.integration.test.js  # MCP Repomix E2E Test
+├── mcp-server.test.js  # MCP Server Handler Tests
+├── mcp-tools.test.js  # MCP Tool Definitions Tests
+├── model-fetcher.test.js  # Tests for src/utils/model-fetcher.js
+├── model-validator-normalize.test.js  # Model Validator Tests — normalizeModelId and config save behavior
+├── model-validator.test.js  # Model Validator Tests
+├── opencode-client-cowork.test.js  # Tests for client-aware prompt in opencode-client.js buildServerOptions()
+├── opencode-client.test.js  # Tests for OpenCode SDK Client Wrapper
+├── postinstall.test.js
+├── prompt-builder.test.js  # Prompt Builder Tests
+├── server-setup.test.js  # Tests for src/utils/server-setup.js
+├── session-manager.test.js  # Session Manager Tests
+├── session.test.js  # Session Resolver Tests
+├── setup-ui-aliases.test.js  # Tests for electron/setup-ui-aliases.js (Alias Editor)
+├── setup-ui-keys.test.js  # Tests for electron/setup-ui-keys.js
+├── setup-ui-model.test.js  # Tests for electron/setup-ui-model.js
+├── setup-ui.test.js  # Tests for electron/setup-ui.js (Wizard Orchestrator)
+├── spawn-pipe-deadlock.integration.test.js  # Spawn Stdio Configuration Tests
+├── toolbar.test.js  # Tests for electron/toolbar.js
+└── updater.test.js  # Updater Module Tests
+scripts/
+├── benchmark-api-direct.js  # Direct OpenRouter API Benchmark for Thinking Levels
+├── benchmark-thinking.js  # * Run a single test with specified model and thinking level
+├── check-file-sizes.js  # File size enforcement script for pre-commit hook.
+├── check-html.js
+├── check-secrets.js  # Secret detection script for pre-commit hook.
+├── check-ui.js
+├── debug-cdp.js
+├── generate-docs-helpers.js  # Helper functions for generate-docs.js.
+├── generate-docs.js  # @param {string} dirPath @returns {string[]} Sorted .md filenames
+├── generate-icon.js  # Generate app icon PNG from SVG source.
+├── integration-test.sh
+├── list-models.js
+├── postinstall.js  # Install skill file to ~/.claude/skills/sidecar/
+├── test-tools.sh
+├── validate-docs.js  # * Full drift analysis: compare CLAUDE.md sections against actual filesystem.
+├── validate-thinking.js
+└── validate-ui.js
+evals/
+├── tests/
+│   ├── claude_runner.test.js
+│   ├── evaluator.test.js
+│   ├── result_writer.test.js
+│   └── transcript_parser.test.js
+├── claude_runner.js  # Recursively copy a directory
+├── eval_tasks.json
+├── evaluator.js  # Recursively find all files relative to baseDir
+├── README.md
+├── result_writer.js  # Format token count as human-readable string (e.g., "15.7k tok").
+├── run_eval.js  # Load eval tasks
+└── transcript_parser.js  # Extract text from tool result content (string, array, or object)
+<!-- /AUTO:tree -->
 
 ---
 
 ## Key Modules
 
-### Core Sidecar Operations (`src/sidecar/`)
-
-| Module | Purpose | Key Functions |
-|--------|---------|---------------|
-| `sidecar/start.js` | Session starting | `startSidecar()`, `generateTaskId()`, `buildMcpConfig()` |
-| `sidecar/interactive.js` | Interactive mode (Electron) | `runInteractive()`, `checkElectronAvailable()`, `buildElectronEnv()` |
-| `sidecar/resume.js` | Session resumption | `resumeSidecar()`, `checkFileDrift()`, `buildDriftWarning()` |
-| `sidecar/continue.js` | Session continuation | `continueSidecar()`, `loadPreviousSession()`, `buildContinuationContext()` |
-| `sidecar/read.js` | Session listing/reading | `readSidecar()`, `listSidecars()`, `formatAge()` |
-| `sidecar/context-builder.js` | Context from Claude Code | `buildContext()`, `parseDuration()` |
-| `sidecar/session-utils.js` | Shared utilities | `SessionPaths`, `finalizeSession()`, `saveInitialContext()`, `createHeartbeat()` |
-| `sidecar/progress.js` | Session progress reader | `readProgress()`, `extractLatest()`, `computeLastActivity()` |
-| `sidecar/crash-handler.js` | Crash recovery handler | `installCrashHandler()` |
-| `sidecar/setup.js` | Interactive setup wizard | `addAlias()`, `createDefaultConfig()`, `runInteractiveSetup()` |
-
-### Supporting Modules (`src/`)
-
-| Module | Purpose | Key Functions |
-|--------|---------|---------------|
-| `index.js` | Re-exports all public APIs | Thin module (~82 lines) |
-| `mcp-server.js` | MCP server (Cowork/Desktop) | `startMcpServer()`, `handlers` (8 tool handlers) |
-| `mcp-tools.js` | MCP tool definitions | `TOOLS` (Zod schemas), `getGuideText()` |
-| `cli.js` | Argument parsing & validation | `parseArgs()`, `validateStartArgs()`, `validateSubagentArgs()` |
-| `context.js` | Context filtering | `filterContext()`, `takeLastNTurns()`, `estimateTokens()` |
-| `session-manager.js` | Session persistence | `createSession()`, `updateSession()`, `saveConversation()`, `saveSummary()` |
-| `prompt-builder.js` | Prompt construction | `buildPrompts()` (system=instructions, user=context+briefing) |
-| `headless.js` | Autonomous execution | Uses async API (`promptAsync`), polls `getMessages` for `[SIDECAR_FOLD]` |
-| `conflict.js` | File conflict detection | Compares mtimes against session start, formats warnings |
-| `drift.js` | Context staleness | `calculateDrift()`, `isDriftSignificant()`, `countTurnsSince()` |
-| `session.js` | Session resolution | Primary (explicit ID) / Fallback (most recent mtime) |
-| `utils/agent-mapping.js` | OpenCode agent mapping | `mapAgentToOpenCode()`, `isValidAgent()`, `OPENCODE_AGENTS` |
-| `utils/auth-json.js` | Read-only import from OpenCode auth.json | `readAuthJsonKeys()`, `importFromAuthJson()`, `checkAuthJson()`, `removeFromAuthJson()` |
-| `utils/config.js` | Config loading, alias resolution, provider model sync | `loadConfig()`, `saveConfig()`, `resolveModel()`, `buildProviderModels()` |
-| `utils/model-router.js` | Subagent model routing | `resolveModel()`, `getConfiguredCheapModel()`, `isRoutingEnabled()` |
-| `utils/agent-model-config.js` | Model config persistence | `loadConfig()`, `saveConfig()`, `getModelForAgent()`, `setAgentModel()` |
-| `utils/validators.js` | CLI input validation | `validateBriefingContent()`, `validateProjectPath()`, `validateApiKey()` |
-| `utils/logger.js` | Structured logging | `logger.info()`, `logger.warn()`, `logger.error()`, `logger.debug()` |
-| `prompts/cowork-agent-prompt.js` | Cowork agent prompt | `buildCoworkAgentPrompt()` — replaces SE-focused OpenCode base prompt when `client === 'cowork'` |
-| `utils/model-fetcher.js` | Fetch model lists from provider APIs | `fetchModelsFromProvider()`, `fetchAllModels()`, `groupModelsByFamily()` |
-| `utils/model-validator.js` | Validate direct-API fallback models | `validateDirectModel()`, `filterRelevantModels()`, `normalizeModelId()` |
-| `utils/updater.js` | Update check & execute | `initUpdateCheck()`, `getUpdateInfo()`, `notifyUpdate()`, `performUpdate()` |
-
-### Shared Session Utilities (`src/sidecar/session-utils.js`)
-
-This module consolidates functionality shared between interactive and headless modes:
-
-| Utility | Purpose |
-|---------|---------|
-| `SessionPaths` | Path constants for session files (eliminates magic strings) |
-| `saveInitialContext()` | Save system prompt + user message to `initial_context.md` |
-| `finalizeSession()` | Unified session completion (conflict detection, summary save, metadata update) |
-| `outputSummary()` | Standardized summary output to stdout |
-| `createHeartbeat()` | Encapsulated heartbeat with proper cleanup |
-| `executeMode()` | Abstract headless/interactive execution pattern |
+<!-- AUTO:modules -->
+| Module | Purpose | Key Exports |
+|--------|---------|-------------|
+| `cli-handlers.js` | CLI Command Handlers | `handleSetup()`, `handleAbort()`, `handleUpdate()`, `handleMcp()` |
+| `cli.js` | * Default values per spec §4.1 | `parseArgs()`, `validateStartArgs()`, `getUsage()`, `DEFAULTS()` |
+| `conflict.js` | File Conflict Detection Module | `detectConflicts()`, `formatConflictWarning()` |
+| `context-compression.js` | Context Compression Module | `compressContext()`, `estimateTokenCount()`, `buildPreamble()`, `DEFAULT_TOKEN_LIMIT()` |
+| `context.js` | Context Filtering Module | `filterContext()`, `parseDuration()`, `estimateTokens()`, `takeLastNTurns()` |
+| `drift.js` | Context Drift Detection Module | `calculateDrift()`, `formatDriftWarning()`, `countTurnsSince()`, `isDriftSignificant()` |
+| `environment.js` | Environment Detection Module | `inferClient()`, `getSessionRoot()`, `detectEnvironment()`, `VALID_CLIENTS()` |
+| `headless.js` | * Default timeout: 15 minutes per spec §6.2 | `runHeadless()`, `waitForServer()`, `extractSummary()`, `formatFoldOutput()`, `DEFAULT_TIMEOUT()` |
+| `index.js` | Claude Sidecar - Main Module | `APIs()`, `startSidecar()`, `listSidecars()`, `resumeSidecar()`, `continueSidecar()` |
+| `jsonl-parser.js` | JSONL Parser | `parseJSONLLine()`, `readJSONL()`, `extractTimestamp()`, `formatMessage()`, `formatContext()` |
+| `mcp-server.js` | @module mcp-server — Sidecar MCP Server (stdio transport) | `handlers()`, `startMcpServer()`, `getProjectDir()` |
+| `mcp-tools.js` | Zod pattern for safe task IDs (alphanumeric, hyphens, underscores only) | `getTools()`, `getGuideText()`, `safeTaskId()`, `safeModel()` |
+| `opencode-client.js` | OpenCode SDK Client Wrapper | `parseModelString()`, `createClient()`, `createSession()`, `createChildSession()`, `sendPrompt()` |
+| `prompt-builder.js` | System Prompt Builder | `buildSystemPrompt()`, `buildPrompts()`, `buildEnvironmentSection()`, `getSummaryTemplate()`, `SUMMARY_TEMPLATE()` |
+| `session-manager.js` | * Session status constants | `createSession()`, `updateSession()`, `getSession()`, `saveConversation()`, `saveSummary()` |
+| `session.js` | Session Resolver | `encodeProjectPath()`, `decodeProjectPath()`, `getSessionDirectory()`, `getSessionId()`, `resolveSession()` |
+| `prompts/cowork-agent-prompt.js` | Cowork Agent Prompt | `buildCoworkAgentPrompt()` |
+| `sidecar/context-builder.js` | Context Builder Module | `buildContext()`, `parseDuration()`, `resolveSessionFile()`, `applyContextFilters()`, `findCoworkSession()` |
+| `sidecar/continue.js` | Load previous session data (metadata, summary, conversation) | `loadPreviousSession()`, `buildContinuationContext()`, `createContinueSessionMetadata()`, `continueSidecar()` |
+| `sidecar/crash-handler.js` | Crash Handler - Updates metadata to 'error' on uncaught exceptions | `installCrashHandler()` |
+| `sidecar/interactive.js` | Check if Electron is available (lazy loading guard) | `getElectronPath()`, `checkElectronAvailable()`, `buildElectronEnv()`, `handleElectronProcess()`, `runInteractive()` |
+| `sidecar/progress.js` | Lifecycle stage labels | `readProgress()`, `writeProgress()`, `extractLatest()`, `computeLastActivity()`, `STAGE_LABELS()` |
+| `sidecar/read.js` | Sidecar Read Operations Module | `formatAge()`, `listSidecars()`, `readSidecar()` |
+| `sidecar/resume.js` | Load session metadata from session directory | `loadSessionMetadata()`, `loadInitialContext()`, `checkFileDrift()`, `buildDriftWarning()`, `buildResumeUserMessage()` |
+| `sidecar/session-utils.js` | Standard heartbeat interval in milliseconds | `HEARTBEAT_INTERVAL()`, `SessionPaths()`, `saveInitialContext()`, `finalizeSession()`, `outputSummary()` |
+| `sidecar/setup-window.js` | Setup Window Launcher | `launchSetupWindow()` |
+| `sidecar/setup.js` | Sidecar Setup Wizard | `addAlias()`, `createDefaultConfig()`, `detectApiKeys()`, `runInteractiveSetup()`, `runReadlineSetup()` |
+| `sidecar/start.js` | Generate a unique 8-character hex task ID | `generateTaskId()`, `createSessionMetadata()`, `buildMcpConfig()`, `checkElectronAvailable()`, `runInteractive()` |
+| `utils/agent-mapping.js` | * All OpenCode native agent names (lowercase) | `PRIMARY_AGENTS()`, `OPENCODE_AGENTS()`, `HEADLESS_SAFE_AGENTS()`, `mapAgentToOpenCode()`, `isValidAgent()` |
+| `utils/alias-resolver.js` | Alias Resolver Utilities | `applyDirectApiFallback()`, `autoRepairAlias()` |
+| `utils/api-key-store.js` | Maps provider IDs to environment variable names | `getEnvPath()`, `readApiKeys()`, `readApiKeyHints()`, `readApiKeyValues()`, `saveApiKey()` |
+| `utils/api-key-validation.js` | Validation endpoints per provider | `validateApiKey()`, `validateOpenRouterKey()`, `VALIDATION_ENDPOINTS()` |
+| `utils/auth-json.js` | Known provider IDs that map to sidecar's PROVIDER_ENV_MAP | `readAuthJsonKeys()`, `importFromAuthJson()`, `checkAuthJson()`, `removeFromAuthJson()`, `AUTH_JSON_PATH()` |
+| `utils/config.js` | Default model alias map — short names to full OpenRouter model identifiers | `getConfigDir()`, `getConfigPath()`, `loadConfig()`, `saveConfig()`, `getDefaultAliases()` |
+| `utils/logger.js` | Structured Logger Module | `logger()`, `LOG_LEVELS()` |
+| `utils/mcp-discovery.js` | MCP Discovery - Discovers MCP servers from parent LLM configuration | `discoverParentMcps()`, `discoverClaudeCodeMcps()`, `discoverCoworkMcps()`, `normalizeMcpJson()` |
+| `utils/mcp-validators.js` | MCP Validators | `validateMcpSpec()`, `validateMcpConfigFile()` |
+| `utils/model-fetcher.js` | Hardcoded Anthropic models (no public listing endpoint) | `fetchModelsFromProvider()`, `fetchAllModels()`, `groupModelsByFamily()`, `ANTHROPIC_MODELS()`, `PROVIDER_FAMILY_NAMES()` |
+| `utils/model-validator.js` | Alias-to-search-term mapping for filtering provider model lists | `validateDirectModel()`, `filterRelevantModels()`, `normalizeModelId()` |
+| `utils/path-setup.js` | Ensures that the project's node_modules/.bin directory is included in the PATH. | `ensureNodeModulesBinInPath()` |
+| `utils/server-setup.js` | Server Setup Utilities | `DEFAULT_PORT()`, `isPortInUse()`, `getPortPid()`, `killPortProcess()`, `ensurePortAvailable()` |
+| `utils/start-helpers.js` | Start Command Helpers | `resolveModelFromArgs()`, `validateFallbackModel()` |
+| `utils/thinking-validators.js` | Thinking Level Validators | `MODEL_THINKING_SUPPORT()`, `getSupportedThinkingLevels()`, `validateThinkingLevel()` |
+| `utils/updater.js` | @type {import('update-notifier').UpdateNotifier|null} | `initUpdateCheck()`, `getUpdateInfo()`, `notifyUpdate()`, `performUpdate()` |
+| `utils/validators.js` | * Provider to API key mapping | `VALID_AGENT_MODES()`, `PROVIDER_KEY_MAP()`, `MODEL_THINKING_SUPPORT()`, `TASK_ID_PATTERN()`, `validateTaskId()` |
+<!-- /AUTO:modules -->
 
 ---
 
@@ -376,10 +427,10 @@ Any commit that adds, removes, or renames a file in `src/`, `bin/`, or `scripts/
 
 **STOP and refactor immediately if you see:**
 
-- **>5 nested if/else statements** → Extract to separate functions
-- **>3 try/catch blocks in one function** → Split error handling
-- **>10 imports** → Consider splitting the module
-- **Duplicate logic** → Extract to shared utilities
+- **>5 nested if/else statements** -> Extract to separate functions
+- **>3 try/catch blocks in one function** -> Split error handling
+- **>10 imports** -> Consider splitting the module
+- **Duplicate logic** -> Extract to shared utilities
 
 ### Code Quality Monitoring
 
@@ -406,7 +457,8 @@ Runs on every `git commit`. Blocks the commit if any check fails.
 | 1. lint-staged | `npx lint-staged` | ESLint `--fix` on staged `.js` files |
 | 2. Secret scan | `node scripts/check-secrets.js` | Blocks commits containing API keys, tokens, or private keys |
 | 3. File size check | `node scripts/check-file-sizes.js` | Blocks files over 300 lines |
-| 4. Doc drift warning | `node scripts/validate-docs.js` | Warns (non-blocking) if `src/`/`bin/`/`scripts/` changed without staging CLAUDE.md |
+| 4. Doc generation | `node scripts/generate-docs.js` | Regenerates auto sections, auto-stages CLAUDE.md |
+| 5. Doc drift warning | `node scripts/validate-docs.js` | Warns if `src/`/`bin/`/`scripts/` changed without CLAUDE.md |
 
 ### pre-push (thorough, ~3min)
 
@@ -433,127 +485,6 @@ The cache is invalidated automatically by any new commit. `.test-passed` is giti
 ## Structured Logging
 
 Use `src/utils/logger.js` (levels: error/warn/info/debug). Logs go to stderr to avoid polluting stdout (used for sidecar summary output). See global CLAUDE.md for general logging guidelines.
-
----
-
-## Testing Strategy
-
-### What to Unit Test (Core Business Logic)
-
-| Test File | Target Module | Focus |
-|-----------|--------------|-------|
-| `cli.test.js` | Argument parsing | Command validation, flag handling |
-| `context.test.js` | Context filtering | Turn extraction, token estimation |
-| `session.test.js` | Session resolution | Primary/fallback paths |
-| `session-manager.test.js` | Persistence layer | CRUD operations, metadata |
-| `conflict.test.js` | File conflicts | mtime comparison, warning format |
-| `drift.test.js` | Drift calculation | Age, turn count, significance |
-| `headless.test.js` | OpenCode HTTP API | Spawn, polling, timeout |
-| `prompt-builder.test.js` | System prompts | Template construction |
-| `index.test.js` | Main API | Re-export smoke tests, generateTaskId |
-| `e2e.test.js` | End-to-end | Full workflow |
-| `sidecar/start.test.js` | Session starting | Task ID generation, metadata creation, MCP config |
-| `sidecar/resume.test.js` | Session resumption | Drift detection, metadata loading |
-| `sidecar/continue.test.js` | Session continuation | Previous session loading, context building |
-| `sidecar/read.test.js` | Session reading | Listing, age formatting, output modes |
-| `sidecar/context-builder.test.js` | Context building | Session resolution, message filtering |
-| `sidecar/session-utils.test.js` | Shared utilities | Session paths, finalization, heartbeat |
-| `sidecar/progress.test.js` | Progress reader | Message counts, latest activity, last activity |
-| `sidecar/exit-handler.test.js` | Crash handler | Metadata update on crash, status transitions |
-| `mcp-headless-lifecycle.test.js` | MCP headless lifecycle | Start, poll, progress, crash, abort, read |
-| `mcp-discovery.test.js` | MCP discovery | Plugin chain, `~/.claude.json` mcpServers, merge priority, sidecar exclusion |
-| `mcp-discovery-integration.test.js` | buildMcpConfig merge | Discovery + file + CLI merge, --no-mcp, --exclude-mcp |
-| `mcp-repomix-e2e.integration.test.js` | MCP E2E (real LLM + repomix) | Real discovery → headless sidecar → repomix tool call |
-| `auth-json.test.js` | Auth JSON reader | Import discovery, provider mapping, smart delete check |
-| `opencode-client-cowork.test.js` | OpenCode client config | Client-aware prompt, systemPrompt, port handling, provider model sync |
-| `config.test.js` | Config core | Config I/O, aliases, getEffectiveAliases, tryResolveModel, buildProviderModels |
-| `config-fallback.test.js` | Config fallback | Direct API fallback with persisted keys |
-| `config-hash.test.js` | Config hashing | Config hashing, alias table, change detection |
-| `config-null-alias.test.js` | Config null alias | Null alias protection and auto-repair |
-| `config-resolve.test.js` | Config resolution | Model resolution, default aliases, direct API fallback, detectFallback |
-| `model-validator.test.js` | Model validator | Validation, filtering, interactive prompting, headless errors |
-| `model-fetcher.test.js` | Model fetcher | Provider API fetching, normalization, grouping, error handling |
-| `updater.test.js` | Update checker | Mock states, performUpdate spawn, CLI integration |
-| `evals/tests/transcript_parser.test.js` | Stream-json parsing | Tool call extraction, token usage, error capture |
-| `evals/tests/evaluator.test.js` | Eval criteria | Programmatic checks (7 types), LLM-as-judge prompt/response |
-| `evals/tests/claude_runner.test.js` | Claude runner | MCP config, sandbox creation, CLI command building |
-| `evals/tests/result_writer.test.js` | Result output | Summary formatting, file writing |
-| `scripts/check-secrets.test.js` | Secret detection | Pattern matching, allowlist, multi-secret |
-| `scripts/check-file-sizes.test.js` | File size limits | Line counting, batch checking |
-| `scripts/validate-docs.test.js` | Doc drift detection | Section extraction, drift comparison, staged file check |
-| `helpers/cdp-client.test.js` | CDP helper | Mock HTTP+WebSocket CDP server, factory methods |
-| `electron-headless-mode.test.js` | Electron headless | Source-level verify `SIDECAR_HEADLESS_TEST` guard |
-| `cli-headless-e2e.integration.test.js` | CLI E2E (real LLM) | `start --no-ui`, `list`, `read`, `read --metadata` |
-| `electron-toolbar-e2e.integration.test.js` | Electron CDP E2E (real LLM) | Brand, task ID, timer, fold button, settings, update banner, screenshots |
-
-### What NOT to Unit Test (UI Code)
-
-**Do NOT write unit tests for:**
-- DOM manipulation in `renderer.js`
-- UI picker components (`model-picker.js`, `mode-picker.js`, `thinking-picker.js`)
-- Electron window configuration (`main.js`)
-- CSS class assignments and styling
-
-**Why:** DOM mock tests are ineffective - they test mock behavior, not real rendering. These tests create false confidence and are expensive to maintain.
-
-### UI Testing Approach (Autonomous Verification Required)
-
-**MANDATORY: Any UI feature change MUST be visually verified before considering it complete.** Do not rely solely on unit tests for UI work — launch the Electron app, inspect via CDP, and take a screenshot.
-
-For UI changes, follow this autonomous verification process:
-
-1. **Launch the app** with appropriate mock env vars (e.g., `SIDECAR_MOCK_UPDATE=available`)
-2. **Use `SIDECAR_DEBUG_PORT=9223`** to avoid port conflicts with Chrome
-3. **Inspect via Chrome DevTools Protocol**: Connect to `http://127.0.0.1:9223/json`, find the target page, query DOM state via WebSocket
-4. **Take a screenshot**: `screencapture -x /tmp/sidecar-<feature>.png` and visually verify
-5. **Check both targets**: The Electron window has two pages — the OpenCode content (`http://localhost:...`) and the toolbar (`data:text/html`). Test each as needed.
-
-**Key gotcha:** `contextBridge` does not work with `data:` URLs. The toolbar (`data:text/html`) cannot use `window.sidecar` IPC. Use `executeJavaScript()` polling from the main process instead.
-
-See [docs/electron-testing.md](docs/electron-testing.md) for full CDP patterns, toolbar-specific testing, and known limitations.
-
-### Image / Diagram QA (Mandatory Visual Loop)
-
-**When creating or modifying any image (SVG, PNG, diagram, screenshot), you MUST:**
-
-1. Render / convert the image
-2. Read it back visually (use `Read` tool on the PNG) and inspect the output
-3. Check for: text clipping, alignment issues, correct labels, layout balance, readability
-4. Fix any issues found
-5. Re-render and re-inspect — **loop until fully QA'd**
-
-Never commit an image without completing visual verification. GitHub strips `<style>` and `<filter>` from SVGs, so always convert to PNG (use `sharp`) for any image referenced in README or docs.
-
-### Update Banner Mock Testing
-
-Use `SIDECAR_MOCK_UPDATE` to test update UI states without real npm operations:
-
-```bash
-SIDECAR_MOCK_UPDATE=available sidecar start --model gemini --prompt "test"  # Shows banner
-SIDECAR_MOCK_UPDATE=success sidecar start --model gemini --prompt "test"    # Update succeeds
-SIDECAR_MOCK_UPDATE=error sidecar start --model gemini --prompt "test"      # Update fails
-```
-
-### Test Commands
-
-```bash
-npm test                           # Unit tests (excludes *.integration.test.js)
-npm run test:all                   # Unit + integration (used by pre-push hook)
-npm run test:integration           # Integration tests only (real LLM, costs tokens)
-npm test tests/context.test.js     # Single file (faster during dev)
-npm test -- --watch                # Watch mode
-npm test -- --coverage             # Coverage report
-```
-
----
-
-## Testing Guide
-
-See **[docs/testing.md](docs/testing.md)** for the comprehensive testing guide covering all test tiers (unit, integration, E2E), CDP helper usage, environment variables, cross-platform setup, and how to write new tests.
-
-See also:
-- [docs/electron-testing.md](docs/electron-testing.md) for manual CDP WebSocket recipes and debugging patterns
-- [evals/README.md](evals/README.md) for the agentic eval system
 
 ---
 
@@ -587,201 +518,6 @@ See [docs/jsdoc-setup.md](docs/jsdoc-setup.md) for JSDoc patterns, `.d.ts` gener
 
 ---
 
-## Configuration
-
-### Environment Variables (.env)
-
-```bash
-# Required
-OPENROUTER_API_KEY=sk-or-...              # Multi-model API access
-
-# Optional
-OPENCODE_COMMAND=opencode                 # Override OpenCode command path
-SIDECAR_DEFAULT_MODEL=openrouter/google/gemini-2.5-flash
-SIDECAR_TIMEOUT=15                        # Headless timeout in minutes
-LOG_LEVEL=error                           # debug | info | warn | error
-
-# Model Routing
-SIDECAR_DISABLE_MODEL_ROUTING=true        # Disable auto-routing for subagent tasks
-SIDECAR_EXPLORE_MODEL=openrouter/...      # Override model for Explore subagents
-
-# Advanced / Debug
-SIDECAR_CONFIG_DIR=/path/to/config        # Override config directory (~/.config/sidecar)
-SIDECAR_ENV_DIR=/path/to/env              # Override .env file directory
-SIDECAR_DEBUG_PORT=9223                   # CDP debug port (default: 9222)
-SIDECAR_MOCK_UPDATE=available             # Mock update UI state for testing
-```
-
-### Dependencies
-
-| Package | Version | Purpose |
-|---------|---------|---------|
-| `electron` | ^28.0.0 | Interactive sidecar window |
-| `tiktoken` | ^1.0.0 | Token estimation |
-| `jest` | ^29.0.0 | Testing framework |
-| `eslint` | ^8.0.0 | Code linting |
-| `husky` | ^9.1.7 | Git hook management |
-| `lint-staged` | ^16.3.2 | Run linters on staged files |
-
-### Bundled Dependencies
-
-- `opencode-ai` (>=1.0.0) - LLM conversation engine (installed automatically, no separate install needed)
-
-### Model Names Reference
-
-**IMPORTANT**: Always fetch current model names from the OpenRouter API before using them.
-
-**API Endpoint**: `https://openrouter.ai/api/v1/models`
-
-```bash
-# Fetch available models
-curl https://openrouter.ai/api/v1/models | jq '.data[].id' | grep -i gemini
-```
-
-**Common Model IDs** (as of 2026-03):
-| Model | OpenRouter ID |
-|-------|---------------|
-| Gemini 3 Flash | `openrouter/google/gemini-3-flash-preview` |
-| Gemini 3 Pro | `openrouter/google/gemini-3-pro-preview` |
-| Gemini 3.1 Pro | `openrouter/google/gemini-3.1-pro-preview` |
-
-**Note**: Model names change frequently. Always verify current names via the API or `opencode models openrouter`.
-
-### Model Aliases
-
-Sidecar supports model aliases configured via `sidecar setup`. Config is stored at `~/.config/sidecar/config.json`.
-
-```bash
-sidecar setup                              # Interactive wizard
-sidecar start --prompt "Review auth"       # Uses config default model
-sidecar start --model opus --prompt "..."  # Uses alias
-sidecar start --model openrouter/google/gemini-3-flash-preview --prompt "..."  # Full string
-```
-
-Run `sidecar setup --add-alias name=model` to add custom aliases.
-
----
-
-## SDK & API Notes
-
-### OpenCode SDK Requirements
-
-- SDK's `createOpencodeServer()` spawns `opencode` CLI internally
-- `opencode-ai` is a regular dependency — its binary is in `node_modules/.bin/`
-- `src/utils/path-setup.js` adds `node_modules/.bin/` to PATH so the binary is always found
-- SDK is ESM-only; use dynamic `import()` not `require()` in CommonJS projects
-- Jest can't mock dynamic imports without `--experimental-vm-modules` - skip those tests
-
-### OpenCode API Format
-
-- Model must be object: `{ providerID: 'openrouter', modelID: 'google/gemini-2.5-flash' }`
-- Sending model as string causes 400 Bad Request
-- Use `formatModelForAPI()` from `electron/ui/model-picker.js` for conversion
-
----
-
-## OpenCode Integration Principles
-
-This section documents how sidecar integrates with OpenCode's native capabilities and avoids redundant implementations.
-
-### What OpenCode Provides (Use Native APIs)
-
-| Feature | OpenCode API | How We Use It |
-|---------|-------------|---------------|
-| **Agent Types** | Native `Build`, `Plan`, `Explore`, `General` | Pass `agent` parameter to `sendPrompt()` |
-| **Tool Permissions** | Enforced by agent framework | NO custom prompt-based restrictions |
-| **Session Status** | `session.status()` | Used in `headless.js` for completion detection |
-| **Session Messages** | `session.messages()` | Used for polling and conversation capture |
-| **Child Sessions** | `session.create({ parentID })` | Used for subagent spawning |
-| **Health Check** | `config.get()` | Used to verify server ready state |
-
-### What We Built (Unique Value)
-
-| Feature | Why We Need It | Implementation |
-|---------|----------------|----------------|
-| **Context Extraction** | Bridge Claude Code sessions to OpenCode | `context.js` reads `.jsonl` files |
-| **File Conflict Detection** | Safety feature - OpenCode doesn't track this | `conflict.js` compares mtimes |
-| **Context Drift Detection** | Safety feature - detect stale context | `drift.js` calculates staleness |
-| **Session Persistence** | Custom metadata (briefing, agent, thinking) | `session-manager.js` |
-| **MCP Config Merging** | CLI overrides + file config | `opencode-client.js` |
-| **Client-aware prompt** | Cowork needs general-purpose, not SE-focused | `prompts/cowork-agent-prompt.js` sets `chat` agent `prompt` field |
-
-### Removed Redundancies
-
-The following custom implementations were **removed** because OpenCode handles them natively:
-
-| Removed | Reason | Native Replacement |
-|---------|--------|-------------------|
-| ~~`buildCodeModeEnvironment()`~~ | Tool restrictions in prompts | OpenCode `Build` agent |
-| ~~`buildPlanModeEnvironment()`~~ | Tool restrictions in prompts | OpenCode `Plan` agent |
-| ~~`buildAskModeEnvironment()`~~ | Tool restrictions in prompts | OpenCode `Build` with `permissions` |
-| ~~Custom heartbeat polling~~ | Basic sleep loop | `session.status()` API |
-
-### Agent Type Mapping
-
-```javascript
-// src/utils/agent-mapping.js
-mapAgentToOpenCode('build')    // → { agent: 'Build' }
-mapAgentToOpenCode('plan')     // → { agent: 'Plan' }
-mapAgentToOpenCode('explore')  // → { agent: 'Explore' }
-mapAgentToOpenCode('general')  // → { agent: 'General' }
-mapAgentToOpenCode('custom')   // → { agent: 'custom' } // passed through
-```
-
-**Headless mode defaults:** When `--no-ui` is set, the default agent is `build` (not `chat`).
-The `chat` agent requires user interaction for write/bash permissions and stalls in headless mode.
-`isHeadlessSafe(agent)` returns `true` (safe), `false` (chat), or `null` (custom/unknown).
-
-### Key Integration Files
-
-| File | OpenCode Integration |
-|------|---------------------|
-| `src/opencode-client.js` | SDK wrapper - `createSession()`, `sendPrompt()`, `getSessionStatus()` |
-| `src/headless.js` | Uses `session.status()` for completion detection |
-| `src/utils/agent-mapping.js` | Maps sidecar modes to OpenCode agents |
-| `electron/main.js` | Creates child sessions for subagents |
-
----
-
-## OpenCode SDK & HTTP API Reference
-
-Refer to the [OpenCode documentation](https://opencode.ai/docs/) for SDK and server API details.
-
-**Critical: Model Format** — Models MUST be objects, not strings:
-
-```javascript
-// ❌ WRONG - causes 400 Bad Request
-{ model: "google/gemini-2.5-flash" }
-
-// ✅ CORRECT
-{ model: { providerID: "openrouter", modelID: "google/gemini-2.5-flash" } }
-```
-
----
-
-## npm Publishing
-
-**Package**: `claude-sidecar` on npm (public)
-**Publishing method**: GitHub Actions with OIDC trusted publishing + provenance
-
-### How to Publish a New Version
-
-```bash
-npm version patch   # or minor/major (bumps version + creates git tag)
-git push origin main --tags
-```
-
-The `.github/workflows/publish.yml` workflow triggers on `v*` tags and publishes automatically.
-
-### Publishing Setup
-
-- **Trusted Publisher**: Configured on npm for `jrenaldi79/sidecar` + `publish.yml` (OIDC-based, no manual token management)
-- **NPM_TOKEN**: Granular access token stored as GitHub secret (bypass 2FA enabled, scoped to `claude-sidecar`)
-- **OIDC provenance**: `--provenance` flag adds Sigstore attestation (requires `id-token: write` permission)
-- **Trusted publisher config**: https://www.npmjs.com/package/claude-sidecar/access (Settings tab)
-
----
-
 ## Development Workflow Checklists
 
 ### Before Starting New Work
@@ -806,25 +542,6 @@ The `.github/workflows/publish.yml` workflow triggers on `v*` tags and publishes
 
 ---
 
-## Troubleshooting
-
-| Issue | Cause | Solution |
-|-------|-------|----------|
-| `command not found: opencode` | OpenCode binary not found | Reinstall: `npm install -g claude-sidecar` (opencode-ai is bundled) |
-| `spawn opencode ENOENT` | CLI not in PATH | Verify `path-setup.js` runs before server start; check `node_modules/.bin/opencode` exists |
-| API 400 Bad Request | Model format wrong | Use `{providerID, modelID}` object, not string. See `formatModelForAPI()` |
-| Jest ESM mock fails | Dynamic import | Skip test with `it.skip()` or use `--experimental-vm-modules` |
-| Session resolution fails | No recent session | Pass explicit `--session` flag |
-| Electron window blank | Assets not built | Run from project root |
-| Headless stalls silently | `chat` agent in `--no-ui` mode | Use `--agent build` or remove `--no-ui` |
-| Headless timeout | Task too complex | Increase `SIDECAR_TIMEOUT` |
-| Context too large | Too many turns | Use `--turns` or `--tokens` filter |
-| API key errors | Missing env var | Set `OPENROUTER_API_KEY` in .env |
-| Summary not captured | Fold not clicked | Click FOLD button or wait for [SIDECAR_FOLD] |
-| Question tool fails after answer | Using sync API | Ensure `sendToAPIStreaming()` is used, not `sendToAPI()`. See "Async-Only Architecture" section. |
-
----
-
 ## Code Review Checklist
 
 - [ ] Tests written first (TDD) and passing
@@ -836,72 +553,41 @@ The `.github/workflows/publish.yml` workflow triggers on `v*` tags and publishes
 
 ---
 
+## Auto-Generated Sections
+
+Sections between `<!-- AUTO:name -->` markers are maintained by `scripts/generate-docs.js`.
+Do NOT edit these by hand. To update: `node scripts/generate-docs.js`.
+The pre-commit hook runs this automatically. See [docs/doc-system.md](docs/doc-system.md) for details.
+
+---
+
+## Critical Gotchas
+
+- **Model format**: Must be `{ providerID, modelID }` object, not string. String causes 400.
+- **ESM**: SDK is ESM-only. Use dynamic `import()`, not `require()`.
+- **Headless agent**: Default agent in `--no-ui` mode is `build` (not `chat`). `chat` stalls.
+- **Jest + ESM**: Can't mock dynamic imports without `--experimental-vm-modules`. Use child process.
+- **contextBridge**: Does not work with `data:` URLs. Toolbar uses `executeJavaScript()` polling.
+
+---
+
 ## Agent Documentation
 
 GEMINI.md and AGENTS.md are symlinks to CLAUDE.md -- no sync needed.
 
 ---
 
-## Related Documentation
+## Docs Map
 
-- [README.md](README.md) - User-facing documentation
-- [skill/SKILL.md](skill/SKILL.md) - Claude Code skill integration
-- [docs/testing.md](docs/testing.md) - Comprehensive testing guide (all tiers, CDP, cross-platform)
-- [docs/electron-testing.md](docs/electron-testing.md) - Manual CDP WebSocket recipes and debugging
-- [docs/jsdoc-setup.md](docs/jsdoc-setup.md) - JSDoc patterns and type declarations
-- [evals/README.md](evals/README.md) - Agentic eval system (end-to-end LLM interaction testing)
-- [OpenCode docs](https://opencode.ai/docs/) - SDK and server API reference (upstream)
-
----
-
-## Maintaining This Documentation
-
-**CRITICAL**: Keep CLAUDE.md in sync with the codebase. Outdated docs lead to incorrect AI assistance.
-
-### When to Update CLAUDE.md
-
-| Change Type | Sections to Update |
-|-------------|-------------------|
-| **New module added** | Directory Structure, Key Modules table |
-| **Module renamed/removed** | Directory Structure, Key Modules table |
-| **New public API function** | Key Modules table, add JSDoc example if complex |
-| **New CLI command** | Essential Commands section |
-| **New environment variable** | Configuration section |
-| **New test file** | Testing Strategy (Test Files table) |
-| **New npm script** | Essential Commands section |
-| **Architecture change** | Architecture diagram, Data Flow |
-| **New dependency** | Dependencies table in Configuration |
-| **Bug fix pattern discovered** | Troubleshooting table |
-
-### Update Checklist
-
-After making significant changes, verify:
-
-- [ ] **Directory Structure** matches actual `ls -la` output
-- [ ] **Key Modules table** lists all files in `src/`
-- [ ] **Essential Commands** match `package.json` scripts
-- [ ] **Test count** is current (run npm test to verify)
-- [ ] **Dependencies table** matches `package.json`
-
-### Quick Validation Commands
-
-```bash
-# Verify directory structure
-ls -la src/ bin/ electron/ tests/ scripts/
-
-# Count tests (update if changed)
-npm test 2>&1 | grep "Tests:"
-
-# Check file count
-find src -name "*.js" | wc -l
-
-# Verify module count matches docs
-grep -c "| \`" CLAUDE.md  # Should match module count
-```
-
-### Versioning This File
-
-When making major updates to CLAUDE.md:
-1. Add a comment at the top with the date: `<!-- Last updated: 2026-01-25 -->`
-2. If the spec version changes, update the "Related Documentation" link
-
+| Topic | File |
+|-------|------|
+| Documentation system (markers, auto-gen, cross-links) | [docs/doc-system.md](docs/doc-system.md) |
+| Testing strategy, tiers, CDP, UI testing, test file index | [docs/testing.md](docs/testing.md) |
+| OpenCode SDK integration, agent mapping, API format | [docs/opencode-integration.md](docs/opencode-integration.md) |
+| Configuration, env vars, dependencies, model names | [docs/configuration.md](docs/configuration.md) |
+| Publishing to npm | [docs/publishing.md](docs/publishing.md) |
+| Troubleshooting | [docs/troubleshooting.md](docs/troubleshooting.md) |
+| Electron CDP testing patterns | [docs/electron-testing.md](docs/electron-testing.md) |
+| JSDoc patterns and type declarations | [docs/jsdoc-setup.md](docs/jsdoc-setup.md) |
+| Agentic eval system | [evals/README.md](evals/README.md) |
+| Design and implementation plans | [docs/plans/index.md](docs/plans/index.md) |
