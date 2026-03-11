@@ -29,52 +29,14 @@ This file provides guidance to Claude Code when working with code in this reposi
 ### Development
 ```bash
 npm start                    # Run sidecar CLI
-npm test                     # Run unit tests (Jest, excludes *.integration.test.js)
-npm run test:integration     # Run integration tests only (real LLM, costs tokens)
-npm run test:all             # Run all tests (unit + integration, used by pre-push)
 npm run lint                 # Run ESLint
 ```
 
-### CLI Usage
-```bash
-node bin/sidecar.js start --model <model> --prompt "<task>" [--agent <agent>] [--validate-model]
-node bin/sidecar.js list [--status <filter>] [--all]
-node bin/sidecar.js resume <task_id>
-node bin/sidecar.js continue <task_id> --briefing "..."
-node bin/sidecar.js read <task_id> [--summary|--conversation]
-sidecar setup                    # Configure default model and aliases
-sidecar setup --add-alias name=model  # Add a custom alias
-sidecar mcp                      # Start MCP server (stdio transport)
-sidecar update                       # Update to latest version
-```
-
-### MCP Server (for Cowork / Claude Desktop)
-```bash
-# Auto-registered during npm install. Manual registration:
-claude mcp add-json sidecar '{"command":"npx","args":["-y","claude-sidecar@latest","mcp"]}' --scope user
-```
-
-MCP tools: `sidecar_start`, `sidecar_status`, `sidecar_read`, `sidecar_list`, `sidecar_resume`, `sidecar_continue`, `sidecar_setup`, `sidecar_guide`, `sidecar_abort`
-
-Session statuses: `running`, `complete`, `aborted`, `crashed`, `error`
-
-### OpenCode Agent Types
-
-The `--agent` option specifies which OpenCode native agent to use:
-
-| Agent | Description | Tool Access |
-|-------|-------------|-------------|
-| **Build** | Default primary agent | Full (read, write, bash, task) |
-| **Plan** | Read-only analysis | Read-only |
-| **General** | Full-access subagent | Full |
-| **Explore** | Read-only subagent | Read-only |
-
-Custom agents defined in `~/.config/opencode/agents/` or `.opencode/agents/` are also supported.
-
 ### Testing
 ```bash
-npm test                           # Unit tests (excludes integration)
-npm run test:all                   # Unit + integration tests
+npm test                           # Unit tests (excludes *.integration.test.js)
+npm run test:integration           # Integration tests only (real LLM, costs tokens)
+npm run test:all                   # Unit + integration (used by pre-push)
 npm test tests/context.test.js     # Single file (preferred during dev)
 npm test -- --coverage             # Coverage report
 ```
@@ -88,14 +50,6 @@ node scripts/generate-docs.js --check # Verify auto sections are current (CI mod
 node scripts/validate-docs.js        # Pre-commit: warn if CLAUDE.md may need update
 node scripts/validate-docs.js --full # Full: compare CLAUDE.md against codebase
 npm run validate-docs                # Alias for --full mode
-```
-
-### Agentic Evals
-```bash
-node evals/run_eval.js --eval-id 1       # Single eval
-node evals/run_eval.js --all             # All evals
-node evals/run_eval.js --all --dry-run   # Print commands only
-node evals/run_eval.js --eval-id 1 --model opus  # Override model
 ```
 
 ---
@@ -581,6 +535,7 @@ GEMINI.md and AGENTS.md are symlinks to CLAUDE.md -- no sync needed.
 
 | Topic | File |
 |-------|------|
+| CLI commands, MCP tools, agent types, evals | [docs/usage.md](docs/usage.md) |
 | Documentation system (markers, auto-gen, cross-links) | [docs/doc-system.md](docs/doc-system.md) |
 | Testing strategy, tiers, CDP, UI testing, test file index | [docs/testing.md](docs/testing.md) |
 | OpenCode SDK integration, agent mapping, API format | [docs/opencode-integration.md](docs/opencode-integration.md) |
