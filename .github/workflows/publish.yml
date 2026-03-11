@@ -29,3 +29,84 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           TAG_NAME: ${{ github.ref_name }}
         run: gh release create "$TAG_NAME" --generate-notes --latest
+
+  release-notes:
+    needs: publish
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get previous tag
+        id: prev_tag
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          PREV_TAG=$(git tag --sort=-version:refname | grep -v "^${TAG_NAME}$" | head -1)
+          echo "prev_tag=${PREV_TAG}" >> "$GITHUB_OUTPUT"
+          echo "Current: ${TAG_NAME}, Previous: ${PREV_TAG}"
+
+      - name: Generate commit summary
+        id: commits
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+          PREV_TAG: ${{ steps.prev_tag.outputs.prev_tag }}
+        run: |
+          {
+            echo 'summary<<COMMITS_EOF'
+            echo "## Commits from ${PREV_TAG} to ${TAG_NAME}"
+            echo ""
+            git log "${PREV_TAG}..${TAG_NAME}" --pretty=format:"- %s (%h)" --no-merges
+            echo ""
+            echo ""
+            echo "## Diff stat"
+            git diff "${PREV_TAG}..${TAG_NAME}" --stat
+            echo 'COMMITS_EOF'
+          } >> "$GITHUB_OUTPUT"
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          prompt: |
+            You are writing release notes for claude-sidecar ${{ github.ref_name }}.
+
+            Here is the commit history and diff stat since the last release (${{ steps.prev_tag.outputs.prev_tag }}):
+
+            ${{ steps.commits.outputs.summary }}
+
+            Instructions:
+            1. Read the actual code changes by running: git diff ${{ steps.prev_tag.outputs.prev_tag }}..${{ github.ref_name }}
+            2. Write rich, categorized release notes in this exact style:
+
+            ## What's Changed
+
+            ### [Category Name]
+            - **[Short title]**: Description of what changed and why it matters. Be specific about behavior changes.
+
+            ### Bug Fixes
+            - Description of fix and what was broken.
+
+            **Full Changelog**: https://github.com/${{ github.repository }}/compare/${{ steps.prev_tag.outputs.prev_tag }}...${{ github.ref_name }}
+
+            Rules:
+            - Group related changes under descriptive category headings (Features, Bug Fixes, Improvements, Infrastructure, etc.)
+            - Each bullet should explain WHAT changed and WHY, not just repeat the commit message
+            - Bold the key phrase in each bullet for scannability
+            - Skip version-bump-only commits (e.g. "0.4.4")
+            - Skip docs-only and chore commits unless they are user-facing
+            - Keep it concise but informative. 2-3 sentences per item max.
+            - Always end with the Full Changelog link
+            - Do NOT wrap the output in markdown code fences
+            - Do NOT use em dashes. Use commas, periods, or parentheses instead.
+
+            3. Update the release body by running:
+            gh release edit ${{ github.ref_name }} --notes-file -
+
+            Pass the release notes via stdin using a heredoc. Example:
+            gh release edit TAG --notes-file - <<'NOTES'
+            ...release notes here...
+            NOTES
