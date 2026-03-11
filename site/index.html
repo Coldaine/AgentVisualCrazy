@@ -1305,14 +1305,15 @@ document.querySelectorAll('h2').forEach(h2=>{
     pill.title=data.name||data.tag;
     pill.style.display='inline-flex';
   }
+  var TTL=3600000; /* 1 hour */
   try{
-    var cached=sessionStorage.getItem(CACHE_KEY);
-    if(cached){show(JSON.parse(cached));return}
+    var cached=JSON.parse(sessionStorage.getItem(CACHE_KEY));
+    if(cached&&cached.ts&&Date.now()-cached.ts<TTL){show(cached);return}
   }catch(e){}
   fetch('https://api.github.com/repos/'+REPO+'/releases/latest')
     .then(function(r){if(!r.ok){throw new Error(r.status)}return r.json()})
     .then(function(d){
-      var data={tag:d.tag_name,url:d.html_url,name:d.name||d.tag_name};
+      var data={tag:d.tag_name,url:d.html_url,name:d.name||d.tag_name,ts:Date.now()};
       show(data);
       try{sessionStorage.setItem(CACHE_KEY,JSON.stringify(data))}catch(e){}
     })
