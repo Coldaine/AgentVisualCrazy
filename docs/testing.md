@@ -414,6 +414,102 @@ module.exports = {
 
 ---
 
+## Test File Index
+
+Complete mapping of test files to their targets and focus areas.
+
+| Test File | Target Module | Focus |
+|-----------|--------------|-------|
+| `cli.test.js` | Argument parsing | Command validation, flag handling |
+| `context.test.js` | Context filtering | Turn extraction, token estimation |
+| `session.test.js` | Session resolution | Primary/fallback paths |
+| `session-manager.test.js` | Persistence layer | CRUD operations, metadata |
+| `conflict.test.js` | File conflicts | mtime comparison, warning format |
+| `drift.test.js` | Drift calculation | Age, turn count, significance |
+| `headless.test.js` | OpenCode HTTP API | Spawn, polling, timeout |
+| `prompt-builder.test.js` | System prompts | Template construction |
+| `index.test.js` | Main API | Re-export smoke tests, generateTaskId |
+| `e2e.test.js` | End-to-end | Full workflow |
+| `sidecar/start.test.js` | Session starting | Task ID generation, metadata creation, MCP config |
+| `sidecar/resume.test.js` | Session resumption | Drift detection, metadata loading |
+| `sidecar/continue.test.js` | Session continuation | Previous session loading, context building |
+| `sidecar/read.test.js` | Session reading | Listing, age formatting, output modes |
+| `sidecar/context-builder.test.js` | Context building | Session resolution, message filtering |
+| `sidecar/session-utils.test.js` | Shared utilities | Session paths, finalization, heartbeat |
+| `sidecar/progress.test.js` | Progress reader | Message counts, latest activity, last activity |
+| `sidecar/exit-handler.test.js` | Crash handler | Metadata update on crash, status transitions |
+| `mcp-headless-lifecycle.test.js` | MCP headless lifecycle | Start, poll, progress, crash, abort, read |
+| `mcp-discovery.test.js` | MCP discovery | Plugin chain, `~/.claude.json` mcpServers, merge priority, sidecar exclusion |
+| `mcp-discovery-integration.test.js` | buildMcpConfig merge | Discovery + file + CLI merge, --no-mcp, --exclude-mcp |
+| `mcp-repomix-e2e.integration.test.js` | MCP E2E (real LLM + repomix) | Real discovery -> headless sidecar -> repomix tool call |
+| `auth-json.test.js` | Auth JSON reader | Import discovery, provider mapping, smart delete check |
+| `opencode-client-cowork.test.js` | OpenCode client config | Client-aware prompt, systemPrompt, port handling, provider model sync |
+| `config.test.js` | Config core | Config I/O, aliases, getEffectiveAliases, tryResolveModel, buildProviderModels |
+| `config-fallback.test.js` | Config fallback | Direct API fallback with persisted keys |
+| `config-hash.test.js` | Config hashing | Config hashing, alias table, change detection |
+| `config-null-alias.test.js` | Config null alias | Null alias protection and auto-repair |
+| `config-resolve.test.js` | Config resolution | Model resolution, default aliases, direct API fallback, detectFallback |
+| `model-validator.test.js` | Model validator | Validation, filtering, interactive prompting, headless errors |
+| `model-fetcher.test.js` | Model fetcher | Provider API fetching, normalization, grouping, error handling |
+| `updater.test.js` | Update checker | Mock states, performUpdate spawn, CLI integration |
+| `evals/tests/transcript_parser.test.js` | Stream-json parsing | Tool call extraction, token usage, error capture |
+| `evals/tests/evaluator.test.js` | Eval criteria | Programmatic checks (7 types), LLM-as-judge prompt/response |
+| `evals/tests/claude_runner.test.js` | Claude runner | MCP config, sandbox creation, CLI command building |
+| `evals/tests/result_writer.test.js` | Result output | Summary formatting, file writing |
+| `scripts/check-secrets.test.js` | Secret detection | Pattern matching, allowlist, multi-secret |
+| `scripts/check-file-sizes.test.js` | File size limits | Line counting, batch checking |
+| `scripts/validate-docs.test.js` | Doc drift detection | Section extraction, drift comparison, staged file check |
+| `helpers/cdp-client.test.js` | CDP helper | Mock HTTP+WebSocket CDP server, factory methods |
+| `electron-headless-mode.test.js` | Electron headless | Source-level verify `SIDECAR_HEADLESS_TEST` guard |
+| `cli-headless-e2e.integration.test.js` | CLI E2E (real LLM) | `start --no-ui`, `list`, `read`, `read --metadata` |
+| `electron-toolbar-e2e.integration.test.js` | Electron CDP E2E (real LLM) | Brand, task ID, timer, fold button, settings, update banner, screenshots |
+
+---
+
+## UI Testing Approach (Autonomous Verification Required)
+
+**MANDATORY: Any UI feature change MUST be visually verified before considering it complete.** Do not rely solely on unit tests for UI work -- launch the Electron app, inspect via CDP, and take a screenshot.
+
+For UI changes, follow this autonomous verification process:
+
+1. **Launch the app** with appropriate mock env vars (e.g., `SIDECAR_MOCK_UPDATE=available`)
+2. **Use `SIDECAR_DEBUG_PORT=9223`** to avoid port conflicts with Chrome
+3. **Inspect via Chrome DevTools Protocol**: Connect to `http://127.0.0.1:9223/json`, find the target page, query DOM state via WebSocket
+4. **Take a screenshot**: `screencapture -x /tmp/sidecar-<feature>.png` and visually verify
+5. **Check both targets**: The Electron window has two pages -- the OpenCode content (`http://localhost:...`) and the toolbar (`data:text/html`). Test each as needed.
+
+**Key gotcha:** `contextBridge` does not work with `data:` URLs. The toolbar (`data:text/html`) cannot use `window.sidecar` IPC. Use `executeJavaScript()` polling from the main process instead.
+
+See [electron-testing.md](electron-testing.md) for full CDP patterns, toolbar-specific testing, and known limitations.
+
+---
+
+## Image / Diagram QA (Mandatory Visual Loop)
+
+**When creating or modifying any image (SVG, PNG, diagram, screenshot), you MUST:**
+
+1. Render / convert the image
+2. Read it back visually (use `Read` tool on the PNG) and inspect the output
+3. Check for: text clipping, alignment issues, correct labels, layout balance, readability
+4. Fix any issues found
+5. Re-render and re-inspect -- **loop until fully QA'd**
+
+Never commit an image without completing visual verification. GitHub strips `<style>` and `<filter>` from SVGs, so always convert to PNG (use `sharp`) for any image referenced in README or docs.
+
+---
+
+## Update Banner Mock Testing
+
+Use `SIDECAR_MOCK_UPDATE` to test update UI states without real npm operations:
+
+```bash
+SIDECAR_MOCK_UPDATE=available sidecar start --model gemini --prompt "test"  # Shows banner
+SIDECAR_MOCK_UPDATE=success sidecar start --model gemini --prompt "test"    # Update succeeds
+SIDECAR_MOCK_UPDATE=error sidecar start --model gemini --prompt "test"      # Update fails
+```
+
+---
+
 ## Troubleshooting
 
 | Problem | Cause | Solution |
