@@ -23,7 +23,7 @@ const {
   buildModuleIndex,
 } = require('./generate-docs-helpers');
 
-const TREE_DIRS = ['bin/', 'src/', 'electron/', 'tests/', 'scripts/', 'evals/'];
+const TREE_DIRS = ['bin/', 'src/', 'electron/', 'scripts/', 'evals/'];
 
 // ---------------------------------------------------------------------------
 // Marker Replacement

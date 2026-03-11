@@ -73,53 +73,7 @@ npm run validate-docs                # Alias for --full mode
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### Data Flow
-
-```
-User: sidecar start --model google/gemini-2.5 --briefing "Debug auth issue"
-       ↓
-CLI parses args (cli.js)
-       ↓
-buildContext() extracts from ~/.claude/projects/[project]/[session].jsonl
-       ↓
-buildPrompts() creates system prompt + user message
-  Interactive: context in system prompt (hidden from UI)
-  Headless: context in user message (no UI)
-       ↓
-startOpenCodeServer() → createSession() → sendPromptAsync()
-       ↓
-[Interactive]                    [Headless]
-Electron BrowserView opens       OpenCode async API (promptAsync)
-User converses with model        Agent works autonomously
-FOLD clicked →                   Polls for [SIDECAR_FOLD] marker
-  Model generates summary            ↓
-  (SUMMARY_TEMPLATE prompt)     extractSummary() captures output
-       ↓                              ↓
-Summary output to stdout → Claude Code receives in context
-```
-
-### Fold Mechanism
-
-When the user clicks **Fold** (or presses `Cmd+Shift+F`) in interactive mode:
-
-1. UI shows overlay with spinner ("Generating summary...")
-2. `SUMMARY_TEMPLATE` is sent to the model via OpenCode HTTP API (`prompt_async`)
-3. Electron polls `/session/:id/message` for the model's response
-4. Model generates a structured summary with: Task, Findings, Attempted Approaches, Recommendations, Code Changes, Files Modified, Assumptions, Open Questions
-5. Summary is written to stdout with `[SIDECAR_FOLD]` metadata header
-6. Electron window closes, `start.js` captures stdout and finalizes session
-
-In headless mode, the agent outputs `[SIDECAR_FOLD]` autonomously when done, and `headless.js` extracts everything before the marker.
-
-### Electron BrowserView Architecture
-
-The Electron shell (`electron/main.js`) uses a **BrowserView** to avoid CSS conflicts between the OpenCode SPA and the sidecar toolbar:
-
-- **BrowserView** (top): Loads the OpenCode web UI at `http://localhost:<port>`. Gets its own physical viewport, no CSS interference with the host window.
-- **Main window** (bottom 40px): Renders the sidecar toolbar (branding, task ID, timer, Fold button) via a `data:` URL.
-- On resize, `updateContentBounds()` adjusts the BrowserView to fill `height - 40px`.
-
-This replaced earlier CSS-based approaches (`padding-bottom`, `calc(100dvh - 40px)`) which failed because OpenCode's Tailwind `h-dvh` class resolves to the actual browser viewport and ignores parent element overrides.
+For detailed data flow, fold mechanism, and Electron BrowserView architecture, see [docs/architecture.md](docs/architecture.md).
 
 ---
 
@@ -196,85 +150,6 @@ electron/
 ├── summary.js  # Summary Generation via OpenCode API
 ├── toolbar.js  # Sidecar Toolbar HTML Builder
 └── window-position.js  # Window Position Calculator
-tests/
-├── electron/
-│   └── window-position.test.js  # Window Position Tests
-├── helpers/
-│   ├── cdp-client.js  # CDP Client - Thin Chrome DevTools Protocol helper for E2E tests.
-│   ├── cdp-client.test.js
-│   └── start-server.js  # Helper script: starts a real OpenCode server and prints connection info.
-├── prompts/
-│   └── cowork-agent-prompt.test.js
-├── scripts/
-│   ├── check-file-sizes.test.js  # File Size Enforcement Script Tests
-│   ├── check-secrets.test.js  # Secret Detection Script Tests
-│   ├── generate-docs.test.js  # Create a temp directory for each test, cleaned up after.
-│   └── validate-docs.test.js  # CLAUDE.md Drift Detection Script Tests
-├── sidecar/
-│   ├── config-change-flow.test.js  # Config Change Detection Flow Tests
-│   ├── context-builder.test.js  # Context Builder Tests
-│   ├── electron-guard.test.js  # Electron Lazy Loading Guard Tests
-│   ├── exit-handler.test.js  # Crash Handler Tests
-│   ├── interactive.test.js  # Interactive Mode Tests
-│   ├── progress.test.js  # Progress Reader Tests
-│   ├── resume.test.js  # Sidecar Resume Tests
-│   ├── session-utils.test.js  # Session Utils Tests
-│   ├── setup-window.test.js  # Tests for src/sidecar/setup-window.js
-│   ├── setup.test.js  # Setup Wizard Tests
-│   └── start.test.js  # Sidecar Start Tests
-├── agent-mapping.test.js  # Agent Mapping Tests
-├── api-key-store-readwrite.test.js  # Tests for src/utils/api-key-store.js — hints, values, and removal
-├── api-key-store-validation.test.js  # Tests for src/utils/api-key-store.js — validation and endpoints
-├── api-key-store.test.js  # Tests for src/utils/api-key-store.js
-├── auth-json.test.js  # Tests for src/utils/auth-json.js
-├── cli-handler.integration.test.js  # Helper: run sidecar CLI and return { stdout, stderr, code }
-├── cli-headless-e2e.integration.test.js  # Run a sidecar CLI command and return { stdout, stderr, exitCode }
-├── cli-process.integration.test.js  # Helper: run sidecar CLI and return { stdout, stderr, code }
-├── cli.test.js  # CLI Argument Parser Tests
-├── config-fallback.test.js  # Config Direct API Fallback Tests
-├── config-hash.test.js  # Sidecar Config Module Tests - Hashing & Alias Table
-├── config-null-alias.test.js  # Null Alias Defense Tests
-├── config-resolve.test.js  # Sidecar Config Module Tests - Model Resolution
-├── config.test.js  # Sidecar Config Module Tests
-├── conflict.test.js  # File Conflict Detection Tests
-├── context-compression.test.js  # Context Compression Module Tests
-├── context.test.js  # Context Filtering Tests
-├── drift.test.js  # Context Drift Detection Tests
-├── e2e.test.js  # End-to-End Tests for Claude Sidecar
-├── electron-headless-mode.test.js
-├── electron-toolbar-e2e.integration.test.js  # Electron Toolbar E2E Integration Test
-├── environment.test.js  # Environment Detection Tests
-├── fold-nudge.test.js
-├── headless.test.js  # Tests for headless mode runner
-├── index.test.js  # Tests for main index module
-├── jsonl-parser.test.js  # JSONL Parser Tests
-├── mcp-discovery-integration.test.js  # MCP buildMcpConfig Integration Tests
-├── mcp-discovery.test.js  # MCP Discovery Tests
-├── mcp-headless-e2e.integration.test.js  # Spawn real MCP server and provide JSON-RPC send/receive methods
-├── mcp-headless-lifecycle.test.js  # Create a session directory with metadata.json
-├── mcp-model-validation.test.js  # MCP Model Validation Tests
-├── mcp-project-dir.test.js
-├── mcp-protocol.integration.test.js  # MCP Protocol Integration Tests
-├── mcp-repomix-e2e.integration.test.js  # MCP Repomix E2E Test
-├── mcp-server.test.js  # MCP Server Handler Tests
-├── mcp-tools.test.js  # MCP Tool Definitions Tests
-├── model-fetcher.test.js  # Tests for src/utils/model-fetcher.js
-├── model-validator-normalize.test.js  # Model Validator Tests — normalizeModelId and config save behavior
-├── model-validator.test.js  # Model Validator Tests
-├── opencode-client-cowork.test.js  # Tests for client-aware prompt in opencode-client.js buildServerOptions()
-├── opencode-client.test.js  # Tests for OpenCode SDK Client Wrapper
-├── postinstall.test.js
-├── prompt-builder.test.js  # Prompt Builder Tests
-├── server-setup.test.js  # Tests for src/utils/server-setup.js
-├── session-manager.test.js  # Session Manager Tests
-├── session.test.js  # Session Resolver Tests
-├── setup-ui-aliases.test.js  # Tests for electron/setup-ui-aliases.js (Alias Editor)
-├── setup-ui-keys.test.js  # Tests for electron/setup-ui-keys.js
-├── setup-ui-model.test.js  # Tests for electron/setup-ui-model.js
-├── setup-ui.test.js  # Tests for electron/setup-ui.js (Wizard Orchestrator)
-├── spawn-pipe-deadlock.integration.test.js  # Spawn Stdio Configuration Tests
-├── toolbar.test.js  # Tests for electron/toolbar.js
-└── updater.test.js  # Updater Module Tests
 scripts/
 ├── benchmark-api-direct.js  # Direct OpenRouter API Benchmark for Thinking Levels
 ├── benchmark-thinking.js  # * Run a single test with specified model and thinking level
@@ -366,73 +241,23 @@ evals/
 
 ## Code Quality Rules
 
-### File Size Limits (HARD LIMITS)
-
-| Entity | Max Lines | Action If Exceeded |
-|--------|-----------|-------------------|
-| **Any file** | 300 lines | MUST refactor immediately |
-| **Any function** | 50 lines | MUST break into smaller functions |
+File size limits (300 lines/file, 50 lines/function) and complexity red flags are defined in the global CLAUDE.md.
 
 ### Documentation Sync (HARD RULE)
 
-Any commit that adds, removes, or renames a file in `src/`, `bin/`, or `scripts/` MUST include a CLAUDE.md update in the same commit. This is not optional. The pre-commit hook will warn if CLAUDE.md is not staged alongside tracked file changes.
-
-### Complexity Red Flags
-
-**STOP and refactor immediately if you see:**
-
-- **>5 nested if/else statements** -> Extract to separate functions
-- **>3 try/catch blocks in one function** -> Split error handling
-- **>10 imports** -> Consider splitting the module
-- **Duplicate logic** -> Extract to shared utilities
-
-### Code Quality Monitoring
-
-```bash
-# Check line counts (monitor file sizes - target <300 lines)
-find src -name "*.js" -exec wc -l {} + | sort -n
-
-# Find large files (>300 lines need refactoring)
-find src -name "*.js" -exec wc -l {} + | awk '$1 > 300'
-```
+Any commit that adds, removes, or renames a file in `src/`, `bin/`, or `scripts/` MUST include a CLAUDE.md update in the same commit. The pre-commit hook will warn if CLAUDE.md is not staged alongside tracked file changes.
 
 ---
 
 ## Git Hooks
 
-Managed by [husky](https://typicode.github.io/husky/). Hooks run automatically on commit and push.
+Managed by [husky](https://typicode.github.io/husky/).
 
-### pre-commit (fast, <2s)
+**pre-commit (<2s):** lint-staged -> check-secrets (block) -> check-file-sizes (block) -> generate-docs (auto-stage) -> validate-docs (warn)
 
-Runs on every `git commit`. Blocks the commit if any check fails.
+**pre-push:** `npm run test:all` (skipped if SHA-cached via `.test-passed`) -> `npm audit` (warn-only)
 
-| Step | Script | What It Does |
-|------|--------|-------------|
-| 1. lint-staged | `npx lint-staged` | ESLint `--fix` on staged `.js` files |
-| 2. Secret scan | `node scripts/check-secrets.js` | Blocks commits containing API keys, tokens, or private keys |
-| 3. File size check | `node scripts/check-file-sizes.js` | Blocks files over 300 lines |
-| 4. Doc generation | `node scripts/generate-docs.js` | Regenerates auto sections, auto-stages CLAUDE.md |
-| 5. Doc drift warning | `node scripts/validate-docs.js` | Warns if `src/`/`bin/`/`scripts/` changed without CLAUDE.md |
-
-### pre-push (thorough, ~3min)
-
-Runs on every `git push`. Blocks the push if tests fail.
-
-| Step | What It Does |
-|------|-------------|
-| 1. Test suite | `npm run test:all` (unit + integration) -- **skipped if cached** (see below) |
-| 2. Audit | `npm audit` (warn-only, does not block push) |
-
-### Test Caching (SHA-based)
-
-To avoid re-running the full test suite on push when you just ran `npm test`, the hooks use SHA-based caching:
-
-1. `npm test` / `npm run test:all` succeeds -> `posttest` script writes `HEAD` SHA to `.test-passed`
-2. `pre-push` hook compares current `HEAD` SHA against `.test-passed`
-3. If they match, tests are skipped with "Tests already passed for \<sha\>"
-4. If they differ (new commit since last test run), tests run normally
-
-The cache is invalidated automatically by any new commit. `.test-passed` is gitignored.
+**SHA caching:** `posttest` writes HEAD SHA to `.test-passed`. Pre-push skips tests if SHA matches. Invalidated by any new commit. File is gitignored.
 
 ---
 
@@ -533,16 +358,15 @@ GEMINI.md and AGENTS.md are symlinks to CLAUDE.md -- no sync needed.
 
 ## Docs Map
 
-| Topic | File |
-|-------|------|
-| CLI commands, MCP tools, agent types, evals | [docs/usage.md](docs/usage.md) |
-| Documentation system (markers, auto-gen, cross-links) | [docs/doc-system.md](docs/doc-system.md) |
-| Testing strategy, tiers, CDP, UI testing, test file index | [docs/testing.md](docs/testing.md) |
-| OpenCode SDK integration, agent mapping, API format | [docs/opencode-integration.md](docs/opencode-integration.md) |
-| Configuration, env vars, dependencies, model names | [docs/configuration.md](docs/configuration.md) |
-| Publishing to npm | [docs/publishing.md](docs/publishing.md) |
-| Troubleshooting | [docs/troubleshooting.md](docs/troubleshooting.md) |
-| Electron CDP testing patterns | [docs/electron-testing.md](docs/electron-testing.md) |
-| JSDoc patterns and type declarations | [docs/jsdoc-setup.md](docs/jsdoc-setup.md) |
-| Agentic eval system | [evals/README.md](evals/README.md) |
-| Design and implementation plans | [docs/plans/index.md](docs/plans/index.md) |
+- [docs/usage.md](docs/usage.md) - CLI, MCP tools, agent types, evals
+- [docs/architecture.md](docs/architecture.md) - Data flow, fold mechanism, Electron BrowserView
+- [docs/testing.md](docs/testing.md) - Testing strategy, tiers, CDP, UI testing
+- [docs/doc-system.md](docs/doc-system.md) - Auto-generation markers, cross-links
+- [docs/opencode-integration.md](docs/opencode-integration.md) - OpenCode SDK, agent mapping
+- [docs/configuration.md](docs/configuration.md) - Env vars, dependencies, model names
+- [docs/publishing.md](docs/publishing.md) - npm publishing
+- [docs/troubleshooting.md](docs/troubleshooting.md)
+- [docs/electron-testing.md](docs/electron-testing.md) - CDP patterns
+- [docs/jsdoc-setup.md](docs/jsdoc-setup.md) - JSDoc, `.d.ts` generation
+- [evals/README.md](evals/README.md) - Agentic eval system
+- [docs/plans/index.md](docs/plans/index.md) - Design plans
