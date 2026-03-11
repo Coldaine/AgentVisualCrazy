@@ -336,7 +336,7 @@ scripts/
 ├── list-models.js
 ├── postinstall.js  # Install skill file to ~/.claude/skills/sidecar/
 ├── test-tools.sh
-├── validate-docs.js  # * Full drift analysis: compare CLAUDE.md sections against actual filesystem.
+├── validate-docs.js  # * Main entry point.
 ├── validate-thinking.js
 └── validate-ui.js
 evals/

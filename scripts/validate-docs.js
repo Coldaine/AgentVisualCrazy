@@ -13,7 +13,6 @@
  */
 
 const { execFileSync } = require('node:child_process');
-const { readdirSync, readFileSync } = require('node:fs');
 const { resolve, basename } = require('node:path');
 
 const CONFIG = {
@@ -112,79 +111,19 @@ function checkStagedFilesDrift(stagedFiles) {
 }
 
 /**
- * Full drift analysis: compare CLAUDE.md sections against actual filesystem.
+ * Full drift analysis: delegates to generate-docs.js --check.
+ * That script handles marker freshness, cross-link validation,
+ * and plans index checks.
  */
 function runFullAnalysis() {
-  const docPath = resolve(CONFIG.docFile);
-  let markdown;
   try {
-    markdown = readFileSync(docPath, 'utf-8');
-  } catch {
-    console.error(`Cannot read ${CONFIG.docFile}`);
-    process.exit(1);
-  }
-
-  let hasIssues = false;
-
-  for (const mapping of CONFIG.mappings) {
-    const section = extractSection(markdown, mapping.section);
-    if (!section) {
-      console.warn(
-        `  Warning: Section "${mapping.section}" not found in ${CONFIG.docFile}`
-      );
-      continue;
-    }
-
-    const docFiles = findFilesInSection(section);
-
-    const dirs = mapping.dirs || [mapping.dir];
-    const diskFiles = [];
-    for (const dir of dirs) {
-      try {
-        const entries = readdirSync(resolve(dir), { withFileTypes: true });
-        for (const entry of entries) {
-          if (
-            entry.isFile() &&
-            (!mapping.pattern || mapping.pattern.test(entry.name))
-          ) {
-            diskFiles.push(entry.name);
-          }
-        }
-      } catch {
-        // Directory might not exist
-      }
-    }
-
-    const drift = checkDrift(docFiles, diskFiles);
-
-    if (drift.missingFromDocs.length > 0) {
-      hasIssues = true;
-      console.warn(
-        `\n  "${mapping.section}" is missing files that exist on disk:`
-      );
-      for (const f of drift.missingFromDocs) {
-        console.warn(`    + ${f} (exists but not documented)`);
-      }
-    }
-
-    if (drift.missingFromDisk.length > 0) {
-      hasIssues = true;
-      console.warn(
-        `\n  "${mapping.section}" references files that don't exist:`
-      );
-      for (const f of drift.missingFromDisk) {
-        console.warn(`    - ${f} (documented but missing)`);
-      }
-    }
-  }
-
-  if (hasIssues) {
-    console.warn(
-      '\n  Update CLAUDE.md to fix drift, or run without --full for pre-commit mode.\n'
+    execFileSync(
+      process.execPath,
+      [resolve(__dirname, 'generate-docs.js'), '--check'],
+      { stdio: 'inherit', cwd: resolve(__dirname, '..') }
     );
+  } catch {
     process.exit(1);
-  } else {
-    console.log('  CLAUDE.md is in sync with the codebase.');
   }
 }
 

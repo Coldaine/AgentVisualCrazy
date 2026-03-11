@@ -4,10 +4,12 @@
 # 1. lint-staged (ESLint on staged .js files)
 # 2. Secret detection
 # 3. File size enforcement
-# 4. CLAUDE.md drift warning
+# 4. Auto-regenerate doc sections (auto-stages CLAUDE.md if changed)
+# 5. CLAUDE.md drift warning
 
 npx lint-staged
 
 node scripts/check-secrets.js
 node scripts/check-file-sizes.js
+node scripts/generate-docs.js
 node scripts/validate-docs.js
