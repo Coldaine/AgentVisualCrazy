@@ -32,10 +32,11 @@ describe('Progress Reader', () => {
     it('returns defaults when conversation.jsonl does not exist', () => {
       const result = readProgress(tmpDir);
 
-      expect(result).toEqual({
+      expect(result).toMatchObject({
         messages: 0,
         lastActivity: 'never',
-        latest: 'Starting up...'
+        latest: 'Starting up...',
+        lastActivityMs: null
       });
     });
 
@@ -44,11 +45,12 @@ describe('Progress Reader', () => {
 
       const result = readProgress(tmpDir);
 
-      expect(result).toEqual({
+      expect(result).toMatchObject({
         messages: 0,
         lastActivity: expect.any(String),
         latest: 'Starting up...'
       });
+      expect(result.lastActivityMs).toEqual(expect.any(Number));
     });
 
     it('counts assistant messages and skips system/tool roles', () => {
@@ -460,6 +462,61 @@ describe('Progress Reader', () => {
       const result = readProgress(tmpDir);
 
       expect(result.stage).toBeUndefined();
+    });
+  });
+
+  describe('lastActivityMs in readProgress', () => {
+    it('returns lastActivityMs based on file mtime', () => {
+      const convPath = path.join(tmpDir, 'conversation.jsonl');
+      fs.writeFileSync(convPath, JSON.stringify({ role: 'assistant', content: 'hi' }));
+      const tenSecondsAgo = new Date(Date.now() - 10000);
+      fs.utimesSync(convPath, tenSecondsAgo, tenSecondsAgo);
+
+      const result = readProgress(tmpDir);
+
+      expect(result.lastActivityMs).toBeGreaterThanOrEqual(9000);
+      expect(result.lastActivityMs).toBeLessThan(15000);
+    });
+
+    it('returns null lastActivityMs when no activity exists', () => {
+      const result = readProgress(tmpDir);
+
+      expect(result.lastActivityMs).toBeNull();
+    });
+
+    it('uses progress.json updatedAt for lastActivityMs when more recent', () => {
+      const convPath = path.join(tmpDir, 'conversation.jsonl');
+      fs.writeFileSync(convPath, JSON.stringify({ role: 'system', content: 'init' }));
+      const fiveMinutesAgo = new Date(Date.now() - 300000);
+      fs.utimesSync(convPath, fiveMinutesAgo, fiveMinutesAgo);
+
+      // Progress was updated 5 seconds ago
+      const fiveSecondsAgo = new Date(Date.now() - 5000);
+      fs.writeFileSync(
+        path.join(tmpDir, 'progress.json'),
+        JSON.stringify({
+          stage: 'receiving',
+          stageLabel: 'Generating response...',
+          updatedAt: fiveSecondsAgo.toISOString()
+        })
+      );
+
+      const result = readProgress(tmpDir);
+
+      // Should use progress.json time, not the old conversation mtime
+      expect(result.lastActivityMs).toBeGreaterThanOrEqual(4000);
+      expect(result.lastActivityMs).toBeLessThan(10000);
+    });
+
+    it('returns large lastActivityMs for old activity', () => {
+      const convPath = path.join(tmpDir, 'conversation.jsonl');
+      fs.writeFileSync(convPath, JSON.stringify({ role: 'assistant', content: 'hi' }));
+      const twoMinutesAgo = new Date(Date.now() - 120000);
+      fs.utimesSync(convPath, twoMinutesAgo, twoMinutesAgo);
+
+      const result = readProgress(tmpDir);
+
+      expect(result.lastActivityMs).toBeGreaterThanOrEqual(119000);
     });
   });
 

@@ -182,7 +182,27 @@ function readProgress(sessionDir) {
     }
   }
 
-  const result = { messages, lastActivity, latest };
+  // Compute raw lastActivityMs for stall detection
+  let lastActivityMs = null;
+  if (convStat) {
+    lastActivityMs = Date.now() - convStat.mtime.getTime();
+  }
+  // Use progress.json updatedAt if more recent
+  if (fs.existsSync(progressPath)) {
+    try {
+      const progress = JSON.parse(fs.readFileSync(progressPath, 'utf-8'));
+      if (progress.updatedAt) {
+        const progressMs = Date.now() - new Date(progress.updatedAt).getTime();
+        if (lastActivityMs === null || progressMs < lastActivityMs) {
+          lastActivityMs = progressMs;
+        }
+      }
+    } catch {
+      // Ignore — already handled above
+    }
+  }
+
+  const result = { messages, lastActivity, latest, lastActivityMs };
   if (stage !== undefined) {
     result.stage = stage;
   }

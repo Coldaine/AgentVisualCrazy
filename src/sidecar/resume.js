@@ -73,6 +73,29 @@ Please verify your previous findings against the current state of these files be
 `;
 }
 
+/** Build user message for headless resume, including conversation history */
+function buildResumeUserMessage(briefing, conversation) {
+  const parts = [];
+
+  if (conversation) {
+    parts.push('## PREVIOUS CONVERSATION\n');
+    parts.push(conversation);
+    parts.push('\n---\n');
+    parts.push('## RESUME\n');
+    parts.push('You are resuming a previous session. Continue from where you left off.');
+  }
+
+  if (briefing) {
+    if (parts.length === 0) {
+      parts.push(briefing);
+    } else {
+      parts.push(`\nOriginal task: ${briefing}`);
+    }
+  }
+
+  return parts.join('\n');
+}
+
 /** Update session metadata status */
 function updateSessionStatus(sessionDir, status) {
   const metaPath = SessionPaths.metadataFile(sessionDir);
@@ -123,10 +146,17 @@ async function resumeSidecar(options) {
   let summary;
   const effectiveAgent = metadata.agent || 'Build';
 
+  // Load conversation for both paths (interactive already did this, headless didn't)
+  const conversationPath = SessionPaths.conversationFile(sessionDir);
+  const existingConversation = fs.existsSync(conversationPath)
+    ? fs.readFileSync(conversationPath, 'utf-8')
+    : '';
+
   try {
     if (headless) {
+      const userMessage = buildResumeUserMessage(metadata.briefing || '', existingConversation);
       const result = await runHeadless(
-        metadata.model, resumePrompt, metadata.briefing || '',
+        metadata.model, resumePrompt, userMessage,
         taskId, project, timeout * 60 * 1000, effectiveAgent, { mcp: mcpServers }
       );
       summary = result.summary || '## Sidecar Results: No Output\n\nResumed session completed without summary.';
@@ -135,11 +165,6 @@ async function resumeSidecar(options) {
       if (result.error) { logger.error('Resume task error', { taskId, error: result.error }); }
     } else {
       logger.info('Launching interactive resume', { taskId, model: metadata.model });
-
-      const conversationPath = SessionPaths.conversationFile(sessionDir);
-      const existingConversation = fs.existsSync(conversationPath)
-        ? fs.readFileSync(conversationPath, 'utf-8')
-        : '';
 
       const result = await runInteractive(
         metadata.model, resumePrompt, metadata.briefing || '',
@@ -171,6 +196,7 @@ module.exports = {
   loadInitialContext,
   checkFileDrift,
   buildDriftWarning,
+  buildResumeUserMessage,
   updateSessionStatus,
   resumeSidecar
 };

@@ -607,6 +607,113 @@ describe('MCP Server Handlers', () => {
     });
   });
 
+  describe('sidecar_status stall detection', () => {
+    test('includes stalled: true when lastActivityMs exceeds threshold', async () => {
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mcp-stall-'));
+      const sessDir = path.join(tmpDir, '.claude', 'sidecar_sessions', 'stall1');
+      fs.mkdirSync(sessDir, { recursive: true });
+      fs.writeFileSync(path.join(sessDir, 'metadata.json'), JSON.stringify({
+        taskId: 'stall1', status: 'running', model: 'gemini',
+        pid: process.pid, headless: true,
+        createdAt: new Date(Date.now() - 300000).toISOString(),
+      }));
+      // Write conversation.jsonl with old mtime (3 minutes ago)
+      const convPath = path.join(sessDir, 'conversation.jsonl');
+      fs.writeFileSync(convPath, JSON.stringify({ role: 'assistant', content: 'working' }));
+      const threeMinutesAgo = new Date(Date.now() - 180000);
+      fs.utimesSync(convPath, threeMinutesAgo, threeMinutesAgo);
+      // Write old progress.json too
+      fs.writeFileSync(path.join(sessDir, 'progress.json'), JSON.stringify({
+        stage: 'receiving', stageLabel: 'Executing tool call...',
+        updatedAt: threeMinutesAgo.toISOString()
+      }));
+
+      try {
+        const result = await handlers.sidecar_status({ taskId: 'stall1' }, tmpDir);
+        const parsed = JSON.parse(result.content[0].text);
+        expect(parsed.stalled).toBe(true);
+        expect(parsed.stalledForSeconds).toBeGreaterThanOrEqual(170);
+        expect(parsed.recovery).toContain('sidecar_abort');
+        expect(parsed.recovery).toContain('sidecar_resume');
+        expect(parsed.recovery).toContain('stall1');
+      } finally {
+        fs.rmSync(tmpDir, { recursive: true });
+      }
+    });
+
+    test('does not include stalled flag when activity is recent', async () => {
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mcp-nostall-'));
+      const sessDir = path.join(tmpDir, '.claude', 'sidecar_sessions', 'active1');
+      fs.mkdirSync(sessDir, { recursive: true });
+      fs.writeFileSync(path.join(sessDir, 'metadata.json'), JSON.stringify({
+        taskId: 'active1', status: 'running', model: 'gemini',
+        pid: process.pid, headless: true,
+        createdAt: new Date().toISOString(),
+      }));
+      // Write fresh conversation.jsonl
+      fs.writeFileSync(path.join(sessDir, 'conversation.jsonl'),
+        JSON.stringify({ role: 'assistant', content: 'working' }));
+      fs.writeFileSync(path.join(sessDir, 'progress.json'), JSON.stringify({
+        stage: 'receiving', stageLabel: 'Generating response...',
+        updatedAt: new Date().toISOString()
+      }));
+
+      try {
+        const result = await handlers.sidecar_status({ taskId: 'active1' }, tmpDir);
+        const parsed = JSON.parse(result.content[0].text);
+        expect(parsed.stalled).toBeUndefined();
+      } finally {
+        fs.rmSync(tmpDir, { recursive: true });
+      }
+    });
+
+    test('does not include stalled flag for interactive sessions even when idle', async () => {
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mcp-int-stall-'));
+      const sessDir = path.join(tmpDir, '.claude', 'sidecar_sessions', 'int1');
+      fs.mkdirSync(sessDir, { recursive: true });
+      fs.writeFileSync(path.join(sessDir, 'metadata.json'), JSON.stringify({
+        taskId: 'int1', status: 'running', model: 'gemini',
+        pid: process.pid,
+        createdAt: new Date(Date.now() - 300000).toISOString(),
+      }));
+      const convPath = path.join(sessDir, 'conversation.jsonl');
+      fs.writeFileSync(convPath, JSON.stringify({ role: 'assistant', content: 'working' }));
+      const threeMinutesAgo = new Date(Date.now() - 180000);
+      fs.utimesSync(convPath, threeMinutesAgo, threeMinutesAgo);
+      fs.writeFileSync(path.join(sessDir, 'progress.json'), JSON.stringify({
+        stage: 'receiving', stageLabel: 'Executing tool call...',
+        updatedAt: threeMinutesAgo.toISOString()
+      }));
+
+      try {
+        const result = await handlers.sidecar_status({ taskId: 'int1' }, tmpDir);
+        const parsed = JSON.parse(result.content[0].text);
+        expect(parsed.stalled).toBeUndefined();
+        expect(parsed.recovery).toBeUndefined();
+      } finally {
+        fs.rmSync(tmpDir, { recursive: true });
+      }
+    });
+
+    test('does not include stalled flag for completed sessions', async () => {
+      const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mcp-done-stall-'));
+      const sessDir = path.join(tmpDir, '.claude', 'sidecar_sessions', 'done2');
+      fs.mkdirSync(sessDir, { recursive: true });
+      fs.writeFileSync(path.join(sessDir, 'metadata.json'), JSON.stringify({
+        taskId: 'done2', status: 'complete', model: 'gemini',
+        createdAt: new Date(Date.now() - 600000).toISOString(),
+      }));
+
+      try {
+        const result = await handlers.sidecar_status({ taskId: 'done2' }, tmpDir);
+        const parsed = JSON.parse(result.content[0].text);
+        expect(parsed.stalled).toBeUndefined();
+      } finally {
+        fs.rmSync(tmpDir, { recursive: true });
+      }
+    });
+  });
+
   describe('sidecar_status model field', () => {
     test('includes model in status response when stored in metadata', async () => {
       const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'mcp-model-'));

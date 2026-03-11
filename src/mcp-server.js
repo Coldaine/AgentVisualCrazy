@@ -155,6 +155,17 @@ const handlers = {
     if (metadata.status === 'running') {
       const progress = readProgress(sessionDir);
       Object.assign(response, progress);
+
+      // Stall detection: flag when no activity for 2+ minutes
+      const STALL_THRESHOLD_MS = 120000;
+      if (metadata.headless && progress.lastActivityMs !== null && progress.lastActivityMs > STALL_THRESHOLD_MS) {
+        response.stalled = true;
+        response.stalledForSeconds = Math.floor(progress.lastActivityMs / 1000);
+        response.recovery = `This session appears stalled (no activity for ${response.stalledForSeconds}s). ` +
+          `To recover: 1) call sidecar_abort with taskId "${input.taskId}" ` +
+          `2) call sidecar_resume with taskId "${input.taskId}" and noUi: true to pick up where it left off.`;
+      }
+
       if (metadata.headless) {
         response.next_poll = computeNextPoll();
       }

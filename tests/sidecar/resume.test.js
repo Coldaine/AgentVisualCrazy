@@ -23,7 +23,8 @@ const {
   loadInitialContext,
   checkFileDrift,
   buildDriftWarning,
-  updateSessionStatus
+  updateSessionStatus,
+  buildResumeUserMessage
 } = require('../../src/sidecar/resume');
 
 describe('Resume Operations', () => {
@@ -125,6 +126,41 @@ describe('Resume Operations', () => {
       const updated = updateSessionStatus(tmpDir, 'running');
       expect(updated.status).toBe('running');
       expect(updated.resumedAt).toBeDefined();
+    });
+  });
+
+  describe('buildResumeUserMessage', () => {
+    it('should include conversation excerpt and briefing', () => {
+      const briefing = 'Debug the auth issue';
+      const conversation = '[assistant @ 10:00] Analyzing code\n[assistant @ 10:01] Found the bug in auth.js';
+
+      const result = buildResumeUserMessage(briefing, conversation);
+
+      expect(result).toContain('PREVIOUS CONVERSATION');
+      expect(result).toContain('Analyzing code');
+      expect(result).toContain('Found the bug in auth.js');
+      expect(result).toContain('Debug the auth issue');
+    });
+
+    it('should skip conversation section when conversation is empty', () => {
+      const result = buildResumeUserMessage('Fix the tests', '');
+
+      expect(result).toContain('Fix the tests');
+      expect(result).not.toContain('PREVIOUS CONVERSATION');
+    });
+
+    it('should include resume instruction', () => {
+      const result = buildResumeUserMessage('Task', 'some conversation');
+
+      // Should tell the model to continue from where it left off
+      expect(result).toMatch(/continue|resume|pick up/i);
+    });
+
+    it('should work with no briefing', () => {
+      const result = buildResumeUserMessage('', 'conversation data');
+
+      expect(result).toContain('PREVIOUS CONVERSATION');
+      expect(result).toContain('conversation data');
     });
   });
 
