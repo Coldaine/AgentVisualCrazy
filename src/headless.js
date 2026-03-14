@@ -125,6 +125,8 @@ async function runHeadless(model, systemPrompt, userMessage, taskId, project, ti
   }
 
   let sessionId;
+  const { IdleWatchdog } = require('./utils/idle-watchdog');
+  let watchdog;
 
   try {
     // Wait for server to be ready
@@ -143,6 +145,16 @@ async function runHeadless(model, systemPrompt, userMessage, taskId, project, ti
         error: 'OpenCode server failed to start'
       };
     }
+
+    // Start idle watchdog to enforce the headless timeout
+    watchdog = new IdleWatchdog({
+      mode: 'headless',
+      onTimeout: () => {
+        logger.info('Headless idle timeout - shutting down', { taskId });
+        server.close();
+        process.exit(0);
+      },
+    }).start();
 
     // Create a new session using SDK
     logger.debug('Creating OpenCode session');
@@ -222,6 +234,7 @@ async function runHeadless(model, systemPrompt, userMessage, taskId, project, ti
     // seenPartIds reserved for future use (tracking processed non-text parts)
 
     while (!completed && (Date.now() - startTime) < timeoutMs) {
+      watchdog.touch();
       await new Promise(resolve => setTimeout(resolve, 2000));
 
       // Check for external abort signal (MCP tool or CLI command)
@@ -450,6 +463,7 @@ async function runHeadless(model, systemPrompt, userMessage, taskId, project, ti
       }
     }
 
+    watchdog.cancel();
     server.close();
 
     // Log summary of tool calls for debugging
@@ -502,6 +516,7 @@ async function runHeadless(model, systemPrompt, userMessage, taskId, project, ti
         // Ignore abort errors during error handling
       }
     }
+    if (watchdog) { watchdog.cancel(); }
     server.close();
     return {
       summary: '',
