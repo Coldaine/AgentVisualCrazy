@@ -108,7 +108,7 @@ class MemoryMonitor {
 function createMcpClient() {
   const child = spawn(NODE, [SIDECAR_BIN, 'mcp'], {
     stdio: ['pipe', 'pipe', 'pipe'],
-    env: { ...process.env },
+    env: { ...process.env, SIDECAR_SHARED_SERVER: '1' },
   });
 
   let buffer = '';
@@ -329,7 +329,9 @@ describeE2E('Shared Server E2E: round-robin concurrent sessions with memory moni
       });
       const readText = readResult.result.content[0].text;
       process.stderr.write(`  [e2e] Session ${i} output length: ${readText.length} chars\n`);
-      expect(readText.length).toBeGreaterThan(0);
+      expect(readText.length).toBeGreaterThan(10);
+      // Verify the output contains the session marker we asked for
+      expect(readText).toMatch(/SESSION_\d+_OK|session|ok|hello/i);
     }
 
     // Step 6: Final memory check

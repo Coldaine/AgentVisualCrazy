@@ -63,8 +63,10 @@ trap "kill $MONITOR_PID 2>/dev/null; wait $MONITOR_PID 2>/dev/null" EXIT
 echo "--- RUNNING EVAL ---"
 echo "Args: $@"
 echo ""
+set +e
 node "$PROJECT_DIR/evals/run_eval.js" "$@" 2>&1
 EVAL_EXIT=$?
+set -e
 
 # Stop background monitor
 kill $MONITOR_PID 2>/dev/null

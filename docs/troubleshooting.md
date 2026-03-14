@@ -4,7 +4,7 @@
 |-------|-------|----------|
 | Sidecar process not self-terminating | Idle timeout misconfigured or disabled | Confirm `SIDECAR_IDLE_TIMEOUT` is not set to `0`; set `LOG_LEVEL=debug` to trace watchdog transitions |
 | Shared server crash loop | Server crashing repeatedly | Check logs for the root cause; after 3 restarts in 5 min the server halts. Use `SIDECAR_SHARED_SERVER=0` to fall back to per-process mode |
-| Resume fails with "session already active" | Stale `session.lock` file from a previous crash | Delete the lock file manually: `rm ~/.config/sidecar/sessions/<task_id>/session.lock` |
+| Resume fails with "session already active" | Stale `session.lock` file from a previous crash | Delete the lock file manually: `rm <project>/.claude/sidecar_sessions/<task_id>/session.lock` |
 | Cold start latency after server idle timeout | Shared server was shut down and must restart | Increase `SIDECAR_IDLE_TIMEOUT_SERVER` to keep the server alive longer between requests |
 | `command not found: opencode` | OpenCode binary not found | Reinstall: `npm install -g claude-sidecar` (opencode-ai is bundled) |
 | `spawn opencode ENOENT` | CLI not in PATH | Verify `path-setup.js` runs before server start; check `node_modules/.bin/opencode` exists |
