@@ -161,6 +161,7 @@ scripts/
 ├── check-secrets.js  # Secret detection script for pre-commit hook.
 ├── check-ui.js
 ├── debug-cdp.js
+├── eval-with-monitoring.sh
 ├── generate-docs-helpers.js  # Helper functions for generate-docs.js.
 ├── generate-docs.js  # @param {string} dirPath @returns {string[]} Sorted .md filenames
 ├── generate-icon.js  # Generate app icon PNG from SVG source.
