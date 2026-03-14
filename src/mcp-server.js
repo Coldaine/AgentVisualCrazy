@@ -109,6 +109,7 @@ const handlers = {
 
     if (sharedServer.enabled && input.noUi) {
       // Shared server path: headless only, delegates to runHeadless()
+      let sessionId;
       try {
         const { server, client } = await sharedServer.ensureServer();
         const { createSession } = require('./opencode-client');
@@ -118,14 +119,15 @@ const handlers = {
         const { finalizeSession } = require('./sidecar/session-utils');
         // resolvedModel is already available from validateStartInputs() above
 
-        const sessionId = await createSession(client);
+        sessionId = await createSession(client);
 
         // Write initial metadata (MCP handler owns this, runHeadless skips it)
         fs.mkdirSync(sessionDir, { recursive: true, mode: 0o700 });
         const metaPath = path.join(sessionDir, 'metadata.json');
         const serverPort = server.url ? new URL(server.url).port : null;
         fs.writeFileSync(metaPath, JSON.stringify({
-          taskId, status: 'running', pid: process.pid,
+          taskId, status: 'running',
+          pid: null, // Shared server path: don't store MCP server PID (abort would kill all sessions)
           opencodeSessionId: sessionId,
           opencodePort: serverPort,
           goPid: server.goPid || null,
@@ -205,6 +207,10 @@ const handlers = {
         return { content: [{ type: 'text', text: body }, { type: 'text', text: HEADLESS_START_REMINDER }] };
       } catch (err) {
         logger.warn('Shared server path failed, falling back to spawn', { error: err.message });
+        // Clean up partial shared server state before falling through
+        if (sessionId) {
+          sharedServer.removeSession(sessionId);
+        }
         // Fall through to spawn path below
       }
     }
