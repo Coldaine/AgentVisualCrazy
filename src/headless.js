@@ -181,6 +181,7 @@ async function runHeadless(model, systemPrompt, userMessage, taskId, project, ti
       try {
         sessionId = await createSession(client);
       } catch (error) {
+        if (watchdog) { watchdog.cancel(); }
         if (!externalServer) { server.close(); }
         return {
           summary: '',

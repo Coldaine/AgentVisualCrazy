@@ -60,7 +60,9 @@ function validateStartInputs(input) {
       error: {
         type: 'validation_error',
         field: 'model',
-        message: `Model '${input.model}' not found. ${modelError}`,
+        message: input.model
+          ? `Model '${input.model}' not found. ${modelError}`
+          : `No model specified and no default configured. ${modelError}`,
         suggestions,
         available: aliases,
       },

@@ -246,6 +246,7 @@ function isProcessAlive(pid) {
  * @returns {'alive'|'server-dead'|'dead'}
  */
 function checkSessionLiveness(metadata) {
+  if (!metadata) { return 'dead'; }
   const nodeAlive = isProcessAlive(metadata.pid);
   const goAlive = isProcessAlive(metadata.goPid);
 
