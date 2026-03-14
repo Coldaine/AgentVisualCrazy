@@ -356,6 +356,30 @@ The pre-commit hook runs this automatically. See [docs/doc-system.md](docs/doc-s
 
 ---
 
+## Process Lifecycle Management
+
+Sidecar processes self-terminate after inactivity via IdleWatchdog. MCP sessions use a shared multiplexed server instead of per-session processes.
+
+### Environment Variables
+
+| Env Var | Default | Description |
+|---------|---------|-------------|
+| `SIDECAR_IDLE_TIMEOUT` | (mode-dependent) | Blanket override for idle timeout in minutes (all modes). 0 = disabled (Infinity). |
+| `SIDECAR_IDLE_TIMEOUT_HEADLESS` | 15 | Headless mode idle timeout in minutes |
+| `SIDECAR_IDLE_TIMEOUT_INTERACTIVE` | 60 | Interactive mode idle timeout in minutes |
+| `SIDECAR_IDLE_TIMEOUT_SERVER` | 30 | Shared server "no sessions" timeout in minutes |
+| `SIDECAR_MAX_SESSIONS` | 20 | Max concurrent sessions on shared server |
+| `SIDECAR_REQUEST_TIMEOUT` | 5 | Stuck-stream timeout in minutes |
+| `SIDECAR_SHARED_SERVER` | 1 | Set to 0 to disable shared server (fall back to per-process) |
+
+### Gotchas
+
+- `SIDECAR_IDLE_TIMEOUT=0` means `Infinity` (timer never set), not zero-ms timeout
+- Session lock files live at `<session_dir>/session.lock`. Delete manually if stuck with "session already active" error
+- `SIDECAR_SHARED_SERVER=0` disables shared server and falls back to per-process spawning
+
+---
+
 ## Agent Documentation
 
 GEMINI.md and AGENTS.md are symlinks to CLAUDE.md -- no sync needed.
