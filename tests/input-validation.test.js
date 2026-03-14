@@ -134,6 +134,25 @@ describe('validateStartInputs', () => {
       const result = validateStartInputs({ prompt: '' });
       expect(result.error.message).toBeDefined();
     });
+
+    test('error is JSON-serializable for MCP response', () => {
+      const result = validateStartInputs({ prompt: 'test', model: 'nonexistent_xyz' });
+      expect(result.valid).toBe(false);
+      const json = JSON.stringify(result.error);
+      const parsed = JSON.parse(json);
+      expect(parsed.type).toBe('validation_error');
+      expect(parsed.field).toBe('model');
+      expect(parsed.message).toContain('nonexistent_xyz');
+      expect(Array.isArray(parsed.available)).toBe(true);
+    });
+
+    test('model error includes descriptive message with available aliases', () => {
+      const result = validateStartInputs({ prompt: 'test', model: 'gem' });
+      expect(result.error.message).toContain('gem');
+      // 'gem' is a prefix of 'gemini' so suggestions should include it
+      expect(result.error.suggestions.length).toBeGreaterThan(0);
+      expect(result.error.available.length).toBeGreaterThan(0);
+    });
   });
 });
 
