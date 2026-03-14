@@ -8,6 +8,9 @@ const os = require('os');
 const { logger } = require('./utils/logger');
 const { safeSessionDir } = require('./utils/validators');
 const { readProgress } = require('./sidecar/progress');
+const { SharedServerManager } = require('./utils/shared-server');
+
+const sharedServer = new SharedServerManager({ logger });
 
 /** Resolve the project directory with smart fallback. */
 function getProjectDir(explicitProject) {
@@ -97,6 +100,67 @@ const handlers = {
     args.push('--cwd', cwd);
 
     const sessionDir = path.join(cwd, '.claude', 'sidecar_sessions', taskId);
+
+    if (sharedServer.enabled) {
+      // Shared server path: use single multiplexed server
+      try {
+        const mcpServers = undefined; // MCP config not needed at start handler level
+        const { server, client } = await sharedServer.ensureServer(mcpServers);
+        const { createSession, sendPrompt } = require('./opencode-client');
+        const sessionId = await createSession(client);
+
+        // Write metadata with shared server info
+        fs.mkdirSync(sessionDir, { recursive: true, mode: 0o700 });
+        const metaPath = path.join(sessionDir, 'metadata.json');
+        const serverPort = server.url ? new URL(server.url).port : null;
+        fs.writeFileSync(metaPath, JSON.stringify({
+          taskId, status: 'running', pid: process.pid,
+          opencodeSessionId: sessionId,
+          opencodePort: serverPort,
+          goPid: server.goPid || null,
+          createdAt: new Date().toISOString(),
+          headless: !!input.noUi,
+        }, null, 2), { mode: 0o600 });
+
+        // Register session with idle eviction callback
+        sharedServer.addSession(sessionId, (_evictedId) => {
+          try {
+            const meta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'));
+            meta.status = 'idle-timeout';
+            meta.completedAt = new Date().toISOString();
+            fs.writeFileSync(metaPath, JSON.stringify(meta, null, 2), { mode: 0o600 });
+          } catch (err) {
+            logger.warn('Failed to update evicted session metadata', { error: err.message });
+          }
+        });
+
+        // Send initial prompt with watchdog
+        const watchdog = sharedServer.getSessionWatchdog(sessionId);
+        await sendPrompt(client, sessionId, {
+          message: input.prompt,
+          system: undefined,
+          watchdog,
+        });
+
+        const isHeadless = !!input.noUi;
+        const mode = isHeadless ? 'headless' : 'interactive';
+        const message = isHeadless
+          ? 'Sidecar started in headless mode. Use sidecar_status to check progress.'
+          : 'Sidecar opened in interactive mode. Do NOT poll for status. ' +
+            "Tell the user: 'Let me know when you're done with the sidecar and have clicked Fold.' " +
+            'Then wait for the user to tell you. Use sidecar_read to get results once they confirm.';
+        const body = JSON.stringify({ taskId, status: 'running', mode, message });
+        if (isHeadless) {
+          return { content: [{ type: 'text', text: body }, { type: 'text', text: HEADLESS_START_REMINDER }] };
+        }
+        return textResult(body);
+      } catch (err) {
+        logger.warn('Shared server path failed, falling back to spawn', { error: err.message });
+        // Fall through to spawn path below
+      }
+    }
+
+    // Feature flag disabled (or shared server failed): fall back to per-process spawn
     let child;
     try { child = spawnSidecarProcess(args, sessionDir); } catch (err) {
       return textResult(`Failed to start sidecar: ${err.message}`, true);
@@ -341,6 +405,14 @@ async function startMcpServer() {
       }
     );
   }
+  process.on('SIGTERM', () => {
+    sharedServer.shutdown();
+    process.exit(0);
+  });
+  process.on('SIGINT', () => {
+    sharedServer.shutdown();
+    process.exit(0);
+  });
   const transport = new StdioServerTransport();
   await server.connect(transport);
   process.stderr.write('[sidecar] MCP server running on stdio\n');
