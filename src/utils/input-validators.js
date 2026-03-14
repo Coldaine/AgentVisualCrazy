@@ -93,18 +93,29 @@ function validateStartInputs(input) {
   }
 
   // 4. Agent + headless compatibility
-  if (input.noUi) {
-    const agentResult = validateHeadlessAgent(input.agent);
-    if (!agentResult.valid) {
-      return {
-        valid: false,
-        error: {
-          type: 'validation_error',
-          field: 'agent',
-          message: agentResult.error,
-          suggestions: ['Build', 'Plan'],
-        },
-      };
+  // Note: MCP Zod schema defaults agent to 'Chat'. The handler auto-converts
+  // Chat to Build for headless mode (line ~92 in mcp-server.js). Only reject
+  // if the user explicitly set agent to Chat with noUi (not the Zod default).
+  // We detect explicit by checking if agent was in the original input vs Zod default.
+  // Since we can't distinguish here, skip validation for Chat+noUi -
+  // the handler will convert it to Build before use.
+  if (input.noUi && input.agent) {
+    const lower = input.agent.toLowerCase();
+    // Only reject chat if it's NOT the auto-convertible case
+    // The handler converts chat -> build for headless, so we allow it
+    if (lower !== 'chat') {
+      const agentResult = validateHeadlessAgent(input.agent);
+      if (!agentResult.valid) {
+        return {
+          valid: false,
+          error: {
+            type: 'validation_error',
+            field: 'agent',
+            message: agentResult.error,
+            suggestions: ['Build', 'Plan'],
+          },
+        };
+      }
     }
   }
 

@@ -95,13 +95,13 @@ describe('validateStartInputs', () => {
   });
 
   describe('agent + headless validation', () => {
-    test('rejects chat agent with noUi', () => {
+    test('accepts chat agent with noUi (handler auto-converts to build)', () => {
+      // Chat + noUi is allowed because the MCP handler converts Chat -> Build
+      // for headless mode. The Zod schema also defaults agent to Chat.
       const result = validateStartInputs({
         prompt: 'test', model: 'gemini', agent: 'Chat', noUi: true,
       });
-      expect(result.valid).toBe(false);
-      expect(result.error.field).toBe('agent');
-      expect(result.error.suggestions).toContain('Build');
+      expect(result.valid).toBe(true);
     });
 
     test('accepts build agent with noUi', () => {
