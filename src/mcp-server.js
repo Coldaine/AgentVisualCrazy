@@ -106,7 +106,8 @@ const handlers = {
       try {
         const mcpServers = undefined; // MCP config not needed at start handler level
         const { server, client } = await sharedServer.ensureServer(mcpServers);
-        const { createSession, sendPrompt } = require('./opencode-client');
+        const { createSession, sendPromptAsync } = require('./opencode-client');
+        const { mapAgentToOpenCode } = require('./utils/agent-mapping');
         const sessionId = await createSession(client);
 
         // Write metadata with shared server info
@@ -136,9 +137,12 @@ const handlers = {
 
         // Send initial prompt with watchdog
         const watchdog = sharedServer.getSessionWatchdog(sessionId);
-        await sendPrompt(client, sessionId, {
-          message: input.prompt,
+        const agentConfig = mapAgentToOpenCode(agent || 'build');
+        await sendPromptAsync(client, sessionId, {
+          model: input.model,
           system: undefined,
+          parts: [{ type: 'text', text: input.prompt }],
+          agent: agentConfig.agent,
           watchdog,
         });
 
