@@ -42,10 +42,11 @@ if (externalServer) {
 **2. Server shutdown (3 locations):**
 If using an external server, skip ALL `server.close()` calls. The `SharedServerManager` manages the shared server's lifecycle.
 
-Locations to guard:
+Locations to guard (all `server.close()` calls in `runHeadless()`):
+- Health check failure (~line 139): `if (!externalServer) { server.close(); }`
+- Watchdog `onTimeout` callback (~line 154): must NOT call `server.close()` or `process.exit(0)` when running on shared server (see guard point 3)
 - Normal exit path (~line 467): `if (!externalServer) { server.close(); }`
 - Catch block (~line 520): `if (!externalServer) { server.close(); }`
-- Watchdog `onTimeout` callback (~line 154): must NOT call `server.close()` or `process.exit(0)` when running on shared server (see guard point 3)
 
 **3. Watchdog (lines ~147-156):**
 If `options.watchdog` is provided, use it instead of creating a new one. The MCP handler already created a per-session watchdog via `SharedServerManager.addSession()`.
@@ -109,9 +110,23 @@ if (sharedServer.enabled && input.noUi) {
     headless: true, model: input.model,
   }, null, 2), { mode: 0o600 });
 
-  // Build prompts (same as CLI path)
+  // Build context from parent conversation (unless --no-context)
+  let context = null;
+  if (input.includeContext !== false) {
+    const { buildContext } = require('./sidecar/context-builder');
+    context = await buildContext({
+      project: cwd,
+      parentSession: input.parentSession,
+      coworkProcess: input.coworkProcess,
+      contextTurns: input.contextTurns,
+      contextSince: input.contextSince,
+      contextMaxTokens: input.contextMaxTokens,
+    });
+  }
+
+  // Build prompts with context (same as CLI path)
   const { system: systemPrompt, userMessage } = buildPrompts(
-    input.prompt, null, cwd, true, agent, input.summaryLength
+    input.prompt, context, cwd, true, agent, input.summaryLength
   );
 
   // Register session with idle eviction
@@ -133,8 +148,11 @@ if (sharedServer.enabled && input.noUi) {
       client, server, watchdog, sessionId,
       mcp: mcpServers,
     }
-  ).then(() => {
-    // Session complete - remove from shared server tracking
+  ).then((result) => {
+    // Session complete - finalize metadata and remove from tracking
+    const { finalizeSession } = require('./sidecar/session-utils');
+    const meta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'));
+    finalizeSession(sessionDir, result.summary || '', cwd, meta);
     sharedServer.removeSession(sessionId);
   }).catch(err => {
     logger.error('Shared server session failed', { taskId, error: err.message });
@@ -169,18 +187,34 @@ Key points:
 - `sidecar_status` reads those files as usual (no changes needed)
 - Prompts are built via `buildPrompts()` from `prompt-builder.js` (same as CLI path)
 
-### Prompt construction
+### Context and prompt construction
 
-The MCP handler builds prompts via `buildPrompts()` from `src/prompt-builder.js` before calling `runHeadless()`:
+The MCP handler builds context and prompts before calling `runHeadless()`, matching the CLI path in `src/sidecar/start.js`:
 
 ```javascript
+// 1. Build context from parent conversation (unless --no-context)
+const { buildContext } = require('./sidecar/context-builder');
+const context = (input.includeContext !== false)
+  ? await buildContext({ project: cwd, parentSession: input.parentSession, ... })
+  : null;
+
+// 2. Build prompts with context
 const { buildPrompts } = require('./prompt-builder');
 const { system: systemPrompt, userMessage } = buildPrompts(
   input.prompt, context, cwd, true /* headless */, agent, input.summaryLength
 );
 ```
 
-This is the same function the CLI path uses in `src/sidecar/start.js`.
+Without context building, the sidecar would have no parent conversation history and couldn't respond to references like "that bug we discussed."
+
+### Session finalization
+
+When `runHeadless()` completes, the MCP handler's `.then()` block must call `finalizeSession()` to:
+- Set `status: 'complete'` in metadata
+- Write `completedAt` timestamp
+- Save `summary.md` to the session directory
+
+Without this, `sidecar_status` would show "running" indefinitely and `sidecar_read` would fail. The standalone CLI path handles finalization in `startSidecar()` (`src/sidecar/start.js`); the MCP handler must do the same.
 
 ### Files to modify
 
