@@ -286,5 +286,8 @@ module.exports = {
   validateApiKey,
   validateThinkingLevel,
   getSupportedThinkingLevels,
-  findSessionInProjectDirs
+  findSessionInProjectDirs,
+  // Re-exported from input-validators.js
+  validateStartInputs: require('./input-validators').validateStartInputs,
+  findSimilar: require('./input-validators').findSimilar,
 };

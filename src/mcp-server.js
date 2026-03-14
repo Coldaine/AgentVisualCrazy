@@ -72,17 +72,23 @@ function spawnSidecarProcess(args, sessionDir) {
 /** Tool handler implementations */
 const handlers = {
   async sidecar_start(input, project) {
-    const modelCheck = tryResolveModel(input.model);
-    if (modelCheck.error) {
-      return textResult(modelCheck.error, true);
+    // Validate all inputs before any session creation
+    const { validateStartInputs } = require('./utils/input-validators');
+    const validation = validateStartInputs(input);
+    if (!validation.valid) {
+      return {
+        isError: true,
+        content: [{ type: 'text', text: JSON.stringify(validation.error) }],
+      };
     }
+    const resolvedModel = validation.resolvedModel;
 
     const cwd = project || getProjectDir(input.project);
     const { generateTaskId } = require('./sidecar/start');
     const taskId = generateTaskId();
 
     const args = ['start', '--prompt', input.prompt, '--task-id', taskId, '--client', 'cowork'];
-    if (input.model) { args.push('--model', input.model); }
+    if (resolvedModel) { args.push('--model', resolvedModel); }
     const agent = (input.noUi && (!input.agent || input.agent.toLowerCase() === 'chat'))
       ? 'build' : input.agent;
     if (agent) { args.push('--agent', agent); }
@@ -110,14 +116,7 @@ const handlers = {
         const { buildPrompts } = require('./prompt-builder');
         const { runHeadless } = require('./headless');
         const { finalizeSession } = require('./sidecar/session-utils');
-        const { tryResolveModel } = require('./utils/config');
-
-        // Resolve model alias (e.g. 'gemini' -> 'openrouter/google/gemini-2.5-flash')
-        const { model: resolvedModel, error: modelError } = tryResolveModel(input.model);
-        if (modelError) {
-          logger.warn('Failed to resolve model alias, using raw', { model: input.model, error: modelError });
-        }
-        const effectiveModel = resolvedModel || input.model;
+        // resolvedModel is already available from validateStartInputs() above
 
         const sessionId = await createSession(client);
 
@@ -131,7 +130,7 @@ const handlers = {
           opencodePort: serverPort,
           goPid: server.goPid || null,
           createdAt: new Date().toISOString(),
-          headless: true, model: effectiveModel,
+          headless: true, model: resolvedModel,
         }, null, 2), { mode: 0o600 });
 
         // Build context from parent conversation (unless --no-context)
@@ -170,7 +169,7 @@ const handlers = {
         const timeoutMs = (input.timeout || 15) * 60 * 1000;
 
         // Fire-and-forget: runHeadless with shared server's client
-        runHeadless(effectiveModel, systemPrompt, userMessage, taskId, cwd,
+        runHeadless(resolvedModel, systemPrompt, userMessage, taskId, cwd,
           timeoutMs, agent, {
             client, server, watchdog, sessionId,
             mcp: undefined, // shared server already has MCP config

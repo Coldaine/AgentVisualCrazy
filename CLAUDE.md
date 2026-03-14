@@ -105,6 +105,7 @@ src/
 │   ├── auth-json.js  # Known provider IDs that map to sidecar's PROVIDER_ENV_MAP
 │   ├── config.js  # Default model alias map — short names to full OpenRouter model identifiers
 │   ├── idle-watchdog.js  # @type {Object.<string, number>} Default timeouts per mode in milliseconds
+│   ├── input-validators.js  # MCP input validation with structured error responses.
 │   ├── logger.js  # Structured Logger Module
 │   ├── mcp-discovery.js  # MCP Discovery - Discovers MCP servers from parent LLM configuration
 │   ├── mcp-validators.js  # MCP Validators
@@ -229,6 +230,7 @@ evals/
 | `utils/auth-json.js` | Known provider IDs that map to sidecar's PROVIDER_ENV_MAP | `readAuthJsonKeys()`, `importFromAuthJson()`, `checkAuthJson()`, `removeFromAuthJson()`, `AUTH_JSON_PATH()` |
 | `utils/config.js` | Default model alias map — short names to full OpenRouter model identifiers | `getConfigDir()`, `getConfigPath()`, `loadConfig()`, `saveConfig()`, `getDefaultAliases()` |
 | `utils/idle-watchdog.js` | @type {Object.<string, number>} Default timeouts per mode in milliseconds | `IdleWatchdog()`, `resolveTimeout()` |
+| `utils/input-validators.js` | MCP input validation with structured error responses. | `validateStartInputs()`, `findSimilar()` |
 | `utils/logger.js` | Structured Logger Module | `logger()`, `LOG_LEVELS()` |
 | `utils/mcp-discovery.js` | MCP Discovery - Discovers MCP servers from parent LLM configuration | `discoverParentMcps()`, `discoverClaudeCodeMcps()`, `discoverCoworkMcps()`, `normalizeMcpJson()` |
 | `utils/mcp-validators.js` | MCP Validators | `validateMcpSpec()`, `validateMcpConfigFile()` |
