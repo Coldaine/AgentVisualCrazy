@@ -68,8 +68,8 @@ node "$PROJECT_DIR/evals/run_eval.js" "$@" 2>&1
 EVAL_EXIT=$?
 set -e
 
-# Stop background monitor
-kill $MONITOR_PID 2>/dev/null
+# Stop background monitor (|| true: monitor may have already exited)
+kill $MONITOR_PID 2>/dev/null || true
 wait $MONITOR_PID 2>/dev/null || true
 trap - EXIT
 
@@ -84,10 +84,16 @@ echo ""
 
 # Compare pre and post
 echo "--- PROCESS DELTA ---"
-PRE_OC=$(grep "SUMMARY.*PRE-EVAL" "$MONITOR_LOG" | head -1 | grep -o "opencode=[0-9]*" | cut -d= -f2)
-POST_OC=$(grep "SUMMARY.*POST-EVAL" "$MONITOR_LOG" | tail -1 | grep -o "opencode=[0-9]*" | cut -d= -f2)
-PRE_RSS=$(grep "SUMMARY.*PRE-EVAL" "$MONITOR_LOG" | head -1 | grep -o "total_rss_mb=[0-9.]*" | cut -d= -f2)
-POST_RSS=$(grep "SUMMARY.*POST-EVAL" "$MONITOR_LOG" | tail -1 | grep -o "total_rss_mb=[0-9.]*" | cut -d= -f2)
+PRE_OC=$(grep "SUMMARY.*PRE-EVAL" "$MONITOR_LOG" | head -1 | grep -o "opencode=[0-9]*" | cut -d= -f2 || echo "0")
+POST_OC=$(grep "SUMMARY.*POST-EVAL" "$MONITOR_LOG" | tail -1 | grep -o "opencode=[0-9]*" | cut -d= -f2 || echo "0")
+PRE_RSS=$(grep "SUMMARY.*PRE-EVAL" "$MONITOR_LOG" | head -1 | grep -o "total_rss_mb=[0-9.]*" | cut -d= -f2 || echo "0")
+POST_RSS=$(grep "SUMMARY.*POST-EVAL" "$MONITOR_LOG" | tail -1 | grep -o "total_rss_mb=[0-9.]*" | cut -d= -f2 || echo "0")
+
+# Default to 0 if grep returned empty
+PRE_OC=${PRE_OC:-0}
+POST_OC=${POST_OC:-0}
+PRE_RSS=${PRE_RSS:-0}
+POST_RSS=${POST_RSS:-0}
 
 echo "OpenCode processes: before=$PRE_OC after=$POST_OC delta=$((POST_OC - PRE_OC))"
 echo "Total RSS (MB): before=$PRE_RSS after=$POST_RSS"
