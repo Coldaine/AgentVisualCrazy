@@ -115,7 +115,7 @@ async function runEval(task, opts = {}) {
       maxBudget: task.max_budget_usd,
       mcpConfigPath,
       sandboxDir,
-    });
+    }, 600000); // 10 min - sidecar tasks need time for LLM round-trip + polling
   } catch (err) {
     console.error(`  Claude failed: ${err.message}`);
     const failResult = {
