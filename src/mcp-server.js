@@ -110,6 +110,14 @@ const handlers = {
         const { buildPrompts } = require('./prompt-builder');
         const { runHeadless } = require('./headless');
         const { finalizeSession } = require('./sidecar/session-utils');
+        const { tryResolveModel } = require('./utils/config');
+
+        // Resolve model alias (e.g. 'gemini' -> 'openrouter/google/gemini-2.5-flash')
+        const { model: resolvedModel, error: modelError } = tryResolveModel(input.model);
+        if (modelError) {
+          logger.warn('Failed to resolve model alias, using raw', { model: input.model, error: modelError });
+        }
+        const effectiveModel = resolvedModel || input.model;
 
         const sessionId = await createSession(client);
 
@@ -123,7 +131,7 @@ const handlers = {
           opencodePort: serverPort,
           goPid: server.goPid || null,
           createdAt: new Date().toISOString(),
-          headless: true, model: input.model,
+          headless: true, model: effectiveModel,
         }, null, 2), { mode: 0o600 });
 
         // Build context from parent conversation (unless --no-context)
@@ -162,7 +170,7 @@ const handlers = {
         const timeoutMs = (input.timeout || 15) * 60 * 1000;
 
         // Fire-and-forget: runHeadless with shared server's client
-        runHeadless(input.model, systemPrompt, userMessage, taskId, cwd,
+        runHeadless(effectiveModel, systemPrompt, userMessage, taskId, cwd,
           timeoutMs, agent, {
             client, server, watchdog, sessionId,
             mcp: undefined, // shared server already has MCP config
