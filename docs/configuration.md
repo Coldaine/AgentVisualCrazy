@@ -25,6 +25,29 @@ SIDECAR_MOCK_UPDATE=available             # Mock update UI state for testing
 
 ---
 
+## Process Lifecycle
+
+These environment variables control how sidecar processes self-terminate and share resources.
+
+```bash
+# Idle timeout overrides (values in minutes, 0 = disabled)
+SIDECAR_IDLE_TIMEOUT=0                    # Blanket override for all modes (0 = disabled)
+SIDECAR_IDLE_TIMEOUT_HEADLESS=15          # Headless mode idle timeout (default: 15 min)
+SIDECAR_IDLE_TIMEOUT_INTERACTIVE=60       # Interactive mode idle timeout (default: 60 min)
+SIDECAR_IDLE_TIMEOUT_SERVER=30            # Shared server idle timeout (default: 30 min)
+
+# Resource limits
+SIDECAR_MAX_SESSIONS=20                   # Max concurrent sessions on shared server (default: 20)
+SIDECAR_REQUEST_TIMEOUT=5                 # Per-request timeout in minutes (default: 5 min)
+
+# Shared server
+SIDECAR_SHARED_SERVER=1                   # Use shared OpenCode server (default: 1, set 0 to disable)
+```
+
+Sidecar processes self-terminate after the configured idle period. The shared server (`SIDECAR_SHARED_SERVER=1`) allows multiple sidecar sessions to reuse a single OpenCode Go binary process rather than spawning one per invocation.
+
+---
+
 ## Dependencies
 
 | Package | Version | Purpose |

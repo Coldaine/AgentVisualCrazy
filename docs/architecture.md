@@ -38,6 +38,32 @@ When the user clicks **Fold** (or presses `Cmd+Shift+F`) in interactive mode:
 
 In headless mode, the agent outputs `[SIDECAR_FOLD]` autonomously when done, and `headless.js` extracts everything before the marker.
 
+## Shared Server Architecture
+
+Multiple sidecar invocations share a single OpenCode Go binary when `SIDECAR_SHARED_SERVER=1` (the default). This eliminates per-invocation cold-start latency and reduces memory overhead.
+
+```
+Before (per-process):                After (shared server):
+MCP Server                           MCP Server
+  +-- sidecar CLI (port 4096)          +-- Shared OpenCode Server (port 4096)
+  |     +-- OpenCode Go binary               +-- Session A
+  +-- sidecar CLI (port 4097)               +-- Session B
+  |     +-- OpenCode Go binary               +-- Session C
+  +-- sidecar CLI (port 4098)
+        +-- OpenCode Go binary
+```
+
+The shared server restarts automatically on crash, up to 3 times within any 5-minute window. After 3 restarts the server is considered unstable and will not restart again; use `SIDECAR_SHARED_SERVER=0` to fall back to per-process mode.
+
+## IdleWatchdog State Machine
+
+Each sidecar process runs an `IdleWatchdog` that transitions between two states:
+
+- **BUSY**: A prompt is in flight or a session was recently active. Idle timer is paused.
+- **IDLE**: No active requests for the configured idle period. Process (or shared server) self-terminates.
+
+Transitions: `BUSY → IDLE` when the last active session goes quiet; `IDLE → BUSY` on any new incoming request. The idle clock resets on each BUSY→IDLE transition. Set `SIDECAR_IDLE_TIMEOUT=0` to disable self-termination entirely.
+
 ## Electron BrowserView Architecture
 
 The Electron shell (`electron/main.js`) uses a **BrowserView** to avoid CSS conflicts between the OpenCode SPA and the sidecar toolbar:
