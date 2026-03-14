@@ -59,6 +59,7 @@ function createSessionMetadata(taskId, project, options) {
     agent: agent || (isHeadless ? 'build' : 'chat'),
     thinking: thinking || 'medium',
     status: 'running',
+    pid: existing.pid || process.pid,
     createdAt: existing.createdAt || new Date().toISOString()
   };
 
