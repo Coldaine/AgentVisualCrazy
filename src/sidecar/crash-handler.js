@@ -7,6 +7,7 @@
  */
 
 const fs = require('fs');
+const path = require('path');
 const { SessionPaths } = require('./session-utils');
 
 /**
@@ -37,6 +38,14 @@ function installCrashHandler(taskId, project) {
       metadata.errorAt = new Date().toISOString();
 
       fs.writeFileSync(metaPath, JSON.stringify(metadata, null, 2), { mode: 0o600 });
+
+      // Delete session lock if it exists
+      const lockPath = path.join(sessionDir, 'session.lock');
+      try {
+        fs.unlinkSync(lockPath);
+      } catch {
+        // Lock may not exist yet
+      }
     } catch (_ignored) {
       // Crash handler must never throw - swallow all errors
     }
