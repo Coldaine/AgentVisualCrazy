@@ -11,8 +11,10 @@ const {
   SessionPaths,
   finalizeSession,
   outputSummary,
-  createHeartbeat
+  createHeartbeat,
+  checkSessionLiveness
 } = require('./session-utils');
+const { acquireLock, releaseLock } = require('../utils/session-lock');
 const { runHeadless } = require('../headless');
 const { logger } = require('../utils/logger');
 
@@ -124,6 +126,17 @@ async function resumeSidecar(options) {
   const metadata = loadSessionMetadata(sessionDir);
   const systemPrompt = loadInitialContext(sessionDir);
 
+  // Dead-process detection: log if the previous process is no longer alive
+  const liveness = checkSessionLiveness(metadata);
+  if (liveness !== 'alive') {
+    logger.info('Session process is dead, restoring from disk', {
+      taskId, liveness, pid: metadata.pid,
+    });
+  }
+
+  // Acquire lock to prevent concurrent resume operations
+  acquireLock(sessionDir, headless ? 'headless' : 'interactive');
+
   const mcpServers = buildMcpConfig({ mcp, mcpConfig, clientType: client, noMcp, excludeMcp });
   logger.info('Resuming session', { taskId, model: metadata.model, briefing: metadata.briefing });
 
@@ -182,6 +195,7 @@ async function resumeSidecar(options) {
     }
   } finally {
     heartbeat.stop();
+    releaseLock(sessionDir);
   }
 
   // Output summary

@@ -19,6 +19,7 @@ const { runInteractive, checkElectronAvailable } = require('./interactive');
 const { buildPrompts } = require('../prompt-builder');
 const { runHeadless } = require('../headless');
 const { logger } = require('../utils/logger');
+const { acquireLock, releaseLock } = require('../utils/session-lock');
 const { loadMcpConfig, parseMcpSpec } = require('../opencode-client');
 const { mapAgentToOpenCode } = require('../utils/agent-mapping');
 const { discoverParentMcps } = require('../utils/mcp-discovery');
@@ -170,6 +171,7 @@ async function startSidecar(options) {
     model, prompt: effectivePrompt, noUi: effectiveHeadless, agent, thinking
   });
   saveInitialContext(sessDir, systemPrompt, userMessage);
+  acquireLock(sessDir, effectiveHeadless ? 'headless' : 'interactive');
 
   const heartbeat = createHeartbeat(HEARTBEAT_INTERVAL, sessDir);
   let summary;
@@ -196,6 +198,7 @@ async function startSidecar(options) {
     }
   } finally {
     heartbeat.stop();
+    releaseLock(sessDir);
   }
 
   outputSummary(summary);
