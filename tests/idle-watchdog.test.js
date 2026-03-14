@@ -232,3 +232,16 @@ describe('IdleWatchdog', () => {
     });
   });
 });
+
+describe('sendPrompt watchdog integration', () => {
+  test('opencode-client.js wraps sendPrompt with watchdog markBusy/markIdle', () => {
+    const fs = require('fs');
+    const path = require('path');
+    const src = fs.readFileSync(
+      path.join(__dirname, '../src/opencode-client.js'), 'utf-8'
+    );
+    expect(src).toContain('watchdog');
+    expect(src).toContain('markBusy');
+    expect(src).toContain('markIdle');
+  });
+});

@@ -110,10 +110,11 @@ async function createSession(client) {
  * @param {object} [options.tools] - Tool configuration
  * @param {object} [options.reasoning] - Reasoning/thinking configuration
  * @param {string} [options.reasoning.effort] - Effort level: 'minimal' | 'low' | 'medium' | 'high' | 'xhigh' | 'none'
+ * @param {object} [options.watchdog] - IdleWatchdog instance to signal busy/idle around the API call
  * @returns {Promise<object>} API response
  */
 async function sendPrompt(client, sessionId, options) {
-  const { model, system, parts, agent, tools, reasoning } = options;
+  const { model, system, parts, agent, tools, reasoning, watchdog } = options;
 
   // Parse model string to SDK format
   const modelSpec = parseModelString(model);
@@ -142,10 +143,21 @@ async function sendPrompt(client, sessionId, options) {
     body.reasoning = reasoning;
   }
 
-  const result = await client.session.promptAsync({
-    path: { id: sessionId },
-    body
-  });
+  if (watchdog) {
+    watchdog.markBusy();
+  }
+
+  let result;
+  try {
+    result = await client.session.promptAsync({
+      path: { id: sessionId },
+      body
+    });
+  } finally {
+    if (watchdog) {
+      watchdog.markIdle();
+    }
+  }
 
   // Log but don't throw on promptAsync errors.
   // promptAsync is fire-and-forget: the server queues the prompt for async
