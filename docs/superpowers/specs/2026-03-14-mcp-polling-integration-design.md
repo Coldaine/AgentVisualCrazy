@@ -33,33 +33,57 @@ let client, server;
 if (externalServer) {
   client = options.client;
   server = options.server;
+  // Skip waitForServer() health check - shared server is already healthy
 } else {
-  // existing startServer() logic unchanged
+  // existing startServer() + waitForServer() logic unchanged
 }
 ```
 
-**2. Server shutdown (lines ~465, ~518):**
-If using an external server, skip `server.close()`. The `SharedServerManager` manages the shared server's lifecycle.
+**2. Server shutdown (3 locations):**
+If using an external server, skip ALL `server.close()` calls. The `SharedServerManager` manages the shared server's lifecycle.
 
-```javascript
-if (!externalServer) { server.close(); }
-```
-
-Apply this guard in BOTH cleanup paths (normal exit and catch block).
+Locations to guard:
+- Normal exit path (~line 467): `if (!externalServer) { server.close(); }`
+- Catch block (~line 520): `if (!externalServer) { server.close(); }`
+- Watchdog `onTimeout` callback (~line 154): must NOT call `server.close()` or `process.exit(0)` when running on shared server (see guard point 3)
 
 **3. Watchdog (lines ~147-156):**
 If `options.watchdog` is provided, use it instead of creating a new one. The MCP handler already created a per-session watchdog via `SharedServerManager.addSession()`.
+
+**Critical:** The default watchdog's `onTimeout` calls `server.close()` and `process.exit(0)`. When running inside the MCP server process (shared server path), `process.exit(0)` would kill the entire MCP server. For the external server path, the watchdog must NOT call `process.exit()`. Instead, it should finalize the session metadata and let the `SharedServerManager` handle session eviction.
 
 ```javascript
 let watchdog;
 if (options.watchdog) {
   watchdog = options.watchdog;
+  // External watchdog's onTimeout is managed by SharedServerManager.addSession()
+  // It calls removeSession() which cancels the watchdog - no process.exit() needed
 } else {
-  watchdog = new IdleWatchdog({ mode: 'headless', ... }).start();
+  watchdog = new IdleWatchdog({
+    mode: 'headless',
+    onTimeout: () => {
+      server.close();    // OK for standalone mode
+      process.exit(0);   // OK for standalone mode
+    },
+  }).start();
 }
 ```
 
-Everything else stays the same: session creation, prompt sending, polling, progress tracking, conversation JSONL writing, fold detection, finalization.
+**4. Session ID (new guard point):**
+If `options.sessionId` is provided, skip `createSession(client)` and use the existing session. The MCP handler creates the session before calling `runHeadless()` to avoid orphaned sessions.
+
+```javascript
+let sessionId;
+if (options.sessionId) {
+  sessionId = options.sessionId;
+} else {
+  sessionId = await createSession(client);
+}
+```
+
+**Metadata ownership:** When `externalServer` is true, the MCP handler owns metadata setup (directory creation, initial metadata write). `runHeadless()` skips its own directory creation and initial metadata write when `externalServer` is true, but still writes progress, conversation JSONL, and finalization as usual.
+
+Everything else stays the same: prompt sending, polling, progress tracking, conversation JSONL writing, fold detection, finalization.
 
 ### Changes to MCP handler (`src/mcp-server.js`)
 
@@ -68,36 +92,62 @@ Replace the current shared server path (which calls `sendPromptAsync` directly) 
 ```javascript
 if (sharedServer.enabled && input.noUi) {
   const { server, client } = await sharedServer.ensureServer();
+  const { createSession } = require('./opencode-client');
+  const { buildPrompts } = require('./prompt-builder');
 
-  // Write initial metadata
+  // Create session on shared server
+  const sessionId = await createSession(client);
+
+  // Write initial metadata (MCP handler owns this, not runHeadless)
   fs.mkdirSync(sessionDir, { recursive: true, mode: 0o700 });
+  const metaPath = path.join(sessionDir, 'metadata.json');
   fs.writeFileSync(metaPath, JSON.stringify({
     taskId, status: 'running', pid: process.pid,
+    opencodeSessionId: sessionId,
     goPid: server.goPid || null,
     createdAt: new Date().toISOString(),
     headless: true, model: input.model,
   }, null, 2), { mode: 0o600 });
 
+  // Build prompts (same as CLI path)
+  const { system: systemPrompt, userMessage } = buildPrompts(
+    input.prompt, null, cwd, true, agent, input.summaryLength
+  );
+
   // Register session with idle eviction
-  sharedServer.addSession(sessionId, onEvictCallback);
+  sharedServer.addSession(sessionId, (_evictedId) => {
+    try {
+      const meta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'));
+      meta.status = 'idle-timeout';
+      meta.completedAt = new Date().toISOString();
+      fs.writeFileSync(metaPath, JSON.stringify(meta, null, 2), { mode: 0o600 });
+    } catch (err) {
+      logger.warn('Failed to update evicted session metadata', { error: err.message });
+    }
+  });
   const watchdog = sharedServer.getSessionWatchdog(sessionId);
 
   // Fire-and-forget: runHeadless with shared server's client
   runHeadless(input.model, systemPrompt, userMessage, taskId, cwd,
     timeoutMs, agent, {
-      client, server, watchdog,
+      client, server, watchdog, sessionId,
       mcp: mcpServers,
     }
-  ).catch(err => {
+  ).then(() => {
+    // Session complete - remove from shared server tracking
+    sharedServer.removeSession(sessionId);
+  }).catch(err => {
     logger.error('Shared server session failed', { taskId, error: err.message });
-    // Mark session as error in metadata
+    sharedServer.removeSession(sessionId);
     try {
       const meta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'));
       meta.status = 'error';
       meta.reason = err.message;
       meta.completedAt = new Date().toISOString();
       fs.writeFileSync(metaPath, JSON.stringify(meta, null, 2), { mode: 0o600 });
-    } catch { /* ignore metadata write errors */ }
+    } catch (writeErr) {
+      logger.warn('Failed to write error metadata', { error: writeErr.message });
+    }
   });
 
   // Return immediately
@@ -109,24 +159,34 @@ if (sharedServer.enabled && input.noUi) {
 ```
 
 Key points:
+- Session is created by MCP handler, passed to `runHeadless()` via `options.sessionId`
 - `runHeadless()` is called WITHOUT `await` (fire-and-forget)
-- `.catch()` handles unhandled rejections by marking session as error
+- `.then()` removes the session from `SharedServerManager` tracking on completion
+- `.catch()` handles errors by removing session and marking metadata as error
+- Metadata write errors are logged (not silently swallowed)
 - The handler returns immediately so the MCP caller gets a response
 - `runHeadless()` runs in the background, writing progress/conversation/metadata to disk
 - `sidecar_status` reads those files as usual (no changes needed)
+- Prompts are built via `buildPrompts()` from `prompt-builder.js` (same as CLI path)
 
 ### Prompt construction
 
-`runHeadless()` accepts `systemPrompt` and `userMessage` as parameters. The MCP handler needs to construct these the same way the CLI path does. The existing MCP handler already has prompt construction logic for the per-process path (building CLI args). For the shared server path, we construct the prompts directly:
+The MCP handler builds prompts via `buildPrompts()` from `src/prompt-builder.js` before calling `runHeadless()`:
 
-- `systemPrompt`: built via `buildPrompts()` from `prompt-builder.js` (same as CLI path)
-- `userMessage`: the user's input prompt (from `input.prompt`)
+```javascript
+const { buildPrompts } = require('./prompt-builder');
+const { system: systemPrompt, userMessage } = buildPrompts(
+  input.prompt, context, cwd, true /* headless */, agent, input.summaryLength
+);
+```
+
+This is the same function the CLI path uses in `src/sidecar/start.js`.
 
 ### Files to modify
 
 | File | Change |
 |------|--------|
-| `src/headless.js` | Add 3 guard points for external client/server/watchdog |
+| `src/headless.js` | Add 4 guard points: external client/server, shutdown, watchdog, sessionId |
 | `src/mcp-server.js` | Replace shared server path with fire-and-forget `runHeadless()` |
 
 No new files.
@@ -142,4 +202,4 @@ The existing `tests/shared-server-e2e.integration.test.js` already tests the rig
 3. `sidecar_read` returns LLM output after completion
 4. Process count stays low (shared server, not N separate servers)
 5. Memory stays bounded (RSS < 512MB for 3 sessions)
-6. Unit tests pass (75/75 suites)
+6. All unit tests pass
