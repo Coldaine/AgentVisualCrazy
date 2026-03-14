@@ -11,8 +11,10 @@ const {
   SessionPaths,
   finalizeSession,
   outputSummary,
-  createHeartbeat
+  createHeartbeat,
+  checkSessionLiveness
 } = require('./session-utils');
+const { acquireLock, releaseLock } = require('../utils/session-lock');
 const { runHeadless } = require('../headless');
 const { logger } = require('../utils/logger');
 
@@ -124,35 +126,47 @@ async function resumeSidecar(options) {
   const metadata = loadSessionMetadata(sessionDir);
   const systemPrompt = loadInitialContext(sessionDir);
 
-  const mcpServers = buildMcpConfig({ mcp, mcpConfig, clientType: client, noMcp, excludeMcp });
-  logger.info('Resuming session', { taskId, model: metadata.model, briefing: metadata.briefing });
-
-  // Check for file drift
-  const drift = checkFileDrift(metadata, project);
-  let resumePrompt = systemPrompt;
-
-  if (drift.hasChanges) {
-    const driftWarning = buildDriftWarning(drift.changedFiles, drift.lastActivityTime);
-    resumePrompt = systemPrompt + '\n' + driftWarning;
-    logger.warn('Files changed since last activity', { taskId, changedFileCount: drift.changedFiles.length });
+  // Dead-process detection: log if the previous process is no longer alive
+  const liveness = checkSessionLiveness(metadata);
+  if (liveness !== 'alive') {
+    logger.info('Session process is dead, restoring from disk', {
+      taskId, liveness, pid: metadata.pid,
+    });
   }
 
-  // Update metadata (get updated metadata with resumedAt)
-  const updatedMetadata = updateSessionStatus(sessionDir, 'running');
+  // Acquire lock to prevent concurrent resume operations
+  acquireLock(sessionDir, headless ? 'headless' : 'interactive');
 
-  // Start heartbeat
-  const heartbeat = createHeartbeat();
-
-  let summary;
-  const effectiveAgent = metadata.agent || 'Build';
-
-  // Load conversation for both paths (interactive already did this, headless didn't)
-  const conversationPath = SessionPaths.conversationFile(sessionDir);
-  const existingConversation = fs.existsSync(conversationPath)
-    ? fs.readFileSync(conversationPath, 'utf-8')
-    : '';
-
+  let heartbeat;
   try {
+    const mcpServers = buildMcpConfig({ mcp, mcpConfig, clientType: client, noMcp, excludeMcp });
+    logger.info('Resuming session', { taskId, model: metadata.model, briefing: metadata.briefing });
+
+    // Check for file drift
+    const drift = checkFileDrift(metadata, project);
+    let resumePrompt = systemPrompt;
+
+    if (drift.hasChanges) {
+      const driftWarning = buildDriftWarning(drift.changedFiles, drift.lastActivityTime);
+      resumePrompt = systemPrompt + '\n' + driftWarning;
+      logger.warn('Files changed since last activity', { taskId, changedFileCount: drift.changedFiles.length });
+    }
+
+    // Update metadata (get updated metadata with resumedAt)
+    const updatedMetadata = updateSessionStatus(sessionDir, 'running');
+
+    // Start heartbeat
+    heartbeat = createHeartbeat();
+
+    let summary;
+    const effectiveAgent = metadata.agent || 'Build';
+
+    // Load conversation for both paths (interactive already did this, headless didn't)
+    const conversationPath = SessionPaths.conversationFile(sessionDir);
+    const existingConversation = fs.existsSync(conversationPath)
+      ? fs.readFileSync(conversationPath, 'utf-8')
+      : '';
+
     if (headless) {
       const userMessage = buildResumeUserMessage(metadata.briefing || '', existingConversation);
       const result = await runHeadless(
@@ -180,15 +194,16 @@ async function resumeSidecar(options) {
       summary = result.summary || '';
       if (result.error) { logger.error('Interactive resume error', { taskId, error: result.error }); }
     }
+
+    // Output summary
+    outputSummary(summary);
+
+    // Finalize session (use updatedMetadata which has resumedAt)
+    finalizeSession(sessionDir, summary, project, updatedMetadata);
   } finally {
-    heartbeat.stop();
+    if (heartbeat) { heartbeat.stop(); }
+    releaseLock(sessionDir);
   }
-
-  // Output summary
-  outputSummary(summary);
-
-  // Finalize session (use updatedMetadata which has resumedAt)
-  finalizeSession(sessionDir, summary, project, updatedMetadata);
 }
 
 module.exports = {

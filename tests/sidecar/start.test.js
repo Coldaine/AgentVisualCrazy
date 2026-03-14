@@ -237,8 +237,8 @@ describe('createSessionMetadata PID preservation', () => {
       fs.readFileSync(SessionPaths.metadataFile(sessionDir), 'utf-8')
     );
 
-    // pid should not be present (no MCP handler wrote one)
-    expect(result.pid).toBeUndefined();
+    // pid should be set to the current process PID
+    expect(result.pid).toBe(process.pid);
     // Standard fields must be present
     expect(result.taskId).toBe(taskId);
     expect(result.model).toBe('opus');

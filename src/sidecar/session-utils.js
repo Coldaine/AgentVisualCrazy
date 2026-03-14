@@ -225,6 +225,36 @@ async function startOpenCodeServer(mcpConfig, options = {}) {
   return { client, server };
 }
 
+/**
+ * Check if a process with the given PID is still alive.
+ * @param {number|null} pid
+ * @returns {boolean}
+ */
+function isProcessAlive(pid) {
+  if (!pid) { return false; }
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Check if a session's processes are alive.
+ * @param {Object} metadata - Session metadata with pid and goPid
+ * @returns {'alive'|'server-dead'|'dead'}
+ */
+function checkSessionLiveness(metadata) {
+  if (!metadata) { return 'dead'; }
+  const nodeAlive = isProcessAlive(metadata.pid);
+  const goAlive = isProcessAlive(metadata.goPid);
+
+  if (nodeAlive && goAlive) { return 'alive'; }
+  if (nodeAlive && !goAlive) { return 'server-dead'; }
+  return 'dead';
+}
+
 module.exports = {
   HEARTBEAT_INTERVAL,
   SessionPaths,
@@ -233,5 +263,7 @@ module.exports = {
   outputSummary,
   createHeartbeat,
   executeMode,
-  startOpenCodeServer
+  startOpenCodeServer,
+  isProcessAlive,
+  checkSessionLiveness
 };

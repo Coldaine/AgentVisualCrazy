@@ -99,64 +99,98 @@ async function runHeadless(model, systemPrompt, userMessage, taskId, project, ti
     ensurePortAvailable(port);
   }
 
-  // Start OpenCode server using SDK (no CLI spawning required)
-  logger.debug('Starting OpenCode server via SDK', { model, hasMcp: !!options.mcp, port });
+  // Detect shared-server mode: caller provides client + server directly
+  const externalServer = !!(options.client && options.server);
   let client, server;
 
-  try {
-    // Pass MCP config and port to server
-    const serverOptions = { port };
-    if (options.mcp) {
-      serverOptions.mcp = options.mcp;
-    }
-    const result = await startServer(serverOptions);
-    client = result.client;
-    server = result.server;
-    logger.debug('Server started', { url: server.url });
-  } catch (error) {
-    logger.error('Failed to start OpenCode server', { error: error.message });
-    return {
-      summary: '',
-      completed: false,
-      timedOut: false,
-      taskId,
-      error: `Failed to start server: ${error.message}`
-    };
-  }
-
-  let sessionId;
-
-  try {
-    // Wait for server to be ready
-    logger.debug('Waiting for OpenCode server to be ready');
-    const serverReady = await waitForServer(client, checkHealth);
-    logger.debug('Server ready', { serverReady });
-    writeProgress(sessionDir, 'server_ready');
-
-    if (!serverReady) {
-      server.close();
+  if (externalServer) {
+    client = options.client;
+    server = options.server;
+    logger.debug('Using external server (shared server mode)', { url: server.url });
+  } else {
+    // Start OpenCode server using SDK (no CLI spawning required)
+    logger.debug('Starting OpenCode server via SDK', { model, hasMcp: !!options.mcp, port });
+    try {
+      // Pass MCP config and port to server
+      const serverOptions = { port };
+      if (options.mcp) {
+        serverOptions.mcp = options.mcp;
+      }
+      const result = await startServer(serverOptions);
+      client = result.client;
+      server = result.server;
+      logger.debug('Server started', { url: server.url });
+    } catch (error) {
+      logger.error('Failed to start OpenCode server', { error: error.message });
       return {
         summary: '',
         completed: false,
         timedOut: false,
         taskId,
-        error: 'OpenCode server failed to start'
+        error: `Failed to start server: ${error.message}`
       };
+    }
+  }
+
+  let sessionId;
+  const { IdleWatchdog } = require('./utils/idle-watchdog');
+  let watchdog;
+
+  try {
+    if (!externalServer) {
+      // Wait for server to be ready
+      logger.debug('Waiting for OpenCode server to be ready');
+      const serverReady = await waitForServer(client, checkHealth);
+      logger.debug('Server ready', { serverReady });
+      writeProgress(sessionDir, 'server_ready');
+
+      if (!serverReady) {
+        server.close();
+        return {
+          summary: '',
+          completed: false,
+          timedOut: false,
+          taskId,
+          error: 'OpenCode server failed to start'
+        };
+      }
+    } else {
+      writeProgress(sessionDir, 'server_ready');
+    }
+
+    // Start idle watchdog to enforce the headless timeout
+    if (options.watchdog) {
+      watchdog = options.watchdog;
+    } else {
+      watchdog = new IdleWatchdog({
+        mode: 'headless',
+        onTimeout: () => {
+          logger.info('Headless idle timeout - shutting down', { taskId });
+          server.close();
+          process.exit(0);
+        },
+      }).start();
     }
 
     // Create a new session using SDK
     logger.debug('Creating OpenCode session');
-    try {
-      sessionId = await createSession(client);
-    } catch (error) {
-      server.close();
-      return {
-        summary: '',
-        completed: false,
-        timedOut: false,
-        taskId,
-        error: error.message
-      };
+    if (options.sessionId) {
+      sessionId = options.sessionId;
+      logger.debug('Using existing session', { sessionId });
+    } else {
+      try {
+        sessionId = await createSession(client);
+      } catch (error) {
+        if (watchdog) { watchdog.cancel(); }
+        if (!externalServer) { server.close(); }
+        return {
+          summary: '',
+          completed: false,
+          timedOut: false,
+          taskId,
+          error: error.message
+        };
+      }
     }
     logger.debug('Session ID', { sessionId });
     writeProgress(sessionDir, 'session_created');
@@ -222,6 +256,7 @@ async function runHeadless(model, systemPrompt, userMessage, taskId, project, ti
     // seenPartIds reserved for future use (tracking processed non-text parts)
 
     while (!completed && (Date.now() - startTime) < timeoutMs) {
+      watchdog.touch();
       await new Promise(resolve => setTimeout(resolve, 2000));
 
       // Check for external abort signal (MCP tool or CLI command)
@@ -450,7 +485,8 @@ async function runHeadless(model, systemPrompt, userMessage, taskId, project, ti
       }
     }
 
-    server.close();
+    watchdog.cancel();
+    if (!externalServer) { server.close(); }
 
     // Log summary of tool calls for debugging
     if (toolCalls.length > 0) {
@@ -502,7 +538,8 @@ async function runHeadless(model, systemPrompt, userMessage, taskId, project, ti
         // Ignore abort errors during error handling
       }
     }
-    server.close();
+    if (watchdog) { watchdog.cancel(); }
+    if (!externalServer) { server.close(); }
     return {
       summary: '',
       completed: false,

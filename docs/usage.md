@@ -41,6 +41,16 @@ The `--agent` option specifies which OpenCode native agent to use:
 
 Custom agents defined in `~/.config/opencode/agents/` or `.opencode/agents/` are also supported.
 
+## Process Self-Termination
+
+Sidecar processes automatically shut down after a period of inactivity, so you do not need to manually kill lingering processes. Default idle timeouts:
+
+- **Headless mode**: 15 minutes (`SIDECAR_IDLE_TIMEOUT_HEADLESS`)
+- **Interactive mode**: 60 minutes (`SIDECAR_IDLE_TIMEOUT_INTERACTIVE`)
+- **Shared server**: 30 minutes (`SIDECAR_IDLE_TIMEOUT_SERVER`)
+
+Set `SIDECAR_IDLE_TIMEOUT=0` to disable self-termination. See [docs/configuration.md](configuration.md#process-lifecycle) for all lifecycle env vars.
+
 ## Agentic Evals
 
 ```bash

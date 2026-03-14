@@ -13,6 +13,7 @@ const {
   outputSummary,
   createHeartbeat
 } = require('./session-utils');
+const { acquireLock, releaseLock } = require('../utils/session-lock');
 const { runHeadless } = require('../headless');
 const { buildPrompts } = require('../prompt-builder');
 const { logger } = require('../utils/logger');
@@ -123,6 +124,10 @@ async function continueSidecar(options) {
   const { metadata: oldMetadata, summary: previousSummary, conversation: previousConversation } =
     loadPreviousSession(oldTaskId, project);
 
+  // Lock the previous session directory to prevent concurrent continue operations from the same source
+  const prevSessionDir = SessionPaths.sessionDir(project, oldTaskId);
+  acquireLock(prevSessionDir, headless ? 'headless' : 'interactive');
+
   const model = options.model || oldMetadata.model;
   const mcpServers = buildMcpConfig({ mcp, mcpConfig, clientType: client, noMcp, excludeMcp });
   logger.info('Continuing from session', { oldTaskId, model });
@@ -178,6 +183,7 @@ async function continueSidecar(options) {
     }
   } finally {
     heartbeat.stop();
+    releaseLock(prevSessionDir);
   }
 
   // Output summary

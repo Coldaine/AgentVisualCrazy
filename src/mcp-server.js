@@ -8,6 +8,9 @@ const os = require('os');
 const { logger } = require('./utils/logger');
 const { safeSessionDir } = require('./utils/validators');
 const { readProgress } = require('./sidecar/progress');
+const { SharedServerManager } = require('./utils/shared-server');
+
+const sharedServer = new SharedServerManager({ logger });
 
 /** Resolve the project directory with smart fallback. */
 function getProjectDir(explicitProject) {
@@ -69,17 +72,23 @@ function spawnSidecarProcess(args, sessionDir) {
 /** Tool handler implementations */
 const handlers = {
   async sidecar_start(input, project) {
-    const modelCheck = tryResolveModel(input.model);
-    if (modelCheck.error) {
-      return textResult(modelCheck.error, true);
+    // Validate all inputs before any session creation
+    const { validateStartInputs } = require('./utils/input-validators');
+    const validation = validateStartInputs(input);
+    if (!validation.valid) {
+      return {
+        isError: true,
+        content: [{ type: 'text', text: JSON.stringify(validation.error) }],
+      };
     }
+    const resolvedModel = validation.resolvedModel;
 
     const cwd = project || getProjectDir(input.project);
     const { generateTaskId } = require('./sidecar/start');
     const taskId = generateTaskId();
 
     const args = ['start', '--prompt', input.prompt, '--task-id', taskId, '--client', 'cowork'];
-    if (input.model) { args.push('--model', input.model); }
+    if (resolvedModel) { args.push('--model', resolvedModel); }
     const agent = (input.noUi && (!input.agent || input.agent.toLowerCase() === 'chat'))
       ? 'build' : input.agent;
     if (agent) { args.push('--agent', agent); }
@@ -97,6 +106,116 @@ const handlers = {
     args.push('--cwd', cwd);
 
     const sessionDir = path.join(cwd, '.claude', 'sidecar_sessions', taskId);
+
+    if (sharedServer.enabled && input.noUi) {
+      // Shared server path: headless only, delegates to runHeadless()
+      let sessionId;
+      try {
+        const { server, client } = await sharedServer.ensureServer();
+        const { createSession } = require('./opencode-client');
+        const { buildContext } = require('./sidecar/context-builder');
+        const { buildPrompts } = require('./prompt-builder');
+        const { runHeadless } = require('./headless');
+        const { finalizeSession } = require('./sidecar/session-utils');
+        // resolvedModel is already available from validateStartInputs() above
+
+        sessionId = await createSession(client);
+
+        // Write initial metadata (MCP handler owns this, runHeadless skips it)
+        fs.mkdirSync(sessionDir, { recursive: true, mode: 0o700 });
+        const metaPath = path.join(sessionDir, 'metadata.json');
+        const serverPort = server.url ? new URL(server.url).port : null;
+        fs.writeFileSync(metaPath, JSON.stringify({
+          taskId, status: 'running',
+          pid: null, // Shared server path: don't store MCP server PID (abort would kill all sessions)
+          opencodeSessionId: sessionId,
+          opencodePort: serverPort,
+          goPid: server.goPid || null,
+          createdAt: new Date().toISOString(),
+          headless: true, model: resolvedModel,
+        }, null, 2), { mode: 0o600 });
+
+        // Build context from parent conversation (unless --no-context)
+        let context = null;
+        if (input.includeContext !== false) {
+          try {
+            context = buildContext(cwd, input.parentSession, {
+              contextTurns: input.contextTurns,
+              contextSince: input.contextSince,
+              contextMaxTokens: input.contextMaxTokens,
+              coworkProcess: input.coworkProcess,
+            });
+          } catch (ctxErr) {
+            logger.warn('Failed to build context, proceeding without', { error: ctxErr.message });
+          }
+        }
+
+        // Build prompts (same as CLI path in start.js)
+        const { system: systemPrompt, userMessage } = buildPrompts(
+          input.prompt, context, cwd, true, agent, input.summaryLength
+        );
+
+        // Register session with idle eviction
+        sharedServer.addSession(sessionId, (_evictedId) => {
+          try {
+            const meta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'));
+            meta.status = 'idle-timeout';
+            meta.completedAt = new Date().toISOString();
+            fs.writeFileSync(metaPath, JSON.stringify(meta, null, 2), { mode: 0o600 });
+          } catch (err) {
+            logger.warn('Failed to update evicted session metadata', { error: err.message });
+          }
+        });
+        const watchdog = sharedServer.getSessionWatchdog(sessionId);
+
+        const timeoutMs = (input.timeout || 15) * 60 * 1000;
+
+        // Fire-and-forget: runHeadless with shared server's client
+        runHeadless(resolvedModel, systemPrompt, userMessage, taskId, cwd,
+          timeoutMs, agent, {
+            client, server, watchdog, sessionId,
+            mcp: undefined, // shared server already has MCP config
+          }
+        ).then((result) => {
+          // Session complete - finalize and remove from tracking
+          try {
+            const meta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'));
+            finalizeSession(sessionDir, result.summary || '', cwd, meta);
+          } catch (finErr) {
+            logger.warn('Failed to finalize session', { error: finErr.message });
+          }
+          sharedServer.removeSession(sessionId);
+        }).catch((err) => {
+          logger.error('Shared server session failed', { taskId, error: err.message });
+          sharedServer.removeSession(sessionId);
+          try {
+            const meta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'));
+            meta.status = 'error';
+            meta.reason = err.message;
+            meta.completedAt = new Date().toISOString();
+            fs.writeFileSync(metaPath, JSON.stringify(meta, null, 2), { mode: 0o600 });
+          } catch (writeErr) {
+            logger.warn('Failed to write error metadata', { error: writeErr.message });
+          }
+        });
+
+        // Return immediately
+        const body = JSON.stringify({
+          taskId, status: 'running', mode: 'headless',
+          message: 'Sidecar started in headless mode. Use sidecar_status to check progress.',
+        });
+        return { content: [{ type: 'text', text: body }, { type: 'text', text: HEADLESS_START_REMINDER }] };
+      } catch (err) {
+        logger.warn('Shared server path failed, falling back to spawn', { error: err.message });
+        // Clean up partial shared server state before falling through
+        if (sessionId) {
+          sharedServer.removeSession(sessionId);
+        }
+        // Fall through to spawn path below
+      }
+    }
+
+    // Feature flag disabled (or shared server failed): fall back to per-process spawn
     let child;
     try { child = spawnSidecarProcess(args, sessionDir); } catch (err) {
       return textResult(`Failed to start sidecar: ${err.message}`, true);
@@ -341,6 +460,14 @@ async function startMcpServer() {
       }
     );
   }
+  process.on('SIGTERM', () => {
+    sharedServer.shutdown();
+    process.exit(0);
+  });
+  process.on('SIGINT', () => {
+    sharedServer.shutdown();
+    process.exit(0);
+  });
   const transport = new StdioServerTransport();
   await server.connect(transport);
   process.stderr.write('[sidecar] MCP server running on stdio\n');

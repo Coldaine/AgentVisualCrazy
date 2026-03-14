@@ -104,6 +104,8 @@ src/
 │   ├── api-key-validation.js  # Validation endpoints per provider
 │   ├── auth-json.js  # Known provider IDs that map to sidecar's PROVIDER_ENV_MAP
 │   ├── config.js  # Default model alias map — short names to full OpenRouter model identifiers
+│   ├── idle-watchdog.js  # @type {Object.<string, number>} Default timeouts per mode in milliseconds
+│   ├── input-validators.js  # MCP input validation with structured error responses.
 │   ├── logger.js  # Structured Logger Module
 │   ├── mcp-discovery.js  # MCP Discovery - Discovers MCP servers from parent LLM configuration
 │   ├── mcp-validators.js  # MCP Validators
@@ -111,6 +113,8 @@ src/
 │   ├── model-validator.js  # Alias-to-search-term mapping for filtering provider model lists
 │   ├── path-setup.js  # Ensures that the project's node_modules/.bin directory is included in the PATH.
 │   ├── server-setup.js  # Server Setup Utilities
+│   ├── session-lock.js  # Atomic session lock files to prevent concurrent resume/continue.
+│   ├── shared-server.js  # Manages a single shared OpenCode server for MCP sessions.
 │   ├── start-helpers.js  # Start Command Helpers
 │   ├── thinking-validators.js  # Thinking Level Validators
 │   ├── updater.js  # @type {import('update-notifier').UpdateNotifier|null}
@@ -158,6 +162,7 @@ scripts/
 ├── check-secrets.js  # Secret detection script for pre-commit hook.
 ├── check-ui.js
 ├── debug-cdp.js
+├── eval-with-monitoring.sh
 ├── generate-docs-helpers.js  # Helper functions for generate-docs.js.
 ├── generate-docs.js  # @param {string} dirPath @returns {string[]} Sorted .md filenames
 ├── generate-icon.js  # Generate app icon PNG from SVG source.
@@ -224,6 +229,8 @@ evals/
 | `utils/api-key-validation.js` | Validation endpoints per provider | `validateApiKey()`, `validateOpenRouterKey()`, `VALIDATION_ENDPOINTS()` |
 | `utils/auth-json.js` | Known provider IDs that map to sidecar's PROVIDER_ENV_MAP | `readAuthJsonKeys()`, `importFromAuthJson()`, `checkAuthJson()`, `removeFromAuthJson()`, `AUTH_JSON_PATH()` |
 | `utils/config.js` | Default model alias map — short names to full OpenRouter model identifiers | `getConfigDir()`, `getConfigPath()`, `loadConfig()`, `saveConfig()`, `getDefaultAliases()` |
+| `utils/idle-watchdog.js` | @type {Object.<string, number>} Default timeouts per mode in milliseconds | `IdleWatchdog()`, `resolveTimeout()` |
+| `utils/input-validators.js` | MCP input validation with structured error responses. | `validateStartInputs()`, `findSimilar()` |
 | `utils/logger.js` | Structured Logger Module | `logger()`, `LOG_LEVELS()` |
 | `utils/mcp-discovery.js` | MCP Discovery - Discovers MCP servers from parent LLM configuration | `discoverParentMcps()`, `discoverClaudeCodeMcps()`, `discoverCoworkMcps()`, `normalizeMcpJson()` |
 | `utils/mcp-validators.js` | MCP Validators | `validateMcpSpec()`, `validateMcpConfigFile()` |
@@ -231,6 +238,8 @@ evals/
 | `utils/model-validator.js` | Alias-to-search-term mapping for filtering provider model lists | `validateDirectModel()`, `filterRelevantModels()`, `normalizeModelId()` |
 | `utils/path-setup.js` | Ensures that the project's node_modules/.bin directory is included in the PATH. | `ensureNodeModulesBinInPath()` |
 | `utils/server-setup.js` | Server Setup Utilities | `DEFAULT_PORT()`, `isPortInUse()`, `getPortPid()`, `killPortProcess()`, `ensurePortAvailable()` |
+| `utils/session-lock.js` | Atomic session lock files to prevent concurrent resume/continue. | `acquireLock()`, `releaseLock()`, `isLockStale()`, `isPidAlive()` |
+| `utils/shared-server.js` | Manages a single shared OpenCode server for MCP sessions. | `SharedServerManager()` |
 | `utils/start-helpers.js` | Start Command Helpers | `resolveModelFromArgs()`, `validateFallbackModel()` |
 | `utils/thinking-validators.js` | Thinking Level Validators | `MODEL_THINKING_SUPPORT()`, `getSupportedThinkingLevels()`, `validateThinkingLevel()` |
 | `utils/updater.js` | @type {import('update-notifier').UpdateNotifier|null} | `initUpdateCheck()`, `getUpdateInfo()`, `notifyUpdate()`, `performUpdate()` |
@@ -347,6 +356,30 @@ The pre-commit hook runs this automatically. See [docs/doc-system.md](docs/doc-s
 - **Headless agent**: Default agent in `--no-ui` mode is `build` (not `chat`). `chat` stalls.
 - **Jest + ESM**: Can't mock dynamic imports without `--experimental-vm-modules`. Use child process.
 - **contextBridge**: Does not work with `data:` URLs. Toolbar uses `executeJavaScript()` polling.
+
+---
+
+## Process Lifecycle Management
+
+Sidecar processes self-terminate after inactivity via IdleWatchdog. MCP sessions use a shared multiplexed server instead of per-session processes.
+
+### Environment Variables
+
+| Env Var | Default | Description |
+|---------|---------|-------------|
+| `SIDECAR_IDLE_TIMEOUT` | (mode-dependent) | Blanket override for idle timeout in minutes (all modes). 0 = disabled (Infinity). |
+| `SIDECAR_IDLE_TIMEOUT_HEADLESS` | 15 | Headless mode idle timeout in minutes |
+| `SIDECAR_IDLE_TIMEOUT_INTERACTIVE` | 60 | Interactive mode idle timeout in minutes |
+| `SIDECAR_IDLE_TIMEOUT_SERVER` | 30 | Shared server "no sessions" timeout in minutes |
+| `SIDECAR_MAX_SESSIONS` | 20 | Max concurrent sessions on shared server |
+| `SIDECAR_REQUEST_TIMEOUT` | 5 | Stuck-stream timeout in minutes |
+| `SIDECAR_SHARED_SERVER` | 1 | Set to 0 to disable shared server (fall back to per-process) |
+
+### Gotchas
+
+- `SIDECAR_IDLE_TIMEOUT=0` means `Infinity` (timer never set), not zero-ms timeout
+- Session lock files live at `<session_dir>/session.lock`. Delete manually if stuck with "session already active" error
+- `SIDECAR_SHARED_SERVER=0` disables shared server and falls back to per-process spawning
 
 ---
 

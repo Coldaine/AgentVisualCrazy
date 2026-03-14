@@ -150,6 +150,15 @@ async function runInteractive(model, systemPrompt, userMessage, taskId, project,
 
   const serverPort = new URL(server.url).port;
 
+  // Start idle watchdog for interactive mode (60-min default timeout)
+  const { IdleWatchdog } = require('../utils/idle-watchdog');
+  const watchdog = new IdleWatchdog({
+    mode: 'interactive',
+    onTimeout: () => {
+      logger.info('Interactive idle timeout - shutting down', { taskId });
+    },
+  }).start();
+
   return new Promise((resolve, _reject) => {
     const electronPath = getElectronPath();
     const mainPath = path.join(__dirname, '..', '..', 'electron', 'main.js');
@@ -173,9 +182,23 @@ async function runInteractive(model, systemPrompt, userMessage, taskId, project,
       mainPath
     ], { cwd: project, env, stdio: ['ignore', 'pipe', 'pipe'] });
 
+    // Touch watchdog on Electron stdout activity
+    electronProcess.stdout.on('data', () => {
+      watchdog.touch();
+    });
+
+    // Update watchdog onTimeout now that electronProcess is available
+    watchdog.onTimeout = () => {
+      logger.info('Interactive idle timeout - shutting down', { taskId });
+      if (!electronProcess.killed) {
+        electronProcess.kill('SIGTERM');
+      }
+    };
+
     // Clean up server when Electron exits
     const originalResolve = resolve;
     handleElectronProcess(electronProcess, taskId, (result) => {
+      watchdog.cancel();
       server.close();
       logger.debug('OpenCode server closed after Electron exit');
       result.opencodeSessionId = sessionId;
