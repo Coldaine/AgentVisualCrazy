@@ -112,6 +112,7 @@ src/
 │   ├── model-validator.js  # Alias-to-search-term mapping for filtering provider model lists
 │   ├── path-setup.js  # Ensures that the project's node_modules/.bin directory is included in the PATH.
 │   ├── server-setup.js  # Server Setup Utilities
+│   ├── session-lock.js  # Atomic session lock files to prevent concurrent resume/continue.
 │   ├── start-helpers.js  # Start Command Helpers
 │   ├── thinking-validators.js  # Thinking Level Validators
 │   ├── updater.js  # @type {import('update-notifier').UpdateNotifier|null}
@@ -233,6 +234,7 @@ evals/
 | `utils/model-validator.js` | Alias-to-search-term mapping for filtering provider model lists | `validateDirectModel()`, `filterRelevantModels()`, `normalizeModelId()` |
 | `utils/path-setup.js` | Ensures that the project's node_modules/.bin directory is included in the PATH. | `ensureNodeModulesBinInPath()` |
 | `utils/server-setup.js` | Server Setup Utilities | `DEFAULT_PORT()`, `isPortInUse()`, `getPortPid()`, `killPortProcess()`, `ensurePortAvailable()` |
+| `utils/session-lock.js` | Atomic session lock files to prevent concurrent resume/continue. | `acquireLock()`, `releaseLock()`, `isLockStale()`, `isPidAlive()` |
 | `utils/start-helpers.js` | Start Command Helpers | `resolveModelFromArgs()`, `validateFallbackModel()` |
 | `utils/thinking-validators.js` | Thinking Level Validators | `MODEL_THINKING_SUPPORT()`, `getSupportedThinkingLevels()`, `validateThinkingLevel()` |
 | `utils/updater.js` | @type {import('update-notifier').UpdateNotifier|null} | `initUpdateCheck()`, `getUpdateInfo()`, `notifyUpdate()`, `performUpdate()` |
