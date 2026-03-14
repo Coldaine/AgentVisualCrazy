@@ -101,16 +101,19 @@ const handlers = {
 
     const sessionDir = path.join(cwd, '.claude', 'sidecar_sessions', taskId);
 
-    if (sharedServer.enabled) {
-      // Shared server path: use single multiplexed server
+    if (sharedServer.enabled && input.noUi) {
+      // Shared server path: headless only, delegates to runHeadless()
       try {
-        const mcpServers = undefined; // MCP config not needed at start handler level
-        const { server, client } = await sharedServer.ensureServer(mcpServers);
-        const { createSession, sendPromptAsync } = require('./opencode-client');
-        const { mapAgentToOpenCode } = require('./utils/agent-mapping');
+        const { server, client } = await sharedServer.ensureServer();
+        const { createSession } = require('./opencode-client');
+        const { buildContext } = require('./sidecar/context-builder');
+        const { buildPrompts } = require('./prompt-builder');
+        const { runHeadless } = require('./headless');
+        const { finalizeSession } = require('./sidecar/session-utils');
+
         const sessionId = await createSession(client);
 
-        // Write metadata with shared server info
+        // Write initial metadata (MCP handler owns this, runHeadless skips it)
         fs.mkdirSync(sessionDir, { recursive: true, mode: 0o700 });
         const metaPath = path.join(sessionDir, 'metadata.json');
         const serverPort = server.url ? new URL(server.url).port : null;
@@ -120,10 +123,30 @@ const handlers = {
           opencodePort: serverPort,
           goPid: server.goPid || null,
           createdAt: new Date().toISOString(),
-          headless: !!input.noUi,
+          headless: true, model: input.model,
         }, null, 2), { mode: 0o600 });
 
-        // Register session with idle eviction callback
+        // Build context from parent conversation (unless --no-context)
+        let context = null;
+        if (input.includeContext !== false) {
+          try {
+            context = buildContext(cwd, input.parentSession, {
+              contextTurns: input.contextTurns,
+              contextSince: input.contextSince,
+              contextMaxTokens: input.contextMaxTokens,
+              coworkProcess: input.coworkProcess,
+            });
+          } catch (ctxErr) {
+            logger.warn('Failed to build context, proceeding without', { error: ctxErr.message });
+          }
+        }
+
+        // Build prompts (same as CLI path in start.js)
+        const { system: systemPrompt, userMessage } = buildPrompts(
+          input.prompt, context, cwd, true, agent, input.summaryLength
+        );
+
+        // Register session with idle eviction
         sharedServer.addSession(sessionId, (_evictedId) => {
           try {
             const meta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'));
@@ -134,30 +157,45 @@ const handlers = {
             logger.warn('Failed to update evicted session metadata', { error: err.message });
           }
         });
-
-        // Send initial prompt with watchdog
         const watchdog = sharedServer.getSessionWatchdog(sessionId);
-        const agentConfig = mapAgentToOpenCode(agent || 'build');
-        await sendPromptAsync(client, sessionId, {
-          model: input.model,
-          system: undefined,
-          parts: [{ type: 'text', text: input.prompt }],
-          agent: agentConfig.agent,
-          watchdog,
+
+        const timeoutMs = (input.timeout || 15) * 60 * 1000;
+
+        // Fire-and-forget: runHeadless with shared server's client
+        runHeadless(input.model, systemPrompt, userMessage, taskId, cwd,
+          timeoutMs, agent, {
+            client, server, watchdog, sessionId,
+            mcp: undefined, // shared server already has MCP config
+          }
+        ).then((result) => {
+          // Session complete - finalize and remove from tracking
+          try {
+            const meta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'));
+            finalizeSession(sessionDir, result.summary || '', cwd, meta);
+          } catch (finErr) {
+            logger.warn('Failed to finalize session', { error: finErr.message });
+          }
+          sharedServer.removeSession(sessionId);
+        }).catch((err) => {
+          logger.error('Shared server session failed', { taskId, error: err.message });
+          sharedServer.removeSession(sessionId);
+          try {
+            const meta = JSON.parse(fs.readFileSync(metaPath, 'utf-8'));
+            meta.status = 'error';
+            meta.reason = err.message;
+            meta.completedAt = new Date().toISOString();
+            fs.writeFileSync(metaPath, JSON.stringify(meta, null, 2), { mode: 0o600 });
+          } catch (writeErr) {
+            logger.warn('Failed to write error metadata', { error: writeErr.message });
+          }
         });
 
-        const isHeadless = !!input.noUi;
-        const mode = isHeadless ? 'headless' : 'interactive';
-        const message = isHeadless
-          ? 'Sidecar started in headless mode. Use sidecar_status to check progress.'
-          : 'Sidecar opened in interactive mode. Do NOT poll for status. ' +
-            "Tell the user: 'Let me know when you're done with the sidecar and have clicked Fold.' " +
-            'Then wait for the user to tell you. Use sidecar_read to get results once they confirm.';
-        const body = JSON.stringify({ taskId, status: 'running', mode, message });
-        if (isHeadless) {
-          return { content: [{ type: 'text', text: body }, { type: 'text', text: HEADLESS_START_REMINDER }] };
-        }
-        return textResult(body);
+        // Return immediately
+        const body = JSON.stringify({
+          taskId, status: 'running', mode: 'headless',
+          message: 'Sidecar started in headless mode. Use sidecar_status to check progress.',
+        });
+        return { content: [{ type: 'text', text: body }, { type: 'text', text: HEADLESS_START_REMINDER }] };
       } catch (err) {
         logger.warn('Shared server path failed, falling back to spawn', { error: err.message });
         // Fall through to spawn path below

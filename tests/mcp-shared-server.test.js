@@ -22,3 +22,15 @@ describe('MCP shared server integration', () => {
     expect(src).toContain('sharedServer.shutdown()');
   });
 });
+
+describe('MCP shared server uses runHeadless', () => {
+  const src = fs.readFileSync(
+    path.join(__dirname, '../src/mcp-server.js'), 'utf-8'
+  );
+
+  test('imports runHeadless', () => {
+    expect(src).toContain('runHeadless');
+    expect(src).toContain('buildContext');
+    expect(src).toContain('finalizeSession');
+  });
+});
