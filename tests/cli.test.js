@@ -348,6 +348,28 @@ describe('CLI Argument Parser', () => {
         expect(result['no-ui']).toBe(true);
       });
     });
+
+    describe('--key=value syntax', () => {
+      it('should parse --model=gemini as model: "gemini"', () => {
+        const result = parseArgs(['start', '--model=gemini', '--prompt', 'test']);
+        expect(result.model).toBe('gemini');
+      });
+
+      it('should parse --timeout=30 as numeric', () => {
+        const result = parseArgs(['start', '--timeout=30']);
+        expect(result.timeout).toBe(30);
+      });
+
+      it('should handle values containing equals signs', () => {
+        const result = parseArgs(['start', '--model=google/gemini-2.5-flash']);
+        expect(result.model).toBe('google/gemini-2.5-flash');
+      });
+
+      it('should still support --model gemini (space-separated)', () => {
+        const result = parseArgs(['start', '--model', 'gemini']);
+        expect(result.model).toBe('gemini');
+      });
+    });
   });
 
   describe('validateStartArgs', () => {

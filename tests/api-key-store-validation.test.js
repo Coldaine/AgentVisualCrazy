@@ -184,6 +184,42 @@ describe('api-key-store validation', () => {
       expect(result).toEqual({ valid: false, error: 'Invalid API key (401)' });
     });
 
+    it('should treat anthropic 429 as invalid (rate limited)', async () => {
+      const mockResponse = {
+        statusCode: 429,
+        on: jest.fn((event, cb) => {
+          if (event === 'data') { cb('Rate limited'); }
+          if (event === 'end') { cb(); }
+          return mockResponse;
+        })
+      };
+      https.get.mockImplementation((_url, _opts, cb) => {
+        cb(mockResponse);
+        return { on: jest.fn(), setTimeout: jest.fn(), destroy: jest.fn() };
+      });
+
+      const result = await validateApiKey('anthropic', 'sk-ant-ratelimited');
+      expect(result).toEqual({ valid: false, error: 'Server error (429)' });
+    });
+
+    it('should treat anthropic 500 as invalid (server error)', async () => {
+      const mockResponse = {
+        statusCode: 500,
+        on: jest.fn((event, cb) => {
+          if (event === 'data') { cb('Internal error'); }
+          if (event === 'end') { cb(); }
+          return mockResponse;
+        })
+      };
+      https.get.mockImplementation((_url, _opts, cb) => {
+        cb(mockResponse);
+        return { on: jest.fn(), setTimeout: jest.fn(), destroy: jest.fn() };
+      });
+
+      const result = await validateApiKey('anthropic', 'sk-ant-servererror');
+      expect(result).toEqual({ valid: false, error: 'Server error (500)' });
+    });
+
     it('should validate deepseek key using correct endpoint', async () => {
       let capturedUrl;
       let capturedHeaders;
