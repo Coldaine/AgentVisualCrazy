@@ -99,21 +99,28 @@ function registerSetupHandlers(ipcMain, getMainWindow) {
   });
 
   ipcMain.handle('sidecar:get-api-keys', () => {
-    const { readApiKeys, readApiKeyHints, saveApiKey } = require('../src/utils/api-key-store');
-    const { importFromAuthJson } = require('../src/utils/auth-json');
-    const status = readApiKeys();
-    const hints = readApiKeyHints();
+    try {
+      const { readApiKeys, readApiKeyHints, saveApiKey } = require('../src/utils/api-key-store');
+      const { importFromAuthJson } = require('../src/utils/auth-json');
+      const status = readApiKeys();
+      const hints = readApiKeyHints();
 
-    // Auto-import keys from auth.json that sidecar doesn't have yet
-    const { imported } = importFromAuthJson(status);
-    for (const entry of imported) {
-      saveApiKey(entry.provider, entry.key);
-      status[entry.provider] = true;
-      const visible = entry.key.slice(0, 8);
-      hints[entry.provider] = visible + '\u2022'.repeat(Math.max(0, Math.min(entry.key.length - 8, 12)));
+      // Auto-import keys from auth.json that sidecar doesn't have yet
+      const { imported } = importFromAuthJson(status);
+      for (const entry of imported) {
+        const result = saveApiKey(entry.provider, entry.key);
+        if (result && result.success !== false) {
+          status[entry.provider] = true;
+          const visible = entry.key.slice(0, 8);
+          hints[entry.provider] = visible + '\u2022'.repeat(Math.max(0, Math.min(entry.key.length - 8, 12)));
+        }
+      }
+
+      return { status, hints, imported: imported.map(e => e.provider) };
+    } catch (err) {
+      logger.error('get-api-keys handler error', { error: err.message });
+      return { status: {}, hints: {}, imported: [] };
     }
-
-    return { status, hints, imported: imported.map(e => e.provider) };
   });
 
   ipcMain.handle('sidecar:fetch-models', async () => {

@@ -60,6 +60,8 @@ function validateApiKey(provider, key) {
         if (provider === 'anthropic') {
           if (res.statusCode === 401) {
             resolve({ valid: false, error: 'Invalid API key (401)' });
+          } else if (res.statusCode >= 500 || res.statusCode === 429) {
+            resolve({ valid: false, error: `Server error (${res.statusCode})` });
           } else {
             resolve({ valid: true });
           }
@@ -74,6 +76,10 @@ function validateApiKey(provider, key) {
           resolve({ valid: false, error: `Unexpected response (${res.statusCode})` });
         }
       });
+    });
+    req.setTimeout(10000, () => {
+      req.destroy();
+      resolve({ valid: false, error: 'Request timed out' });
     });
     req.on('error', (err) => {
       resolve({ valid: false, error: err.message });
