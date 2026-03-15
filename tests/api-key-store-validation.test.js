@@ -52,7 +52,7 @@ describe('api-key-store validation', () => {
       };
       https.get.mockImplementation((_url, _opts, cb) => {
         cb(mockResponse);
-        return { on: jest.fn() };
+        return { on: jest.fn(), setTimeout: jest.fn(), destroy: jest.fn() };
       });
 
       const result = await validateApiKey('openrouter', 'sk-or-valid');
@@ -70,7 +70,7 @@ describe('api-key-store validation', () => {
       };
       https.get.mockImplementation((_url, _opts, cb) => {
         cb(mockResponse);
-        return { on: jest.fn() };
+        return { on: jest.fn(), setTimeout: jest.fn(), destroy: jest.fn() };
       });
 
       const result = await validateApiKey('openrouter', 'sk-or-bad');
@@ -79,7 +79,7 @@ describe('api-key-store validation', () => {
 
     it('should resolve invalid for network error', async () => {
       https.get.mockImplementation((_url, _opts, _cb) => {
-        const req = { on: jest.fn() };
+        const req = { on: jest.fn(), setTimeout: jest.fn(), destroy: jest.fn() };
         setTimeout(() => {
           const errCall = req.on.mock.calls.find(c => c[0] === 'error');
           if (errCall) { errCall[1](new Error('Network error')); }
@@ -122,7 +122,7 @@ describe('api-key-store validation', () => {
       };
       https.get.mockImplementation((_url, _opts, cb) => {
         cb(mockResponse);
-        return { on: jest.fn() };
+        return { on: jest.fn(), setTimeout: jest.fn(), destroy: jest.fn() };
       });
 
       const result = await validateApiKey('openrouter', 'sk-or-forbidden');
@@ -140,7 +140,7 @@ describe('api-key-store validation', () => {
       };
       https.get.mockImplementation((_url, _opts, cb) => {
         cb(mockResponse);
-        return { on: jest.fn() };
+        return { on: jest.fn(), setTimeout: jest.fn(), destroy: jest.fn() };
       });
 
       const result = await validateApiKey('openrouter', 'sk-or-500');
@@ -159,7 +159,7 @@ describe('api-key-store validation', () => {
       };
       https.get.mockImplementation((_url, _opts, cb) => {
         cb(mockResponse);
-        return { on: jest.fn() };
+        return { on: jest.fn(), setTimeout: jest.fn(), destroy: jest.fn() };
       });
 
       const result = await validateApiKey('anthropic', 'sk-ant-valid');
@@ -177,11 +177,47 @@ describe('api-key-store validation', () => {
       };
       https.get.mockImplementation((_url, _opts, cb) => {
         cb(mockResponse);
-        return { on: jest.fn() };
+        return { on: jest.fn(), setTimeout: jest.fn(), destroy: jest.fn() };
       });
 
       const result = await validateApiKey('anthropic', 'sk-ant-bad');
       expect(result).toEqual({ valid: false, error: 'Invalid API key (401)' });
+    });
+
+    it('should treat anthropic 429 as invalid (rate limited)', async () => {
+      const mockResponse = {
+        statusCode: 429,
+        on: jest.fn((event, cb) => {
+          if (event === 'data') { cb('Rate limited'); }
+          if (event === 'end') { cb(); }
+          return mockResponse;
+        })
+      };
+      https.get.mockImplementation((_url, _opts, cb) => {
+        cb(mockResponse);
+        return { on: jest.fn(), setTimeout: jest.fn(), destroy: jest.fn() };
+      });
+
+      const result = await validateApiKey('anthropic', 'sk-ant-ratelimited');
+      expect(result).toEqual({ valid: false, error: 'Server error (429)' });
+    });
+
+    it('should treat anthropic 500 as invalid (server error)', async () => {
+      const mockResponse = {
+        statusCode: 500,
+        on: jest.fn((event, cb) => {
+          if (event === 'data') { cb('Internal error'); }
+          if (event === 'end') { cb(); }
+          return mockResponse;
+        })
+      };
+      https.get.mockImplementation((_url, _opts, cb) => {
+        cb(mockResponse);
+        return { on: jest.fn(), setTimeout: jest.fn(), destroy: jest.fn() };
+      });
+
+      const result = await validateApiKey('anthropic', 'sk-ant-servererror');
+      expect(result).toEqual({ valid: false, error: 'Server error (500)' });
     });
 
     it('should validate deepseek key using correct endpoint', async () => {
@@ -199,7 +235,7 @@ describe('api-key-store validation', () => {
         capturedUrl = url;
         capturedHeaders = opts.headers;
         cb(mockResponse);
-        return { on: jest.fn() };
+        return { on: jest.fn(), setTimeout: jest.fn(), destroy: jest.fn() };
       });
 
       const result = await validateApiKey('deepseek', 'sk-deepseek-valid');
@@ -221,7 +257,7 @@ describe('api-key-store validation', () => {
       https.get.mockImplementation((url, _opts, cb) => {
         capturedUrl = url;
         cb(mockResponse);
-        return { on: jest.fn() };
+        return { on: jest.fn(), setTimeout: jest.fn(), destroy: jest.fn() };
       });
 
       await validateApiKey('google', 'AIza-test-key');

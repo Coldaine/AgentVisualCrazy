@@ -29,13 +29,13 @@ function launchSetupWindow() {
       SIDECAR_MODE: 'setup'
     };
 
-    const debugPort = process.env.SIDECAR_DEBUG_PORT || '9222';
-    logger.info('Launching setup window', { debugPort });
+    const debugPort = process.env.SIDECAR_DEBUG_PORT;
+    const args = debugPort
+      ? [`--remote-debugging-port=${debugPort}`, mainPath]
+      : [mainPath];
+    logger.info('Launching setup window', { debugPort: debugPort || 'disabled' });
 
-    const proc = spawn(electronPath, [
-      `--remote-debugging-port=${debugPort}`,
-      mainPath
-    ], {
+    const proc = spawn(electronPath, args, {
       env,
       stdio: ['ignore', 'pipe', 'pipe']
     });

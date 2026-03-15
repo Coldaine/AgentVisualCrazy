@@ -54,13 +54,34 @@ describe('setup-window', () => {
 
     expect(spawn).toHaveBeenCalled();
     const spawnArgs = spawn.mock.calls[0];
-    expect(spawnArgs[1][0]).toContain('--remote-debugging-port=');
-    expect(spawnArgs[1][1]).toContain('main.js');
+    // Debug port is opt-in: without SIDECAR_DEBUG_PORT, only main.js is passed
+    expect(spawnArgs[1][0]).toContain('main.js');
 
     const env = spawnArgs[2].env;
     expect(env.SIDECAR_MODE).toBe('setup');
 
     expect(result.success).toBe(true);
+  });
+
+  it('should pass --remote-debugging-port when SIDECAR_DEBUG_PORT is set', async () => {
+    process.env.SIDECAR_DEBUG_PORT = '9333';
+    spawn.mockClear();
+    spawn.mockReturnValue(mockProcess);
+
+    const promise = launchSetupWindow();
+
+    const dataCallback = mockProcess.stdout.on.mock.calls.find(c => c[0] === 'data')[1];
+    dataCallback('{"status":"complete"}\n');
+
+    const closeCallback = mockProcess.on.mock.calls.find(c => c[0] === 'close')[1];
+    closeCallback(0);
+
+    await promise;
+
+    const spawnArgs = spawn.mock.calls[0];
+    expect(spawnArgs[1][0]).toBe('--remote-debugging-port=9333');
+    expect(spawnArgs[1][1]).toContain('main.js');
+    delete process.env.SIDECAR_DEBUG_PORT;
   });
 
   it('should parse enriched JSON with default model and keyCount', async () => {

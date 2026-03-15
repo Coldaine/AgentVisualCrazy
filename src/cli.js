@@ -47,12 +47,26 @@ function parseArgs(argv) {
     const arg = argv[i];
 
     if (arg.startsWith('--')) {
-      const key = arg.slice(2);
+      let key = arg.slice(2);
       const next = argv[i + 1];
+
+      // Handle --key=value syntax
+      let inlineValue;
+      const eqIdx = key.indexOf('=');
+      if (eqIdx !== -1) {
+        inlineValue = key.slice(eqIdx + 1);
+        key = key.slice(0, eqIdx);
+      }
 
       // Boolean flags (no value expected)
       if (isBooleanFlag(key)) {
         result[key] = true;
+        continue;
+      }
+
+      // If --key=value was used, use the inline value directly
+      if (inlineValue !== undefined) {
+        result[key] = parseValue(key, inlineValue);
         continue;
       }
 
