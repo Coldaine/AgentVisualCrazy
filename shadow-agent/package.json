@@ -1,0 +1,30 @@
+{
+  "name": "shadow-agent",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Passive shadow observer that visualizes and interprets agent activity.",
+  "main": "dist-electron/main.cjs",
+  "scripts": {
+    "build:renderer": "vite build",
+    "build:electron": "node electron.esbuild.mjs",
+    "build": "npm run build:renderer && npm run build:electron",
+    "start": "electron dist-electron/main.cjs",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "electron": "^37.0.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.1.2",
+    "@types/react-dom": "^19.1.2",
+    "@vitejs/plugin-react": "^5.0.2",
+    "esbuild": "^0.25.6",
+    "typescript": "^5.8.3",
+    "vite": "^7.0.0",
+    "vitest": "^3.2.4"
+  }
+}
