@@ -1,0 +1,7 @@
+third_party/*
+!third_party/README.md
+
+shadow-agent/node_modules/
+shadow-agent/dist/
+shadow-agent/dist-electron/
+
