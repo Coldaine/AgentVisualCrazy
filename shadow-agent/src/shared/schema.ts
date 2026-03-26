@@ -1,0 +1,82 @@
+export type EventSource = 'claude-hook' | 'claude-transcript' | 'replay' | 'shadow-runtime';
+
+export type EventKind =
+  | 'session_started'
+  | 'session_ended'
+  | 'agent_spawned'
+  | 'agent_completed'
+  | 'agent_idle'
+  | 'message'
+  | 'tool_started'
+  | 'tool_completed'
+  | 'tool_failed'
+  | 'subagent_dispatched'
+  | 'subagent_returned'
+  | 'permission_requested'
+  | 'context_snapshot'
+  | 'shadow_insight';
+
+export type InsightKind =
+  | 'objective'
+  | 'phase'
+  | 'risk'
+  | 'next_move'
+  | 'attention'
+  | 'summary';
+
+export interface CanonicalEvent<TPayload = Record<string, unknown>> {
+  id: string;
+  sessionId: string;
+  source: EventSource;
+  timestamp: string;
+  actor: string;
+  kind: EventKind;
+  payload: TPayload;
+}
+
+export interface ShadowInsight {
+  kind: InsightKind;
+  confidence: number;
+  scope: 'session' | 'agent' | 'file';
+  summary: string;
+  evidenceEventIds: string[];
+  structuredPayload?: Record<string, unknown>;
+}
+
+export interface SessionRecord {
+  sessionId: string;
+  title: string;
+  startedAt: string;
+  updatedAt: string;
+  source: EventSource;
+  eventCount: number;
+}
+
+export interface AgentNode {
+  id: string;
+  label: string;
+  parentId?: string;
+  state: 'active' | 'idle' | 'completed';
+  toolCount: number;
+}
+
+export interface TimelineItem {
+  id: string;
+  timestamp: string;
+  label: string;
+  kind: EventKind;
+}
+
+export interface DerivedState {
+  sessionId: string;
+  title: string;
+  currentObjective: string;
+  activePhase: string;
+  agentNodes: AgentNode[];
+  timeline: TimelineItem[];
+  transcript: Array<{ id: string; actor: string; text: string; timestamp: string }>;
+  fileAttention: Array<{ filePath: string; touches: number }>;
+  riskSignals: string[];
+  nextMoves: string[];
+  shadowInsights: ShadowInsight[];
+}
