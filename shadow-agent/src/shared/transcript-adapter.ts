@@ -14,10 +14,21 @@ function makeId(index: number, suffix: string): string {
   return `transcript-${index}-${suffix}`;
 }
 
+function makeTimestamp(eventIndex: number): string {
+  return new Date(Date.UTC(2026, 0, 1, 0, 0, eventIndex)).toISOString();
+}
+
 export function parseClaudeTranscriptJsonl(raw: string): CanonicalEvent[] {
   const events: CanonicalEvent[] = [];
   const lines = raw.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
   let activeSessionId = 'claude-transcript-session';
+  let eventIndex = 0;
+
+  const nextTimestamp = (): string => {
+    const timestamp = makeTimestamp(eventIndex);
+    eventIndex += 1;
+    return timestamp;
+  };
 
   lines.forEach((line, index) => {
     let parsed: ClaudeTranscriptEntry;
@@ -33,7 +44,7 @@ export function parseClaudeTranscriptJsonl(raw: string): CanonicalEvent[] {
         id: makeId(index, 'session-started'),
         sessionId: activeSessionId,
         source: 'claude-transcript',
-        timestamp: new Date().toISOString(),
+        timestamp: nextTimestamp(),
         actor: 'system',
         kind: 'session_started',
         payload: { cwd: parsed.cwd ?? null }
@@ -52,7 +63,7 @@ export function parseClaudeTranscriptJsonl(raw: string): CanonicalEvent[] {
         id: makeId(index, 'message'),
         sessionId: activeSessionId,
         source: 'claude-transcript',
-        timestamp: new Date().toISOString(),
+        timestamp: nextTimestamp(),
         actor: role,
         kind: 'message',
         payload: { text: content }
@@ -71,7 +82,7 @@ export function parseClaudeTranscriptJsonl(raw: string): CanonicalEvent[] {
           id: makeId(index, `text-${blockIndex}`),
           sessionId: activeSessionId,
           source: 'claude-transcript',
-          timestamp: new Date().toISOString(),
+          timestamp: nextTimestamp(),
           actor: role,
           kind: 'message',
           payload: { text: block.text }
@@ -82,7 +93,7 @@ export function parseClaudeTranscriptJsonl(raw: string): CanonicalEvent[] {
           id: makeId(index, `tool-start-${blockIndex}`),
           sessionId: activeSessionId,
           source: 'claude-transcript',
-          timestamp: new Date().toISOString(),
+          timestamp: nextTimestamp(),
           actor: role,
           kind: 'tool_started',
           payload: {
@@ -91,13 +102,14 @@ export function parseClaudeTranscriptJsonl(raw: string): CanonicalEvent[] {
           }
         });
       } else if (type === 'tool_result') {
+        const isError = block.is_error === true;
         events.push({
           id: makeId(index, `tool-result-${blockIndex}`),
           sessionId: activeSessionId,
           source: 'claude-transcript',
-          timestamp: new Date().toISOString(),
+          timestamp: nextTimestamp(),
           actor: role,
-          kind: block.is_error ? 'tool_failed' : 'tool_completed',
+          kind: isError ? 'tool_failed' : 'tool_completed',
           payload: {
             toolUseId: block.tool_use_id ?? null,
             content: block.content ?? null
@@ -108,7 +120,7 @@ export function parseClaudeTranscriptJsonl(raw: string): CanonicalEvent[] {
           id: makeId(index, `thinking-${blockIndex}`),
           sessionId: activeSessionId,
           source: 'claude-transcript',
-          timestamp: new Date().toISOString(),
+          timestamp: nextTimestamp(),
           actor: role,
           kind: 'message',
           payload: { text: block.thinking }
@@ -122,7 +134,7 @@ export function parseClaudeTranscriptJsonl(raw: string): CanonicalEvent[] {
       id: makeId(lines.length, 'session-ended'),
       sessionId: activeSessionId,
       source: 'claude-transcript',
-      timestamp: new Date().toISOString(),
+      timestamp: nextTimestamp(),
       actor: 'system',
       kind: 'session_ended',
       payload: {}

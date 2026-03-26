@@ -52,6 +52,31 @@ export interface SessionRecord {
   eventCount: number;
 }
 
+export interface LoadedSource {
+  kind: 'fixture' | 'replay' | 'transcript';
+  label: string;
+  path?: string;
+}
+
+export interface SnapshotPayload {
+  source: LoadedSource;
+  record: SessionRecord;
+  state: DerivedState;
+  events: CanonicalEvent[];
+}
+
+export interface ExportResult {
+  canceled: boolean;
+  filePath?: string;
+  error?: string;
+}
+
+export interface ShadowAgentBridge {
+  bootstrap: () => Promise<SnapshotPayload>;
+  openReplayFile: () => Promise<SnapshotPayload | null>;
+  exportReplayJsonl: (events: CanonicalEvent[], suggestedFileName?: string) => Promise<ExportResult>;
+}
+
 export interface AgentNode {
   id: string;
   label: string;

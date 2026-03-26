@@ -5,26 +5,7 @@ import { deriveState } from '../shared/derive';
 import { paymentRefactorSession } from '../shared/fixtures/payment-refactor-session';
 import { buildSessionRecord, parseReplay, serializeEvents } from '../shared/replay-store';
 import { parseClaudeTranscriptJsonl } from '../shared/transcript-adapter';
-import type { CanonicalEvent, DerivedState, SessionRecord } from '../shared/schema';
-
-interface LoadedSource {
-  kind: 'fixture' | 'replay' | 'transcript';
-  label: string;
-  path?: string;
-}
-
-interface SnapshotPayload {
-  source: LoadedSource;
-  record: SessionRecord;
-  state: DerivedState;
-  events: CanonicalEvent[];
-}
-
-interface ExportResult {
-  canceled: boolean;
-  filePath?: string;
-  error?: string;
-}
+import type { CanonicalEvent, ExportResult, LoadedSource, SnapshotPayload } from '../shared/schema';
 
 const APP_TITLE = 'Shadow Agent';
 
@@ -131,7 +112,7 @@ function createWindow(): BrowserWindow {
       preload: getPreloadPath(),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: false
+      sandbox: true
     }
   });
 

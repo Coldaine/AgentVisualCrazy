@@ -1,25 +1,5 @@
 import { startTransition, useEffect, useMemo, useState } from 'react';
-import type { AgentNode, CanonicalEvent, DerivedState, ShadowInsight, TimelineItem } from '../shared/schema';
-
-interface LoadedSource {
-  kind: 'fixture' | 'replay' | 'transcript';
-  label: string;
-  path?: string;
-}
-
-interface SnapshotPayload {
-  source: LoadedSource;
-  record: {
-    sessionId: string;
-    title: string;
-    startedAt: string;
-    updatedAt: string;
-    source: CanonicalEvent['source'];
-    eventCount: number;
-  };
-  state: DerivedState;
-  events: CanonicalEvent[];
-}
+import type { AgentNode, DerivedState, ShadowInsight, SnapshotPayload, TimelineItem } from '../shared/schema';
 
 function formatClock(timestamp: string): string {
   const date = new Date(timestamp);
