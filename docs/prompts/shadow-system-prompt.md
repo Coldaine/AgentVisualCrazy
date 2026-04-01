@@ -1,8 +1,9 @@
 # Shadow Inference System Prompt
 
 > This is the canonical, documented version of the system prompt used by shadow-agent's
-> inference engine. The runtime version in `shadow-agent/src/inference/prompts.ts` must
-> mirror this exactly. Any change to either file must be reflected in the other.
+> inference engine. The runtime code file is: `shadow-agent/src/inference/prompts.ts`.
+> The runtime version must mirror this exactly. Any change to either file must be
+> reflected in the other.
 >
 > See AGENTS.md for the required workflow when modifying this prompt.
 
