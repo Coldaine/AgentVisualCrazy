@@ -27,7 +27,7 @@
 
 ## Documentation
 
-- 2026-04-01: **Create GitHub issues** for each implementation task above.
+- 2026-04-01: **Enable GitHub Issues** on the AgentVisualCrazy repo (currently disabled) and create issues for each implementation task above.
 
 ## Testing
 
