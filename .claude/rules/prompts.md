@@ -1,5 +1,6 @@
 ---
-applyTo: "docs/prompts/**"
+paths:
+  - "docs/prompts/**"
 ---
 
 # Rules for Prompt Files

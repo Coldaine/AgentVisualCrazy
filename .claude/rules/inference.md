@@ -1,5 +1,6 @@
 ---
-applyTo: "shadow-agent/src/inference/prompt*"
+paths:
+  - "shadow-agent/src/inference/prompt*"
 ---
 
 # Rules for Runtime Prompt Code
