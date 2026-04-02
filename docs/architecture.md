@@ -1,0 +1,107 @@
+# Architecture
+
+How shadow-agent is built and why. Read `docs/north-star.md` first for what the project is.
+This file covers the major technical decisions. Domain-specific detail lives in the
+referenced docs — this is the map, not the territory.
+
+## Rendering Stack
+
+We use **Canvas2D with D3-Force physics** for the main visualization, ported from
+agent-flow (`third_party/agent-flow/`). Canvas2D gives us full pixel control for glow
+effects, bloom post-processing, particle trails, and tapered bezier edges — none of which
+are practical in SVG or React Flow. D3-Force handles organic, self-organizing graph layout
+so we don't manually position nodes. Agent-flow already proved this exact stack works
+beautifully for agent visualization at 60fps with 100+ animated nodes.
+
+A subtle Three.js particle field sits behind the canvas for depth. React 19 + Tailwind
+handle the glass panel overlays. The rendering layer is Electron-native but portable
+enough to embed in VS Code later.
+
+We rejected React Flow (less visual control), Three.js-only (overkill for 2D), and
+keeping SVG (can't achieve the target visual quality).
+
+→ @docs/domain-gui.md for the full rendering domain: color palette, node types, panel
+layout, animation standards, what we port from agent-flow.
+
+## How the Shadow Model Works
+
+Shadow-agent runs its own AI model alongside the observed agent. We use **OpenCode's SDK**
+(`@opencode-ai/sdk`) as the primary inference harness because sidecar
+(`third_party/sidecar/`) already solved this exact problem — its `opencode-client.js` is
+the complete pattern. OpenCode gives us provider abstraction for free: the user can use
+Claude, GPT-4, Gemini, or any OpenRouter model without shadow-agent caring. If the user
+already has OpenCode configured, shadow-agent inherits credentials automatically with zero
+additional auth setup.
+
+When OpenCode isn't available, we fall back to the Anthropic SDK directly. The auth chain
+loads credentials in priority order: `process.env` → `~/.shadow-agent/.env` →
+`~/.local/share/opencode/auth.json`.
+
+We rejected Codex MCP server only (locks to OpenAI), direct API only (forces manual key
+management), and heuristics-only (can't produce calibrated confidence scores).
+
+→ @docs/domain-inference.md for the inference domain: OpenCode integration, auth chain,
+prompt strategy, trigger logic, MCP server, context budget.
+
+## Event Capture
+
+We watch Claude Code's JSONL transcript files via a filesystem watcher. This is the
+simplest reliable approach — Claude Code writes JSONL, we tail it. No need to configure
+hooks on the observed agent's side. Events are parsed incrementally, normalized into
+`CanonicalEvent` objects, and streamed to the renderer via Electron IPC through an
+in-memory ring buffer.
+
+An HTTP hook server may come later (Phase 3+) for lower latency, but the architecture
+is transport-agnostic — the buffer and IPC bridge don't care where events come from.
+
+We rejected HTTP hook server for Phase 2 (more complex, requires observed agent
+configuration) and direct process attachment (fragile, platform-specific).
+
+→ @docs/domain-events.md for the event domain: transcript watcher, canonical schema,
+normalizer, session discovery, IPC bridge.
+
+## Desktop Shell
+
+Standalone Electron app with React 19 renderer, bundled by Vite. Already implemented in
+the Phase 1 prototype. Electron gives us native file access, tray integration, and
+system-level observation. We build the standalone app first; VS Code webview embedding
+is future work.
+
+## Shadow Exposes Itself (MCP Server)
+
+Shadow-agent runs an MCP server (stdio transport) so other agents can query its
+interpretations. Three tools: `shadow_status` (current phase/risk/predictions),
+`shadow_events` (last N canonical events), and `shadow_ask` (trigger focused inference
+with a question). This makes shadow-agent composable — it becomes a tool in larger agent
+systems. Pattern lifted from sidecar's `mcp-server.js`.
+
+→ @docs/domain-inference.md §MCP Server for tool signatures and implementation.
+
+## Prompt Engineering
+
+The shadow inference system prompt lives in `docs/prompts/shadow-system-prompt.md` with
+inline commentary explaining why each section exists. The runtime loads from
+`shadow-agent/src/inference/prompts.ts`, which must match the documented version
+character-for-character. See AGENTS.md for the mandatory prompt change workflow.
+
+## The Read-Only Constraint
+
+Shadow-agent never writes files or calls tools on behalf of the observed agent. This is a
+hard constraint for v1. It keeps the product boundary clear and makes shadow-agent safe to
+trust. Phase 5 may relax this for suggestions, but that's explicitly future work.
+
+## Documentation Layout
+
+```
+docs/
+  north-star.md              — What and why
+  architecture.md            — This file
+  domain-gui.md              — Rendering domain decisions
+  domain-inference.md         — Inference domain decisions
+  domain-events.md           — Event capture domain decisions
+  plans/                     — Implementation plans (GUI, events, inference)
+  prompts/                   — Agent prompts with commentary
+  research/                  — Visual research, patterns, inspiration
+  todo.md                    — Pending tasks
+  history/                   — Completed work log (append-only)
+```

@@ -1,3 +1,11 @@
+---
+status: archived
+note: >
+  This document is archived. It represents early planning and should not be
+  treated as the current plan. See docs/plans/ for current implementation plans
+  and docs/architecture.md for current decisions.
+---
+
 # Shadow Agent Test Plan
 
 This is the next test roadmap for the initial `shadow-agent` prototype.
