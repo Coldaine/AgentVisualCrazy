@@ -23,12 +23,22 @@ everything as a live holographic visualization. See `docs/north-star.md` for the
 | Prompt engineering | `docs/prompts/shadow-system-prompt.md` |
 | Agent-flow visual patterns (source material) | `docs/research/visual-patterns-agent-flow.md` |
 | Sidecar runtime patterns (source material) | `docs/research/visual-patterns-sidecar.md` |
+| Citadel animation primitives (source material) | `docs/research/visual-patterns-citadel.md` |
 
 ## Visual Fidelity Is Priority #1
 
-When facing a tradeoff, choose visual quality over faster implementation. The vendored
-repos in `third_party/` are literal source material — port from agent-flow's Canvas2D
-renderer directly. Preserve the holographic visual language.
+When facing a tradeoff, choose visual quality over faster implementation.
+
+`third_party/` contains three reference libraries. Treat them as a palette — pick what fits:
+
+| Library | What it contributes |
+|---------|-------------------|
+| `agent-flow` | Canvas2D hexagonal nodes, D3-Force physics, particle trails, tapered bezier edges, bloom |
+| `sidecar` | Runtime patterns, session management, MCP auth chain, shadow interpretation architecture |
+| `citadel` | Spring-damped dot-grid background, pulse API (burst/ripple), 13 CSS @keyframes, tier cascade timing |
+
+You are not required to use all of them. Mix, augment, or ignore as the moment demands.
+The research docs catalog which specific patterns are worth stealing and how to adapt them.
 
 ## Read-Only Constraint (v1)
 

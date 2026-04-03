@@ -10,7 +10,19 @@
 
 ## Scope
 
-Replace the current SVG-based `GraphView` in `App.tsx` with a Canvas2D + D3-Force rendering stack ported from `third_party/agent-flow/`. Add a Three.js particle background, glass panel overlay system, and the full holographic visual language described in `docs/research/visual-design-strategy.md`.
+Replace the current SVG-based `GraphView` in `App.tsx` with a Canvas2D + D3-Force rendering stack ported from `third_party/agent-flow/`. Add a particle background, glass panel overlay system, and the full holographic visual language described in `docs/research/visual-design-strategy.md`.
+
+## Visual Primitive Libraries
+
+Three reference libraries are available — use what fits, ignore what doesn't:
+
+| Library | Best for | Research doc |
+|---------|----------|-------------|
+| `third_party/agent-flow` | Hexagonal nodes, D3-Force, particle trails, tapered bezier edges, bloom | `docs/research/visual-patterns-agent-flow.md` |
+| `third_party/sidecar` | Runtime patterns, session management | `docs/research/visual-patterns-sidecar.md` |
+| `third_party/citadel` | Spring-damped dot-grid background, pulse API (burst/ripple), 13 CSS @keyframes, tier cascade timing | `docs/research/visual-patterns-citadel.md` |
+
+Notable Citadel patterns for this plan: canvas dot-grid as background (step 8 alternative to Three.js), `card-breathe` for active node glow, `cl-reveal` for panel element entrances, pulse API wired to agent events.
 
 ---
 
