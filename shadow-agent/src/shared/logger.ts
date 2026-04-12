@@ -28,6 +28,7 @@ const LEVEL_WEIGHT: Record<LogLevel, number> = {
 };
 
 const SENSITIVE_KEY_PATTERN = /(?:^|[_-])(text|prompt|content)(?:$|[_-])/i;
+const ensuredLogDirs = new Map<string, Promise<void>>();
 
 function isErrorLike(value: unknown): value is { name?: unknown; message?: unknown; stack?: unknown } {
   if (!value || typeof value !== 'object') {
@@ -113,8 +114,26 @@ function redactContext(context: Record<string, unknown> | undefined): Record<str
   return redacted;
 }
 
+async function ensureLogDir(filePath: string): Promise<void> {
+  const dir = path.dirname(filePath);
+  const existing = ensuredLogDirs.get(dir);
+  if (existing) {
+    await existing;
+    return;
+  }
+
+  const pending = mkdir(dir, { recursive: true })
+    .then(() => undefined)
+    .catch((error) => {
+      ensuredLogDirs.delete(dir);
+      throw error;
+    });
+  ensuredLogDirs.set(dir, pending);
+  await pending;
+}
+
 async function writeJsonLine(filePath: string, entry: LogEntry): Promise<void> {
-  await mkdir(path.dirname(filePath), { recursive: true });
+  await ensureLogDir(filePath);
   await appendFile(filePath, `${JSON.stringify(entry)}\n`, 'utf8');
 }
 
@@ -124,14 +143,18 @@ export class StructuredLogger {
   private readonly includeMemory: boolean;
   private readonly memoryCapacity: number;
   private readonly filePath?: string;
-  private readonly memory: LogEntry[] = [];
+  private readonly memory: Array<LogEntry | undefined>;
+  private memoryStart = 0;
+  private memorySize = 0;
+  private writeFailureCount = 0;
 
   public constructor(options: LoggerOptions = {}) {
     this.minLevel = options.minLevel ?? 'info';
     this.includeConsole = options.includeConsole ?? true;
     this.includeMemory = options.includeMemory ?? true;
-    this.memoryCapacity = options.memoryCapacity ?? 500;
+    this.memoryCapacity = Math.max(0, options.memoryCapacity ?? 500);
     this.filePath = options.filePath;
+    this.memory = this.memoryCapacity > 0 ? new Array(this.memoryCapacity) : [];
   }
 
   public debug(domain: LogDomain, event: string, context?: Record<string, unknown>): void {
@@ -151,10 +174,27 @@ export class StructuredLogger {
   }
 
   public getRecent(limit = 100): LogEntry[] {
-    if (limit <= 0) {
+    if (limit <= 0 || this.memorySize === 0 || this.memoryCapacity === 0) {
       return [];
     }
-    return this.memory.slice(-limit);
+
+    const take = Math.min(limit, this.memorySize);
+    const offset = this.memorySize - take;
+    const output: LogEntry[] = [];
+
+    for (let i = 0; i < take; i += 1) {
+      const index = (this.memoryStart + offset + i) % this.memoryCapacity;
+      const entry = this.memory[index];
+      if (entry) {
+        output.push(entry);
+      }
+    }
+
+    return output;
+  }
+
+  public getWriteFailureCount(): number {
+    return this.writeFailureCount;
   }
 
   private log(level: LogLevel, domain: LogDomain, event: string, context?: Record<string, unknown>): void {
@@ -170,10 +210,14 @@ export class StructuredLogger {
       context: redactContext(context)
     };
 
-    if (this.includeMemory) {
-      this.memory.push(entry);
-      if (this.memory.length > this.memoryCapacity) {
-        this.memory.shift();
+    if (this.includeMemory && this.memoryCapacity > 0) {
+      const writeIndex = (this.memoryStart + this.memorySize) % this.memoryCapacity;
+      this.memory[writeIndex] = entry;
+
+      if (this.memorySize < this.memoryCapacity) {
+        this.memorySize += 1;
+      } else {
+        this.memoryStart = (this.memoryStart + 1) % this.memoryCapacity;
       }
     }
 
@@ -188,6 +232,7 @@ export class StructuredLogger {
 
     if (this.filePath) {
       void writeJsonLine(this.filePath, entry).catch((error) => {
+        this.writeFailureCount += 1;
         if (this.includeConsole) {
           console.error('logger_write_failed', error);
         }

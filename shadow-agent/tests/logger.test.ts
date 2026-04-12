@@ -1,4 +1,7 @@
 import { describe, expect, it } from 'vitest';
+import { mkdtemp } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
 import { createLogger } from '../src/shared/logger';
 
 describe('structured logger', () => {
@@ -78,5 +81,23 @@ describe('structured logger', () => {
     expect(entry.context).toEqual({
       circular: ['[circular]']
     });
+  });
+
+  it('tracks file write failures even with console logging disabled', async () => {
+    const tempDir = await mkdtemp(path.join(os.tmpdir(), 'shadow-agent-logger-failure-'));
+    const logger = createLogger({
+      minLevel: 'debug',
+      includeConsole: false,
+      includeMemory: false,
+      filePath: tempDir
+    });
+
+    logger.error('app', 'file_write_failure');
+
+    for (let attempt = 0; attempt < 20 && logger.getWriteFailureCount() === 0; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 5));
+    }
+
+    expect(logger.getWriteFailureCount()).toBeGreaterThan(0);
   });
 });

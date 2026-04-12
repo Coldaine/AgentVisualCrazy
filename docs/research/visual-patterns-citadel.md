@@ -60,11 +60,13 @@ window.fireAmbientPulse(x, y)
 
 **How to use in shadow-agent:**
 - Drop the canvas behind the Electron window as a full-screen layer
-- Wire `fireTierPulse` to agent events:
-  - Tool call starts → burst from the agent node position, amber
-  - Phase changes → burst from center, the new phase's color
-  - Risk signal detected → burst from center, crimson
-  - Agent completes → burst, neon green
+- Bind trigger wiring directly to canonical `EventKind` names from `shadow-agent/src/shared/schema.ts`
+- Wire `fireTierPulse` to exact event kinds:
+  - `tool_started` → burst from the active agent node position, amber
+  - `tool_completed` → burst from the active agent node position, green
+  - `tool_failed` → burst from the active agent node position, crimson
+  - `subagent_dispatched` → burst on the parent-to-child edge midpoint, amber
+  - `subagent_returned` → burst on the parent agent node, cyan/green
 - Use `fireAmbientPulse` on a slow interval for the idle heartbeat
 
 The tint map in the source uses Citadel's colors — replace with our palette:
@@ -208,7 +210,8 @@ as a CSS variable so each card can pulse in its own color.
 
 **How to use in shadow-agent:**
 - SVG edges in the agent graph during active data flow
-- Pulse the edge between parent and child agent when a subagent dispatch happens
+- Pulse the edge between parent and child when `subagent_dispatched` fires
+- Fade the edge pulse on `subagent_returned`
 
 ---
 
