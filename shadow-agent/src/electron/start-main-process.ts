@@ -55,41 +55,78 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
 
   ipcMain.removeHandler('shadow-agent:open-replay-file');
   ipcMain.handle('shadow-agent:open-replay-file', async () => {
-    const filePath = await pickOpenFile(getMainWindow());
-    if (!filePath) {
-      logger.info('ipc', 'open_replay_cancelled');
-      return null;
-    }
+    let filePath: string | undefined;
+    try {
+      filePath = await pickOpenFile(getMainWindow());
+      if (!filePath) {
+        logger.info('ipc', 'open_replay_cancelled');
+        return null;
+      }
 
-    logger.info('ipc', 'open_replay_selected', { fileName: path.basename(filePath) });
-    return loadSnapshotFromFile(filePath);
+      logger.info('ipc', 'open_replay_selected', { fileName: path.basename(filePath) });
+      return loadSnapshotFromFile(filePath);
+    } catch (error) {
+      logger.error('ipc', 'open_replay_failed', {
+        fileName: filePath ? path.basename(filePath) : undefined,
+        error
+      });
+      throw error;
+    }
   });
 
   ipcMain.removeHandler('shadow-agent:export-replay-jsonl');
-  ipcMain.handle('shadow-agent:export-replay-jsonl', async (_event, events: CanonicalEvent[], suggestedFileName?: string) =>
-    saveReplayFile(getMainWindow(), events, suggestedFileName)
-  );
+  ipcMain.handle('shadow-agent:export-replay-jsonl', async (_event, events: CanonicalEvent[], suggestedFileName?: string) => {
+    try {
+      return await saveReplayFile(getMainWindow(), events, suggestedFileName);
+    } catch (error) {
+      logger.error('ipc', 'export_replay_failed', {
+        suggestedFileName: suggestedFileName ? path.basename(suggestedFileName) : undefined,
+        error
+      });
+      return {
+        canceled: false,
+        error: error instanceof Error ? error.message : 'Unable to export replay JSONL.'
+      };
+    }
+  });
 }
 
 export function startMainProcess(): void {
   let mainWindow: BrowserWindow | null = null;
 
-  app.whenReady().then(() => {
-    registerIpcHandlers(() => mainWindow);
-    mainWindow = createWindow();
-    mainWindow.on('closed', () => {
-      mainWindow = null;
+  app
+    .whenReady()
+    .then(() => {
+      registerIpcHandlers(() => mainWindow);
+      try {
+        mainWindow = createWindow();
+        mainWindow.on('closed', () => {
+          mainWindow = null;
+        });
+        logger.info('app', 'ready');
+      } catch (error) {
+        logger.error('app', 'window_create_failed_on_ready', { error });
+      }
+    })
+    .catch((error) => {
+      logger.error('app', 'when_ready_failed', { error });
     });
-    logger.info('app', 'ready');
-  });
 
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) {
-      mainWindow = createWindow();
-      mainWindow.on('closed', () => {
-        mainWindow = null;
-      });
-      logger.info('app', 'window_created_on_activate');
+    if (!app.isReady()) {
+      return;
+    }
+
+    try {
+      if (BrowserWindow.getAllWindows().length === 0) {
+        mainWindow = createWindow();
+        mainWindow.on('closed', () => {
+          mainWindow = null;
+        });
+        logger.info('app', 'window_created_on_activate');
+      }
+    } catch (error) {
+      logger.error('app', 'window_create_failed_on_activate', { error });
     }
   });
 

@@ -27,6 +27,45 @@ const LEVEL_WEIGHT: Record<LogLevel, number> = {
   error: 40
 };
 
+const SENSITIVE_KEY_PATTERN = /(?:^|[_-])(text|prompt|content)(?:$|[_-])/i;
+
+function isErrorLike(value: unknown): value is { name?: unknown; message?: unknown; stack?: unknown } {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+  return 'message' in (value as Record<string, unknown>) || 'stack' in (value as Record<string, unknown>);
+}
+
+function serializeError(
+  value: { name?: unknown; message?: unknown; stack?: unknown },
+  redacted: boolean
+): Record<string, unknown> {
+  const name = typeof value.name === 'string' ? value.name : 'Error';
+  const message =
+    typeof value.message === 'string'
+      ? value.message
+      : value.message !== undefined
+        ? String(value.message)
+        : 'Unknown error';
+  const stack = typeof value.stack === 'string' ? value.stack : undefined;
+
+  if (redacted) {
+    return {
+      name,
+      message: '[redacted]',
+      stack: '[redacted]',
+      redacted: true
+    };
+  }
+
+  return {
+    name,
+    message,
+    ...(stack ? { stack } : {}),
+    redacted: false
+  };
+}
+
 function redactContext(context: Record<string, unknown> | undefined): Record<string, unknown> | undefined {
   if (!context) {
     return undefined;
@@ -35,11 +74,16 @@ function redactContext(context: Record<string, unknown> | undefined): Record<str
   const seen = new WeakSet<object>();
 
   const sanitize = (value: unknown, keyHint?: string): unknown => {
-    if (typeof keyHint === 'string') {
-      const lowered = keyHint.toLowerCase();
-      if (lowered.includes('text') || lowered.includes('prompt') || lowered.includes('content')) {
-        return '[redacted]';
-      }
+    const sensitiveKey = typeof keyHint === 'string' && SENSITIVE_KEY_PATTERN.test(keyHint);
+
+    if (value instanceof Error) {
+      return serializeError(value, sensitiveKey);
+    }
+    if (isErrorLike(value)) {
+      return serializeError(value, sensitiveKey);
+    }
+    if (sensitiveKey) {
+      return '[redacted]';
     }
 
     if (Array.isArray(value)) {

@@ -43,6 +43,11 @@ export function buildGraphLayout(agentNodes: AgentNode[]): GraphLayout {
   const map = new Map(sorted.map((node) => [node.id, node]));
   const depthCache = new Map<string, number>();
   const visiting = new Set<string>();
+  const stateRank: Record<AgentNode['state'], number> = {
+    active: 0,
+    idle: 1,
+    completed: 2
+  };
 
   const getDepth = (node: AgentNode): number => {
     const cached = depthCache.get(node.id);
@@ -80,7 +85,7 @@ export function buildGraphLayout(agentNodes: AgentNode[]): GraphLayout {
     level
       .sort((a, b) => {
         if (a.state !== b.state) {
-          return a.state === 'active' ? -1 : a.state === 'idle' ? 1 : 0;
+          return (stateRank[a.state] ?? 99) - (stateRank[b.state] ?? 99);
         }
         return b.toolCount - a.toolCount || a.label.localeCompare(b.label);
       })

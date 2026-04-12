@@ -1,6 +1,6 @@
 # Visual Patterns: Citadel
 
-> Source: `third_party/citadel/` — extracted from sethgammon.github.io/Citadel/
+> Source: https://sethgammon.github.io/Citadel/ (local files were extracted from this site)
 > License: MIT (SethGammon/Citadel)
 > Extraction date: 2026-04-03
 
@@ -35,6 +35,7 @@ stores 7 floats: `[ox, oy, x, y, vx, vy, displacement]`. Mouse repels dots from
 their rest positions; pulses push or brighten them.
 
 **Constants to tune for our aesthetic:**
+
 ```js
 SPACING = 36       // grid density
 BASE_R = 1.2       // resting dot size
@@ -46,6 +47,7 @@ DAMPING = 0.88     // velocity decay
 ```
 
 **The pulse API is the key:**
+
 ```js
 window.fireTierPulse(x, y, maxR, speed, cssColor)
 // burst: radial dot displacement — use for tool calls, phase changes
@@ -66,6 +68,7 @@ window.fireAmbientPulse(x, y)
 - Use `fireAmbientPulse` on a slow interval for the idle heartbeat
 
 The tint map in the source uses Citadel's colors — replace with our palette:
+
 ```js
 const TINT_MAP = {
   'thinking': '102,204,255',   // --holo-base cyan
@@ -85,6 +88,7 @@ Sequential evaluation with staggered JS delays and CSS class transitions.
 Each "tier" gets `.checking` (scan animation), then `.matched` or `.skipped`.
 
 **The timing:**
+
 ```js
 // Tier 0: 360ms, Tier 2: 460ms, Tier 3: 580ms
 const delay = i === 0 ? 360 : i === 2 ? 460 : 580;
@@ -105,6 +109,7 @@ const delay = i === 0 ? 360 : i === 2 ? 460 : 580;
 **Keyframe:** `animations.css` → `@keyframes tier-scan`
 
 A vertical pseudo-element sweeps through a container from top to bottom.
+
 ```css
 @keyframes tier-scan {
   0% { transform: translateY(0); }
@@ -126,6 +131,7 @@ A vertical pseudo-element sweeps through a container from top to bottom.
 
 Ambient glow cycling on a card using `color-mix`. Uses `--gc` (generator color)
 as a CSS variable so each card can pulse in its own color.
+
 
 ```css
 @keyframes card-breathe {
@@ -152,6 +158,7 @@ as a CSS variable so each card can pulse in its own color.
 
 **Keyframe:** `animations.css` → `@keyframes live-pulse`
 
+
 ```css
 @keyframes live-pulse {
   0%, 100% { opacity: 1; transform: scale(1); }
@@ -161,7 +168,7 @@ as a CSS variable so each card can pulse in its own color.
 ```
 
 **How to use in shadow-agent:**
-- The "shadow agent is interpreting" indicator in the topbar
+- The "shadow agent is interpreting" indicator in the top bar
 - Active agent status dot next to the agent node label
 
 ---
@@ -169,6 +176,7 @@ as a CSS variable so each card can pulse in its own color.
 ### 6. Progress Tracks (`tf-run`)
 
 **Keyframe:** `animations.css` → `@keyframes tf-run`
+
 
 ```css
 @keyframes tf-run {
@@ -189,6 +197,7 @@ as a CSS variable so each card can pulse in its own color.
 
 **Keyframe:** `animations.css` → `@keyframes conn-flow`
 
+
 ```css
 @keyframes conn-flow {
   0%, 100% { opacity: 0.3; }
@@ -206,6 +215,7 @@ as a CSS variable so each card can pulse in its own color.
 ### 8. Element Reveal (`cl-reveal`)
 
 **Keyframe:** `animations.css` → `@keyframes cl-reveal`
+
 
 ```css
 @keyframes cl-reveal {

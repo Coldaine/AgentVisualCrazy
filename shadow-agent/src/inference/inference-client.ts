@@ -9,7 +9,9 @@ export interface InferenceResult {
   latencyMs: number;
 }
 
+export type Provider = 'opencode' | 'anthropic' | 'fake';
+
 export interface InferenceClient {
-  readonly provider: 'opencode' | 'anthropic' | 'fake';
+  readonly provider: Provider;
   infer(request: InferenceRequest): Promise<InferenceResult>;
 }

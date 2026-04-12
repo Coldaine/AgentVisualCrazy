@@ -36,6 +36,8 @@ describe('structured logger', () => {
         details: { content: 'nested content', keep: true }
       },
       list: [{ text: 'redact me' }, { safe: 'ok' }],
+      contentType: 'application/json',
+      error: new Error('boom'),
       eventCount: 12
     });
 
@@ -49,6 +51,13 @@ describe('structured logger', () => {
         details: { content: '[redacted]', keep: true }
       },
       list: [{ text: '[redacted]' }, { safe: 'ok' }],
+      contentType: 'application/json',
+      error: {
+        name: 'Error',
+        message: 'boom',
+        stack: expect.any(String),
+        redacted: false
+      },
       eventCount: 12
     });
   });

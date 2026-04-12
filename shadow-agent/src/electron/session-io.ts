@@ -7,6 +7,13 @@ import { buildSessionRecord, parseReplay, serializeEvents } from '../shared/repl
 import type { CanonicalEvent, ExportResult, LoadedSource, SnapshotPayload } from '../shared/schema';
 import { parseClaudeTranscriptJsonl } from '../shared/transcript-adapter';
 
+function formatErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return String(error);
+}
+
 export function inferTitle(events: CanonicalEvent[], fallback: string): string {
   const labeledSession = events.find(
     (event) => event.kind === 'session_started' && typeof event.payload.label === 'string' && event.payload.label.length > 0
@@ -76,13 +83,17 @@ export async function loadSnapshotFromFile(filePath: string): Promise<SnapshotPa
   const raw = await readFile(filePath, 'utf8');
   const primaryFormat = detectReplayFormat(raw);
   const secondaryFormat = primaryFormat === 'replay' ? 'transcript' : 'replay';
+  const fileName = path.basename(filePath);
 
   let format = primaryFormat;
   let events: CanonicalEvent[] = [];
+  let primaryError: unknown;
+  let secondaryError: unknown;
 
   try {
     events = primaryFormat === 'replay' ? parseReplay(raw) : parseClaudeTranscriptJsonl(raw);
-  } catch {
+  } catch (error) {
+    primaryError = error;
     events = [];
   }
 
@@ -93,18 +104,29 @@ export async function loadSnapshotFromFile(filePath: string): Promise<SnapshotPa
         format = secondaryFormat;
         events = fallbackEvents;
       }
-    } catch {
-      // Keep primary failure semantics handled by the empty-events check below.
+    } catch (error) {
+      secondaryError = error;
     }
   }
 
   if (events.length === 0) {
-    throw new Error(`No events could be read from ${path.basename(filePath)}.`);
+    const primaryDetail = primaryError
+      ? `failed with "${formatErrorMessage(primaryError)}"`
+      : 'returned zero events';
+    const secondaryDetail = secondaryError
+      ? `failed with "${formatErrorMessage(secondaryError)}"`
+      : 'returned zero events';
+
+    throw new Error(
+      `No events could be read from ${fileName}. ` +
+        `Primary parser (${primaryFormat}) ${primaryDetail}. ` +
+        `Secondary parser (${secondaryFormat}) ${secondaryDetail}.`
+    );
   }
 
   return createSnapshot(events, {
     kind: format,
-    label: path.basename(filePath),
+    label: fileName,
     path: filePath
   });
 }

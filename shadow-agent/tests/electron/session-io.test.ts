@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
+import { mkdtemp, writeFile } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
 import { buildFixtureSnapshot, createSnapshot, detectReplayFormat, inferTitle } from '../../src/electron/session-io';
 import type { CanonicalEvent } from '../../src/shared/schema';
+import { loadSnapshotFromFile } from '../../src/electron/session-io';
 
 function event(overrides: Partial<CanonicalEvent>): CanonicalEvent {
   return {
@@ -54,5 +58,13 @@ describe('session-io', () => {
     const fixture = buildFixtureSnapshot();
     expect(fixture.source.kind).toBe('fixture');
     expect(fixture.events.length).toBeGreaterThan(0);
+  });
+
+  it('preserves parser failure details when neither parser can load events', async () => {
+    const tempDir = await mkdtemp(path.join(os.tmpdir(), 'shadow-agent-session-io-'));
+    const filePath = path.join(tempDir, 'invalid.jsonl');
+    await writeFile(filePath, '{not-valid-json', 'utf8');
+
+    await expect(loadSnapshotFromFile(filePath)).rejects.toThrow(/Primary parser|Secondary parser/);
   });
 });

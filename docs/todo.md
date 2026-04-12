@@ -27,17 +27,15 @@
 
 ## Observability
 
-- 2026-04-12: **Add shared structured logger** — Create `shadow-agent/src/shared/logger.ts` with domain-aware `debug/info/warn/error` logging, redaction defaults, local file rotation, and an in-memory diagnostics ring buffer. See `docs/plans/plan-testing-observability.md`.
+- 2026-04-12: **Harden logger behavior and sinks** — Add explicit Error serialization, configurable log levels via environment, and durable file-write backpressure/rotation policies for `shadow-agent/src/shared/logger.ts`.
 
-- 2026-04-12: **Instrument capture, IPC, inference, and persistence boundaries** — Log session discovery/switching, watcher truncation/rotation, malformed transcript skips, inference trigger/completion/failure, and replay open/export errors without logging full transcript bodies.
+- 2026-04-12: **Finish instrumentation coverage** — Extend logging across capture, IPC, inference, and persistence boundaries with consistent event names and redacted context payloads.
 
 ## Documentation
 
 - 2026-04-01: **Enable GitHub Issues** on the AgentVisualCrazy repo (currently disabled) and create issues for each implementation task above.
 
 ## Testing
-
-- 2026-04-12: **Land testing seams** — Extract `src/electron/session-io.ts`, `src/renderer/bridge.ts`, `src/renderer/view-model.ts`, and an inference client interface so Electron, renderer, and inference logic can be tested cleanly.
 
 - 2026-04-12: **Expand Phase 1 edge coverage** — Add transcript-adapter, derive, replay-store, and persistence edge/corruption tests plus one transcript -> canonical events -> derive integration test.
 

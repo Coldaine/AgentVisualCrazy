@@ -65,7 +65,7 @@ Several planned subsystems are naturally nondeterministic unless we create seams
 
 We should standardize the following test helpers:
 
-```
+```text
 shadow-agent/tests/
   fixtures/
     transcripts/

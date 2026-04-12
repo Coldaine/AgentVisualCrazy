@@ -10,7 +10,11 @@
 
 ## Scope
 
-Replace the current SVG-based `GraphView` in `App.tsx` with a Canvas2D + D3-Force rendering stack ported from `third_party/agent-flow/`. Add a particle background, glass panel overlay system, and the full holographic visual language described in `docs/research/visual-design-strategy.md`.
+Replace the current SVG-based `GraphView` in `App.tsx` with a Canvas2D + D3-Force rendering stack ported from `third_party/agent-flow/`. Add a glass panel overlay system and the full holographic visual language described in `docs/research/visual-design-strategy.md`.
+
+For the atmospheric background layer, choose exactly one strategy for an implementation pass:
+- Citadel canvas dot-grid + pulse API (preferred)
+- Optional Three.js particle field (`ParticleField.tsx`) if the team wants deeper parallax
 
 ## Visual Primitive Libraries
 
@@ -22,7 +26,7 @@ Three reference libraries are available — use what fits, ignore what doesn't:
 | `third_party/sidecar` | Runtime patterns, session management | `docs/research/visual-patterns-sidecar.md` |
 | `third_party/citadel` | Spring-damped dot-grid background, pulse API (burst/ripple), 13 CSS @keyframes, tier cascade timing | `docs/research/visual-patterns-citadel.md` |
 
-Notable Citadel patterns for this plan: canvas dot-grid as background (step 8 alternative to Three.js), `card-breathe` for active node glow, `cl-reveal` for panel element entrances, pulse API wired to agent events.
+Notable Citadel patterns for this plan: canvas dot-grid as background (step 8 preferred), `card-breathe` for active node glow, `cl-reveal` for panel element entrances, pulse API wired to agent events.
 
 ---
 
@@ -32,8 +36,8 @@ Install in `shadow-agent/`:
 
 ```
 d3-force@^3.0.0             # Graph physics simulation
-three@^0.170.0               # Background particle field
-@react-three/fiber@^9.0.0    # React bridge for Three.js
+three@^0.170.0               # Optional background particle field
+@react-three/fiber@^9.0.0    # Optional React bridge for Three.js background
 react-spring@^9.7.0          # Physics-based animations for panels
 class-variance-authority@^0.7.0   # Type-safe CSS variant system
 @radix-ui/react-dialog@^1.1.0    # Accessible modal primitives
@@ -155,17 +159,24 @@ Use CSS Grid named areas. Panels use `GlassCard` with slide-in/out via react-spr
 
 ---
 
-## 8. Three.js Background Particle Field
+## 8. Optional Background Atmosphere Layer (Choose One)
 
-Create `src/renderer/background/ParticleField.tsx` using `@react-three/fiber`.
+Choose one background approach and ship it cleanly before adding a second:
 
+**Option A (preferred): Citadel dot-grid canvas**
+- Build a lightweight full-screen canvas background adapted from Citadel patterns
+- Wire burst/ripple pulse APIs to shadow-agent events (tool start, phase change, risk)
+- Keep opacity low and motion subtle so the graph remains primary
+
+**Option B (optional): Three.js `ParticleField.tsx`**
+- Create `src/renderer/background/ParticleField.tsx` using `@react-three/fiber`
 - 5,000–10,000 point sprites in very slow drift
 - Extremely low opacity (0.03–0.08)
 - Subtle parallax on mouse movement
-- Renders in a `<Canvas>` element positioned behind the main Canvas2D via CSS z-index
-- Optional: disable via a performance setting
+- Render in a `<Canvas>` behind the main Canvas2D via CSS z-index
+- Add a performance toggle to disable on weaker machines
 
-This is the lowest-priority visual layer — it adds atmosphere but is not functional.
+The background layer is atmospheric only; it must never reduce graph readability.
 
 ---
 
@@ -192,7 +203,7 @@ These are unique to shadow-agent (not ported from agent-flow):
 8. Panel layout overhaul (CSS Grid + all panel components)
 9. Timeline scrubber (`TimelineScrubber.tsx`)
 10. Bloom post-processing (`bloom.ts`)
-11. Three.js background particle field (`ParticleField.tsx`)
+11. Optional background layer (Citadel dot-grid or `ParticleField.tsx`, not both in first pass)
 12. Shadow-specific overlays (risk heatmap, prediction trails, interpretation ghost)
 13. Animation polish (react-spring transitions, mount/unmount)
 

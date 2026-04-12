@@ -39,5 +39,11 @@ describe('registerIpcHandlers', () => {
     expect(removeHandlerMock).toHaveBeenCalledWith('shadow-agent:open-replay-file');
     expect(removeHandlerMock).toHaveBeenCalledWith('shadow-agent:export-replay-jsonl');
     expect(handleMock).toHaveBeenCalledTimes(3);
+
+    const removeOrder = removeHandlerMock.mock.invocationCallOrder;
+    const handleOrder = handleMock.mock.invocationCallOrder;
+    expect(removeOrder[0]).toBeLessThan(handleOrder[0]);
+    expect(removeOrder[1]).toBeLessThan(handleOrder[1]);
+    expect(removeOrder[2]).toBeLessThan(handleOrder[2]);
   });
 });
