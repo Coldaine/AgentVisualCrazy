@@ -84,6 +84,21 @@ inline commentary explaining why each section exists. The runtime loads from
 `shadow-agent/src/inference/prompts.ts`, which must match the documented version
 character-for-character. See AGENTS.md for the mandatory prompt change workflow.
 
+## Testing & Observability
+
+Testing and logging are first-class cross-cutting concerns, not cleanup work for later.
+Pure logic should be covered with deterministic Vitest tests. Capture, Electron, and
+inference boundaries should have focused integration and contract tests with fake clients,
+temp files, and mocked IPC. The Canvas2D renderer should use a hybrid strategy: command-
+record tests for drawing semantics plus a small curated set of visual regression scenes.
+
+Runtime diagnostics should use structured local logging with redaction by default. We need
+enough signal to explain watcher failures, parser skips, inference triggers, IPC issues,
+and performance problems without flooding logs or dumping full transcript content.
+
+→ @docs/plans/plan-testing-observability.md for the current testing layers, seam refactors,
+logging requirements, and pre-merge quality gates.
+
 ## The Read-Only Constraint
 
 Shadow-agent never writes files or calls tools on behalf of the observed agent. This is a
@@ -99,7 +114,7 @@ docs/
   domain-gui.md              — Rendering domain decisions
   domain-inference.md         — Inference domain decisions
   domain-events.md           — Event capture domain decisions
-  plans/                     — Implementation plans (GUI, events, inference)
+  plans/                     — Implementation plans (GUI, events, inference, testing/observability)
   prompts/                   — Agent prompts with commentary
   research/                  — Visual research, patterns, inspiration
   todo.md                    — Pending tasks

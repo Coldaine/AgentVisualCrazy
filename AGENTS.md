@@ -20,6 +20,7 @@ everything as a live holographic visualization. See `docs/north-star.md` for the
 | Event capture domain (watcher, schema, adapters) | `docs/domain-events.md` |
 | Inference engine research | `docs/research/shadow-inference-architecture.md` |
 | Implementation plans | `docs/plans/` |
+| Testing and logging plan | `docs/plans/plan-testing-observability.md` |
 | Prompt engineering | `docs/prompts/shadow-system-prompt.md` |
 | Agent-flow visual patterns (source material) | `docs/research/visual-patterns-agent-flow.md` |
 | Sidecar runtime patterns (source material) | `docs/research/visual-patterns-sidecar.md` |
