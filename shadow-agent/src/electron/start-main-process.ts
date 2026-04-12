@@ -64,7 +64,7 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
       }
 
       logger.info('ipc', 'open_replay_selected', { fileName: path.basename(filePath) });
-      return loadSnapshotFromFile(filePath);
+      return await loadSnapshotFromFile(filePath);
     } catch (error) {
       logger.error('ipc', 'open_replay_failed', {
         fileName: filePath ? path.basename(filePath) : undefined,

@@ -36,12 +36,17 @@ Install in `shadow-agent/`:
 
 ```
 d3-force@^3.0.0             # Graph physics simulation
-three@^0.170.0               # Optional background particle field
-@react-three/fiber@^9.0.0    # Optional React bridge for Three.js background
 react-spring@^9.7.0          # Physics-based animations for panels
 class-variance-authority@^0.7.0   # Type-safe CSS variant system
 @radix-ui/react-dialog@^1.1.0    # Accessible modal primitives
 @radix-ui/react-tooltip@^1.1.0   # Tooltip primitives
+```
+
+Optional (only if choosing Option B in Step 8):
+
+```
+three@^0.170.0
+@react-three/fiber@^9.0.0
 ```
 
 ---
