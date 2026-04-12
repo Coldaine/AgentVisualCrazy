@@ -70,7 +70,7 @@ export function detectReplayFormat(raw: string): 'replay' | 'transcript' {
       if ('sessionId' in parsed || 'message' in parsed) {
         return 'transcript';
       }
-      return 'transcript';
+      // Keep scanning for a decisive replay marker.
     } catch {
       // Try later lines. JSONL may contain non-JSON prelude lines.
     }
@@ -89,6 +89,7 @@ export async function loadSnapshotFromFile(filePath: string): Promise<SnapshotPa
   let events: CanonicalEvent[] = [];
   let primaryError: unknown;
   let secondaryError: unknown;
+  let secondaryAttempted = false;
 
   try {
     events = primaryFormat === 'replay' ? parseReplay(raw) : parseClaudeTranscriptJsonl(raw);
@@ -97,7 +98,9 @@ export async function loadSnapshotFromFile(filePath: string): Promise<SnapshotPa
     events = [];
   }
 
-  if (events.length === 0) {
+  const shouldTrySecondary = events.length === 0 && !(primaryFormat === 'replay' && primaryError);
+  if (shouldTrySecondary) {
+    secondaryAttempted = true;
     try {
       const fallbackEvents = secondaryFormat === 'replay' ? parseReplay(raw) : parseClaudeTranscriptJsonl(raw);
       if (fallbackEvents.length > 0) {
@@ -113,9 +116,11 @@ export async function loadSnapshotFromFile(filePath: string): Promise<SnapshotPa
     const primaryDetail = primaryError
       ? `failed with "${formatErrorMessage(primaryError)}"`
       : 'returned zero events';
-    const secondaryDetail = secondaryError
-      ? `failed with "${formatErrorMessage(secondaryError)}"`
-      : 'returned zero events';
+    const secondaryDetail = secondaryAttempted
+      ? secondaryError
+        ? `failed with "${formatErrorMessage(secondaryError)}"`
+        : 'returned zero events'
+      : 'was skipped to preserve replay parser errors';
 
     throw new Error(
       `No events could be read from ${fileName}. ` +

@@ -106,27 +106,26 @@ export function startMainProcess(): void {
         logger.info('app', 'ready');
       } catch (error) {
         logger.error('app', 'window_create_failed_on_ready', { error });
+        app.quit();
       }
     })
     .catch((error) => {
       logger.error('app', 'when_ready_failed', { error });
+      app.quit();
     });
 
   app.on('activate', () => {
-    if (!app.isReady()) {
-      return;
-    }
-
-    try {
-      if (BrowserWindow.getAllWindows().length === 0) {
+    if (app.isReady() && BrowserWindow.getAllWindows().length === 0) {
+      try {
         mainWindow = createWindow();
         mainWindow.on('closed', () => {
           mainWindow = null;
         });
         logger.info('app', 'window_created_on_activate');
+      } catch (error) {
+        logger.error('app', 'window_create_failed_on_activate', { error });
+        app.quit();
       }
-    } catch (error) {
-      logger.error('app', 'window_create_failed_on_activate', { error });
     }
   });
 

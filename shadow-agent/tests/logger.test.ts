@@ -61,4 +61,22 @@ describe('structured logger', () => {
       eventCount: 12
     });
   });
+
+  it('handles circular arrays in context without recursion overflow', () => {
+    const logger = createLogger({
+      minLevel: 'debug',
+      includeConsole: false,
+      includeMemory: true
+    });
+
+    const circular: unknown[] = [];
+    circular.push(circular);
+
+    logger.debug('app', 'circular_array', { circular });
+
+    const [entry] = logger.getRecent(1);
+    expect(entry.context).toEqual({
+      circular: ['[circular]']
+    });
+  });
 });

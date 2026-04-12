@@ -23,6 +23,7 @@ describe('session-io', () => {
     expect(detectReplayFormat('{"kind":"tool_started","actor":"assistant"}')).toBe('replay');
     expect(detectReplayFormat('{"sessionId":"abc","message":{"role":"assistant"}}')).toBe('transcript');
     expect(detectReplayFormat('not-json\n{"kind":"message","actor":"assistant"}')).toBe('replay');
+    expect(detectReplayFormat('{"meta":"header"}\n{"kind":"message","actor":"assistant"}')).toBe('replay');
     expect(detectReplayFormat('')).toBe('replay');
   });
 
@@ -66,5 +67,17 @@ describe('session-io', () => {
     await writeFile(filePath, '{not-valid-json', 'utf8');
 
     await expect(loadSnapshotFromFile(filePath)).rejects.toThrow(/Primary parser|Secondary parser/);
+  });
+
+  it('does not mask replay parse errors with transcript fallback', async () => {
+    const tempDir = await mkdtemp(path.join(os.tmpdir(), 'shadow-agent-session-io-'));
+    const filePath = path.join(tempDir, 'corrupt-replay.jsonl');
+    await writeFile(
+      filePath,
+      '{"kind":"message","actor":"assistant","sessionId":"s1","id":"evt-1","source":"replay","timestamp":"2026-01-01T00:00:00.000Z","payload":{"text":"ok"}}\n{not-valid-json',
+      'utf8'
+    );
+
+    await expect(loadSnapshotFromFile(filePath)).rejects.toThrow(/Failed to parse replay JSON on line 2/);
   });
 });

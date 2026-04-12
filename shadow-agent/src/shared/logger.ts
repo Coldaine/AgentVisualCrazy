@@ -86,10 +86,6 @@ function redactContext(context: Record<string, unknown> | undefined): Record<str
       return '[redacted]';
     }
 
-    if (Array.isArray(value)) {
-      return value.map((item) => sanitize(item));
-    }
-
     if (!value || typeof value !== 'object') {
       return value;
     }
@@ -98,6 +94,10 @@ function redactContext(context: Record<string, unknown> | undefined): Record<str
       return '[circular]';
     }
     seen.add(value as object);
+
+    if (Array.isArray(value)) {
+      return value.map((item) => sanitize(item));
+    }
 
     const output: Record<string, unknown> = {};
     for (const [childKey, childValue] of Object.entries(value as Record<string, unknown>)) {

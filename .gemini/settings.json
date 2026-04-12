@@ -136,6 +136,6 @@
     ]
   },
   "hooksConfig": {
-    "enabled": true
+    "enabled": false
   }
 }
