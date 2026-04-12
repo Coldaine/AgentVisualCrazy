@@ -1,28 +1,7 @@
 import { startTransition, useEffect, useMemo, useState } from 'react';
 import type { AgentNode, DerivedState, ShadowInsight, SnapshotPayload, TimelineItem } from '../shared/schema';
-
-function formatClock(timestamp: string): string {
-  const date = new Date(timestamp);
-  if (Number.isNaN(date.valueOf())) {
-    return timestamp;
-  }
-  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-}
-
-function toLabel(value: string): string {
-  return value
-    .split(/[_-]/g)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ');
-}
-
-function safeFileName(value: string): string {
-  return value
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-    .slice(0, 60) || 'shadow-agent';
-}
+import { getShadowAgentBridge } from './bridge';
+import { buildGraphLayout, formatClock, safeFileName, toLabel } from './view-model';
 
 function stateTone(state: AgentNode['state']): string {
   if (state === 'active') {
@@ -42,73 +21,6 @@ function statusTone(kind: string): string {
     return 'pill--accent';
   }
   return 'pill--neutral';
-}
-
-function buildGraphLayout(agentNodes: AgentNode[]): {
-  nodes: Array<AgentNode & { depth: number; x: number; y: number }>;
-  edges: Array<{ from: string; to: string }>;
-  width: number;
-  height: number;
-} {
-  const sorted = [...agentNodes].sort((a, b) => a.label.localeCompare(b.label));
-  const map = new Map(sorted.map((node) => [node.id, node]));
-  const depthCache = new Map<string, number>();
-
-  const getDepth = (node: AgentNode): number => {
-    const cached = depthCache.get(node.id);
-    if (cached !== undefined) {
-      return cached;
-    }
-
-    const parent = node.parentId ? map.get(node.parentId) : undefined;
-    const depth = parent ? getDepth(parent) + 1 : 0;
-    depthCache.set(node.id, depth);
-    return depth;
-  };
-
-  const levelMap = new Map<number, AgentNode[]>();
-  for (const node of sorted) {
-    const depth = getDepth(node);
-    const level = levelMap.get(depth) ?? [];
-    level.push(node);
-    levelMap.set(depth, level);
-  }
-
-  const depthEntries = [...levelMap.entries()].sort(([left], [right]) => left - right);
-  const nodes: Array<AgentNode & { depth: number; x: number; y: number }> = [];
-  const xSpacing = 260;
-  const ySpacing = 118;
-  const maxDepth = depthEntries.reduce((max, [depth]) => Math.max(max, depth), 0);
-  const maxCount = depthEntries.reduce((max, [, level]) => Math.max(max, level.length), 0);
-
-  depthEntries.forEach(([depth, level]) => {
-    level
-      .sort((a, b) => {
-        if (a.state !== b.state) {
-          return a.state === 'active' ? -1 : a.state === 'idle' ? 1 : 0;
-        }
-        return b.toolCount - a.toolCount || a.label.localeCompare(b.label);
-      })
-      .forEach((node, index) => {
-        nodes.push({
-          ...node,
-          depth,
-          x: 40 + depth * xSpacing,
-          y: 40 + index * ySpacing
-        });
-      });
-  });
-
-  const edges = nodes
-    .filter((node) => node.parentId && map.has(node.parentId))
-    .map((node) => ({ from: node.parentId as string, to: node.id }));
-
-  return {
-    nodes,
-    edges,
-    width: Math.max(760, 80 + (maxDepth + 1) * xSpacing),
-    height: Math.max(300, 120 + Math.max(1, maxCount) * ySpacing)
-  };
 }
 
 function Panel({
@@ -346,7 +258,7 @@ export default function App() {
     let active = true;
     const bootstrap = async () => {
       try {
-        const data = await window.shadowAgent.bootstrap();
+        const data = await getShadowAgentBridge().bootstrap();
         if (!active) {
           return;
         }
@@ -378,7 +290,7 @@ export default function App() {
     setBusy('loading');
     setError(null);
     try {
-      const data = await window.shadowAgent.openReplayFile();
+      const data = await getShadowAgentBridge().openReplayFile();
       if (data) {
         startTransition(() => setSnapshot(data));
       }
@@ -393,7 +305,7 @@ export default function App() {
     setBusy('booting');
     setError(null);
     try {
-      const data = await window.shadowAgent.bootstrap();
+      const data = await getShadowAgentBridge().bootstrap();
       startTransition(() => setSnapshot(data));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to reload the fixture.');
@@ -409,7 +321,7 @@ export default function App() {
     setBusy('exporting');
     setError(null);
     try {
-      const result = await window.shadowAgent.exportReplayJsonl(snapshot.events, exportName);
+      const result = await getShadowAgentBridge().exportReplayJsonl(snapshot.events, exportName);
       if (result.error) {
         setError(result.error);
       }

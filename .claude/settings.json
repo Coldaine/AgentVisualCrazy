@@ -1,4 +1,5 @@
 {
+  "hooks": {},
   "permissions": {
     "allow": [
       "Read",
@@ -8,6 +9,8 @@
       "Bash(grep:*)",
       "Bash(git:*)"
     ],
-    "deny": []
+    "deny": [
+      "Read(./.entire/metadata/**)"
+    ]
   }
 }
