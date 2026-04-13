@@ -61,6 +61,14 @@ function hexagonPath(cx: number, cy: number, r: number): Path2D {
   return path;
 }
 
+// Helper to convert hex to rgba with alpha
+function toRgba(hex: string, alpha: number): string {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
 // Draw a tapered bezier edge
 function drawEdge(
   ctx: CanvasRenderingContext2D,
@@ -81,8 +89,10 @@ function drawEdge(
   ctx.quadraticCurveTo(ctrlX, ctrlY, tx, ty);
 
   const gradient = ctx.createLinearGradient(sx, sy, tx, ty);
-  gradient.addColorStop(0, color.replace(')', ', 0.6)').replace('rgb', 'rgba'));
-  gradient.addColorStop(1, color.replace(')', ', 0.15)').replace('rgb', 'rgba'));
+  const startColor = toRgba(color, 0.6);
+  const endColor = toRgba(color, 0.15);
+  gradient.addColorStop(0, startColor);
+  gradient.addColorStop(1, endColor);
 
   ctx.strokeStyle = gradient;
   ctx.lineWidth = 3;
@@ -137,7 +147,8 @@ function drawAgentNode(
 function drawParticles(
   ctx: CanvasRenderingContext2D,
   particles: Particle[],
-  nodes: Map<string, SimulationNode>
+  nodes: Map<string, SimulationNode>,
+  edgesMap: Map<string, SimulationEdge>
 ) {
   for (const p of particles) {
     const edge = edgesMap.get(p.edgeId);
@@ -229,7 +240,7 @@ export default function CanvasRenderer({ agentNodes }: CanvasRendererProps) {
     }
 
     // Draw particles
-    drawParticles(ctx, particles, nodeMap);
+    drawParticles(ctx, particles, nodeMap, edgesMap);
 
     // Update particles
     for (const p of particles) {
@@ -263,10 +274,13 @@ export default function CanvasRenderer({ agentNodes }: CanvasRendererProps) {
     });
 
     if (!simRef.current && newNodes.length > 0) {
+      const canvas = canvasRef.current;
+      const width = canvas?.offsetWidth ?? 800;
+      const height = canvas?.offsetHeight ?? 600;
       sim = forceSimulation<SimulationNode>(newNodes)
         .force('charge', forceManyBody().strength(-300))
         .force('link', forceLink<SimulationNode, SimulationEdge>(simEdges).id((d) => d.id).distance(150))
-        .force('center', forceCenter(400, 300))
+        .force('center', forceCenter(width / 2, height / 2))
         .force('collide', forceCollide(COLLIDE_RADIUS))
         .alphaDecay(0.02)
         .on('tick', () => {
@@ -290,6 +304,15 @@ export default function CanvasRenderer({ agentNodes }: CanvasRendererProps) {
     const ro = new ResizeObserver(() => {
       canvas.width = canvas.offsetWidth;
       canvas.height = canvas.offsetHeight;
+      if (simRef.current) {
+        const width = canvas.offsetWidth;
+        const height = canvas.offsetHeight;
+        const centerForce = simRef.current.force('center') as ReturnType<typeof forceCenter>;
+        if (centerForce) {
+          (centerForce as any).x(width / 2);
+          (centerForce as any).y(height / 2);
+        }
+      }
     });
     ro.observe(canvas);
 
