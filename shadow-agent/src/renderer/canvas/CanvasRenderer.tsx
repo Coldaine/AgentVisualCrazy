@@ -9,9 +9,10 @@ import {
   type SimulationNodeDatum,
   type SimulationLinkDatum,
 } from 'd3-force';
-import type { AgentNode } from '../../shared/schema';
-import { SimulationNode, SimulationEdge, Particle, STATE_COLORS, NODE_RADIUS, COLLIDE_RADIUS } from './types';
+import type { AgentNode, ShadowInsight } from '../../shared/schema';
+import { SimulationNode, SimulationEdge, Particle, STATE_COLORS, RISK_COLORS, NODE_RADIUS, COLLIDE_RADIUS } from './types';
 import { colors } from '../theme/colors';
+import type { RiskLevel } from './types';
 
 // Map schema AgentNode state → canvas AgentState
 function mapState(state: AgentNode['state']): SimulationNode['state'] {
@@ -181,8 +182,97 @@ function drawParticles(
   }
 }
 
+// Draw a radial gradient vignette at edges. If riskLevel='low': no overlay. If 'medium': amber vignette. If 'high': red vignette with subtle pulse. If 'critical': intense red + 1px shake offset.
+function drawRiskVignette(ctx: CanvasRenderingContext2D, width: number, height: number, riskLevel: RiskLevel) {
+  const color = RISK_COLORS[riskLevel];
+  if (color === 'transparent') return;
+
+  const gradient = ctx.createRadialGradient(width / 2, height / 2, 0, width / 2, height / 2, Math.max(width, height));
+  gradient.addColorStop(0, 'transparent');
+  gradient.addColorStop(1, color);
+
+  ctx.save();
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, width, height);
+  ctx.restore();
+}
+
+// Draws a semi-transparent ghost hexagon with a 🔮 label connected to the agent node with a dashed edge.
+function drawShadowNode(ctx: CanvasRenderingContext2D, agentX: number, agentY: number, time: number, insight: ShadowInsight) {
+  const radius = NODE_RADIUS;
+  const color = toRgba(colors.ghost, 0.6);
+
+  // Breathing/pulse for thinking state
+  let pulse = 0;
+  if (insight.riskLevel === 'critical') {
+    pulse = Math.sin(time * 0.005) * 2;
+  }
+
+  // Outer glow
+  ctx.save();
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 16;
+
+  // Hexagon body
+  const hex = hexagonPath(agentX, agentY, radius + pulse);
+  ctx.fillStyle = 'rgba(5, 5, 16, 0.9)';
+  ctx.fill(hex);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.restore();
+
+  // Label
+  ctx.save();
+  ctx.fillStyle = colors.textPrimary;
+  ctx.font = 'bold 11px "Segoe UI Variable Text", system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('🔮', agentX, agentY - 4);
+  ctx.restore();
+}
+
+// Draws a dashed arrow from src to a point below-right, with label showing tgtLabel + confidence.
+function drawPredictionTrail(ctx: CanvasRenderingContext2D, srcX: number, srcY: number, tgtLabel: string, confidence: number, time: number) {
+  const tgtX = srcX + 100;
+  const tgtY = srcY + 100;
+
+  // Arrow head
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(tgtX, tgtY);
+  ctx.lineTo(tgtX - 10, tgtY - 10);
+  ctx.lineTo(tgtX - 10, tgtY + 10);
+  ctx.closePath();
+  ctx.fillStyle = colors.textPrimary;
+  ctx.fill();
+  ctx.restore();
+
+  // Arrow line
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(srcX, srcY);
+  ctx.lineTo(tgtX, tgtY);
+  ctx.strokeStyle = colors.textPrimary;
+  ctx.lineWidth = 2;
+  ctx.setLineDash([4, 4]);
+  ctx.stroke();
+  ctx.restore();
+
+  // Label
+  ctx.save();
+  ctx.fillStyle = colors.textPrimary;
+  ctx.font = 'bold 11px "Segoe UI Variable Text", system-ui, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(`${tgtLabel} (${confidence.toFixed(2)})`, tgtX, tgtY - 20);
+  ctx.restore();
+}
+
 interface CanvasRendererProps {
   agentNodes: AgentNode[];
+  riskLevel?: RiskLevel;
+  latestInsight?: ShadowInsight;
 }
 
 // Module-level state shared with the animation loop
@@ -192,11 +282,13 @@ let sim: Simulation<SimulationNode, SimulationEdge> | null = null;
 let particles: Particle[] = [];
 let edgesMap: Map<string, SimulationEdge> = new Map();
 
-export default function CanvasRenderer({ agentNodes }: CanvasRendererProps) {
+export default function CanvasRenderer({ agentNodes, riskLevel, latestInsight }: CanvasRendererProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const rafRef = useRef<number>(0);
   const nodesRef = useRef(nodes);
   const simRef = useRef<Simulation<SimulationNode, SimulationEdge> | null>(null);
+  const riskLevelRef = useRef<RiskLevel | undefined>(riskLevel);
+  const latestInsightRef = useRef<ShadowInsight | undefined>(latestInsight);
 
   const draw = useCallback((time: number) => {
     const canvas = canvasRef.current;
@@ -246,6 +338,16 @@ export default function CanvasRenderer({ agentNodes }: CanvasRendererProps) {
     for (const p of particles) {
       p.progress += p.speed * 0.016;
       if (p.progress >= 1) p.progress = 0;
+    }
+
+    if (riskLevelRef.current && riskLevelRef.current !== 'low') {
+      drawRiskVignette(ctx, width, height, riskLevelRef.current);
+    }
+
+    if (latestInsightRef.current && nodesRef.current.length > 0) {
+      const firstNode = nodesRef.current[0];
+      drawShadowNode(ctx, firstNode.x, firstNode.y, time, latestInsightRef.current);
+      drawPredictionTrail(ctx, firstNode.x, firstNode.y, latestInsightRef.current.tgtLabel, latestInsightRef.current.confidence, time);
     }
 
     rafRef.current = requestAnimationFrame(draw);
