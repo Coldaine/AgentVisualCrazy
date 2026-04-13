@@ -1,6 +1,8 @@
-import type { AgentNode } from '../../shared/schema';
+import type { AgentNode, ShadowInsight } from '../../shared/schema';
 
 export type AgentState = 'idle' | 'thinking' | 'tool' | 'complete' | 'error' | 'paused' | 'subagent';
+
+export type RiskLevel = 'low' | 'medium' | 'high' | 'critical';
 
 export interface SimulationNode {
   id: string;
@@ -47,6 +49,13 @@ export const STATE_COLORS: Record<AgentState, string> = {
   error:    '#ff5566',
   paused:   '#888899',
   subagent: '#cc88ff',
+};
+
+export const RISK_COLORS: Record<RiskLevel, string> = {
+  low:      '#66ffaa',
+  medium:   '#ffbb44',
+  high:     '#ff5566',
+  critical: '#ff2244',
 };
 
 export const NODE_RADIUS = 32;
