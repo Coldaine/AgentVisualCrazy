@@ -1,6 +1,8 @@
 import { startTransition, useEffect, useMemo, useState } from 'react';
-import type { AgentNode, DerivedState, ShadowInsight, SnapshotPayload, TimelineItem } from '../shared/schema';
+import type { AgentNode, ShadowInsight, SnapshotPayload } from '../shared/schema';
 import CanvasRenderer from './canvas/CanvasRenderer';
+import TimelineScrubber from './components/TimelineScrubber';
+import ShadowPanel from './components/ShadowPanel';
 
 function formatClock(timestamp: string): string {
   const date = new Date(timestamp);
@@ -133,79 +135,6 @@ function FileAttentionView({ files }: { files: DerivedState['fileAttention'] }) 
           </article>
         );
       })}
-    </div>
-  );
-}
-
-function InsightsView({
-  objective,
-  phase,
-  riskSignals,
-  nextMoves,
-  insights
-}: {
-  objective: string;
-  phase: string;
-  riskSignals: string[];
-  nextMoves: string[];
-  insights: ShadowInsight[];
-}) {
-  return (
-    <div className="insights-grid">
-      <article className="insight-card insight-card--summary">
-        <p className="eyebrow">Objective</p>
-        <h3>{objective}</h3>
-        <div className="insight-card__tags">
-          <Badge tone="accent">{phase}</Badge>
-          <Badge tone="neutral">{insights.length} inferred signals</Badge>
-        </div>
-      </article>
-
-      <article className="insight-card">
-        <p className="eyebrow">Risks</p>
-        {riskSignals.length > 0 ? (
-          <ul className="list">
-            {riskSignals.map((risk) => (
-              <li key={risk}>
-                <Badge tone="danger">{risk}</Badge>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="empty-state">No strong risk signals detected.</p>
-        )}
-      </article>
-
-      <article className="insight-card">
-        <p className="eyebrow">Next Moves</p>
-        {nextMoves.length > 0 ? (
-          <ul className="list">
-            {nextMoves.map((move) => (
-              <li key={move}>
-                <Badge tone="accent">{move}</Badge>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="empty-state">No recommendation yet.</p>
-        )}
-      </article>
-
-      <article className="insight-card insight-card--wide">
-        <p className="eyebrow">Shadow Insights</p>
-        <div className="stack stack--tight">
-          {insights.map((insight, index) => (
-            <div className="insight-row" key={`${insight.kind}-${index}`}>
-              <div className="insight-row__topline">
-                <span className="insight-row__kind">{toLabel(insight.kind)}</span>
-                <span className={`pill ${statusTone(insight.kind)}`}>{Math.round(insight.confidence * 100)}%</span>
-              </div>
-              <p className="insight-row__summary">{insight.summary}</p>
-              <p className="insight-row__scope">{insight.scope} scope</p>
-            </div>
-          ))}
-        </div>
-      </article>
     </div>
   );
 }
@@ -351,31 +280,32 @@ export default function App() {
           <h2>{snapshot?.state.currentObjective ?? 'Waiting for snapshot data'}</h2>
         </section>
 
-        <div className="panels">
-          <Panel title="Graph" eyebrow="Agent topology" className="panel--wide">
-            <CanvasRenderer nodes={snapshot?.state.agentNodes ?? []} />
+        <div className="panels panels--3col">
+          {/* Left column: Graph canvas */}
+          <Panel title="Graph" eyebrow="Agent topology" className="panel--wide panel--graph">
+            <CanvasRenderer agentNodes={snapshot?.state.agentNodes ?? []} />
           </Panel>
 
-          <Panel title="Timeline" eyebrow="Chronological events">
-            <TimelineView timeline={snapshot?.state.timeline ?? []} />
-          </Panel>
+          {/* Left column bottom: Timeline + Transcript */}
+          <div className="panels__left-bottom">
+            <TimelineScrubber timeline={snapshot?.state.timeline ?? []} />
+            <Panel title="Transcript" eyebrow="Observed dialogue">
+              <TranscriptView transcript={snapshot?.state.transcript ?? []} />
+            </Panel>
+          </div>
 
-          <Panel title="Transcript" eyebrow="Observed dialogue">
-            <TranscriptView transcript={snapshot?.state.transcript ?? []} />
-          </Panel>
+          {/* Right column: Shadow interpretation */}
+          <ShadowPanel
+            phase={snapshot ? toLabel(snapshot.state.activePhase) : 'Unknown'}
+            objective={snapshot?.state.currentObjective ?? 'Waiting for data'}
+            riskSignals={snapshot?.state.riskSignals ?? []}
+            nextMoves={snapshot?.state.nextMoves ?? []}
+            insights={snapshot?.state.shadowInsights ?? []}
+          />
 
-          <Panel title="File Attention" eyebrow="Hot spots">
+          {/* Bottom: File Attention */}
+          <Panel title="File Attention" eyebrow="Hot spots" className="panel--wide">
             <FileAttentionView files={snapshot?.state.fileAttention ?? []} />
-          </Panel>
-
-          <Panel title="Insights" eyebrow="Shadow layer" className="panel--wide">
-            <InsightsView
-              objective={snapshot?.state.currentObjective ?? 'Waiting for data'}
-              phase={snapshot ? toLabel(snapshot.state.activePhase) : 'Unknown'}
-              riskSignals={snapshot?.state.riskSignals ?? []}
-              nextMoves={snapshot?.state.nextMoves ?? []}
-              insights={snapshot?.state.shadowInsights ?? []}
-            />
           </Panel>
         </div>
       </main>
