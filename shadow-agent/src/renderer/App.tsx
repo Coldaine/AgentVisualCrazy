@@ -1,5 +1,6 @@
 import { startTransition, useEffect, useMemo, useState } from 'react';
 import type { AgentNode, DerivedState, ShadowInsight, SnapshotPayload, TimelineItem } from '../shared/schema';
+import CanvasRenderer from './canvas/CanvasRenderer';
 
 function formatClock(timestamp: string): string {
   const date = new Date(timestamp);
@@ -24,16 +25,6 @@ function safeFileName(value: string): string {
     .slice(0, 60) || 'shadow-agent';
 }
 
-function stateTone(state: AgentNode['state']): string {
-  if (state === 'active') {
-    return 'node--active';
-  }
-  if (state === 'completed') {
-    return 'node--completed';
-  }
-  return 'node--idle';
-}
-
 function statusTone(kind: string): string {
   if (kind === 'risk' || kind === 'tool_failed') {
     return 'pill--danger';
@@ -42,73 +33,6 @@ function statusTone(kind: string): string {
     return 'pill--accent';
   }
   return 'pill--neutral';
-}
-
-function buildGraphLayout(agentNodes: AgentNode[]): {
-  nodes: Array<AgentNode & { depth: number; x: number; y: number }>;
-  edges: Array<{ from: string; to: string }>;
-  width: number;
-  height: number;
-} {
-  const sorted = [...agentNodes].sort((a, b) => a.label.localeCompare(b.label));
-  const map = new Map(sorted.map((node) => [node.id, node]));
-  const depthCache = new Map<string, number>();
-
-  const getDepth = (node: AgentNode): number => {
-    const cached = depthCache.get(node.id);
-    if (cached !== undefined) {
-      return cached;
-    }
-
-    const parent = node.parentId ? map.get(node.parentId) : undefined;
-    const depth = parent ? getDepth(parent) + 1 : 0;
-    depthCache.set(node.id, depth);
-    return depth;
-  };
-
-  const levelMap = new Map<number, AgentNode[]>();
-  for (const node of sorted) {
-    const depth = getDepth(node);
-    const level = levelMap.get(depth) ?? [];
-    level.push(node);
-    levelMap.set(depth, level);
-  }
-
-  const depthEntries = [...levelMap.entries()].sort(([left], [right]) => left - right);
-  const nodes: Array<AgentNode & { depth: number; x: number; y: number }> = [];
-  const xSpacing = 260;
-  const ySpacing = 118;
-  const maxDepth = depthEntries.reduce((max, [depth]) => Math.max(max, depth), 0);
-  const maxCount = depthEntries.reduce((max, [, level]) => Math.max(max, level.length), 0);
-
-  depthEntries.forEach(([depth, level]) => {
-    level
-      .sort((a, b) => {
-        if (a.state !== b.state) {
-          return a.state === 'active' ? -1 : a.state === 'idle' ? 1 : 0;
-        }
-        return b.toolCount - a.toolCount || a.label.localeCompare(b.label);
-      })
-      .forEach((node, index) => {
-        nodes.push({
-          ...node,
-          depth,
-          x: 40 + depth * xSpacing,
-          y: 40 + index * ySpacing
-        });
-      });
-  });
-
-  const edges = nodes
-    .filter((node) => node.parentId && map.has(node.parentId))
-    .map((node) => ({ from: node.parentId as string, to: node.id }));
-
-  return {
-    nodes,
-    edges,
-    width: Math.max(760, 80 + (maxDepth + 1) * xSpacing),
-    height: Math.max(300, 120 + Math.max(1, maxCount) * ySpacing)
-  };
 }
 
 function Panel({
@@ -140,57 +64,6 @@ function Panel({
 
 function Badge({ children, tone = 'neutral' }: { children: React.ReactNode; tone?: 'neutral' | 'accent' | 'danger' }) {
   return <span className={`pill pill--${tone}`}>{children}</span>;
-}
-
-function GraphView({ nodes }: { nodes: AgentNode[] }) {
-  const layout = useMemo(() => buildGraphLayout(nodes), [nodes]);
-  const nodeMap = useMemo(() => new Map(layout.nodes.map((node) => [node.id, node])), [layout.nodes]);
-
-  if (layout.nodes.length === 0) {
-    return <p className="empty-state">No agent graph is available yet.</p>;
-  }
-
-  return (
-    <div className="graph-shell">
-      <svg className="graph" viewBox={`0 0 ${layout.width} ${layout.height}`} role="img" aria-label="Agent graph">
-        <defs>
-          <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
-            <path d="M0,0 L8,4 L0,8 z" fill="rgba(187, 202, 227, 0.85)" />
-          </marker>
-        </defs>
-        {layout.edges.map((edge) => {
-          const from = nodeMap.get(edge.from);
-          const to = nodeMap.get(edge.to);
-          if (!from || !to) {
-            return null;
-          }
-          return (
-            <line
-              key={`${edge.from}-${edge.to}`}
-              x1={from.x + 180}
-              y1={from.y + 35}
-              x2={to.x}
-              y2={to.y + 35}
-              className="graph__edge"
-              markerEnd="url(#arrow)"
-            />
-          );
-        })}
-        {layout.nodes.map((node) => (
-          <g key={node.id} transform={`translate(${node.x}, ${node.y})`} className={`graph-node ${stateTone(node.state)}`}>
-            <rect width="180" height="70" rx="18" ry="18" />
-            <text x="16" y="22" className="graph-node__label">
-              {node.label}
-            </text>
-            <text x="16" y="43" className="graph-node__meta">
-              {node.toolCount} tools • {node.state}
-            </text>
-            {node.parentId ? <text x="16" y="60" className="graph-node__meta graph-node__meta--dim">{node.parentId}</text> : null}
-          </g>
-        ))}
-      </svg>
-    </div>
-  );
 }
 
 function TimelineView({ timeline }: { timeline: TimelineItem[] }) {
@@ -480,7 +353,7 @@ export default function App() {
 
         <div className="panels">
           <Panel title="Graph" eyebrow="Agent topology" className="panel--wide">
-            <GraphView nodes={snapshot?.state.agentNodes ?? []} />
+            <CanvasRenderer nodes={snapshot?.state.agentNodes ?? []} />
           </Panel>
 
           <Panel title="Timeline" eyebrow="Chronological events">

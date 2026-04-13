@@ -13,9 +13,14 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@radix-ui/react-dialog": "^1.1.15",
+    "@radix-ui/react-tooltip": "^1.2.8",
+    "class-variance-authority": "^0.7.1",
+    "d3-force": "^3.0.0",
     "electron": "^37.0.0",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "react-dom": "^19.1.0",
+    "react-spring": "^9.7.5"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
