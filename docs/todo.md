@@ -5,7 +5,7 @@
 
 ## Implementation
 
-- 2026-04-01: **Port agent-flow Canvas2D renderer** — Copy `third_party/agent-flow/web/components/agent-visualizer/canvas/` into `shadow-agent/src/renderer/canvas/`. Replace SVG graph with Canvas2D + D3-Force. Add `d3-force` dependency. This is the biggest single task.
+- 2026-04-13: ~~**Port agent-flow Canvas2D renderer**~~ ✅ DONE — `shadow-agent/src/renderer/canvas/CanvasRenderer.tsx` + `types.ts` + `theme/colors.ts`. SVG GraphView replaced with Canvas2D + D3-Force. Hexagonal nodes, tapered bezier edges, particle trails, hex grid background. Branch: `work/repovis-canvas-port`. Next: wire Three.js dot-grid background, then GlassCard components.
 
 - 2026-04-01: **Implement Phase 2 live transcript watcher** — Create `shadow-agent/src/adapters/session-watcher.ts`. FileSystemWatcher on Claude Code JSONL session directory. Stream new events to renderer via IPC.
 
