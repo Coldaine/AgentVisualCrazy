@@ -3,16 +3,7 @@ import type { AgentNode, DerivedState, ShadowInsight, TimelineItem } from '../sh
 import { getShadowAgentBridge } from './bridge';
 import { appReducer, initialAppState } from './app-state';
 import { buildGraphLayout, formatClock, safeFileName, toLabel } from './view-model';
-
-function stateTone(state: AgentNode['state']): string {
-  if (state === 'active') {
-    return 'node--active';
-  }
-  if (state === 'completed') {
-    return 'node--completed';
-  }
-  return 'node--idle';
-}
+import CanvasRenderer from './canvas/CanvasRenderer';
 
 function statusTone(kind: string): string {
   if (kind === 'risk' || kind === 'tool_failed') {
@@ -53,57 +44,6 @@ function Panel({
 
 function Badge({ children, tone = 'neutral' }: { children: React.ReactNode; tone?: 'neutral' | 'accent' | 'danger' }) {
   return <span className={`pill pill--${tone}`}>{children}</span>;
-}
-
-function GraphView({ nodes }: { nodes: AgentNode[] }) {
-  const layout = useMemo(() => buildGraphLayout(nodes), [nodes]);
-  const nodeMap = useMemo(() => new Map(layout.nodes.map((node) => [node.id, node])), [layout.nodes]);
-
-  if (layout.nodes.length === 0) {
-    return <p className="empty-state">No agent graph is available yet.</p>;
-  }
-
-  return (
-    <div className="graph-shell">
-      <svg className="graph" viewBox={`0 0 ${layout.width} ${layout.height}`} role="img" aria-label="Agent graph">
-        <defs>
-          <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
-            <path d="M0,0 L8,4 L0,8 z" fill="rgba(187, 202, 227, 0.85)" />
-          </marker>
-        </defs>
-        {layout.edges.map((edge) => {
-          const from = nodeMap.get(edge.from);
-          const to = nodeMap.get(edge.to);
-          if (!from || !to) {
-            return null;
-          }
-          return (
-            <line
-              key={`${edge.from}-${edge.to}`}
-              x1={from.x + 180}
-              y1={from.y + 35}
-              x2={to.x}
-              y2={to.y + 35}
-              className="graph__edge"
-              markerEnd="url(#arrow)"
-            />
-          );
-        })}
-        {layout.nodes.map((node) => (
-          <g key={node.id} transform={`translate(${node.x}, ${node.y})`} className={`graph-node ${stateTone(node.state)}`}>
-            <rect width="180" height="70" rx="18" ry="18" />
-            <text x="16" y="22" className="graph-node__label">
-              {node.label}
-            </text>
-            <text x="16" y="43" className="graph-node__meta">
-              {node.toolCount} tools • {node.state}
-            </text>
-            {node.parentId ? <text x="16" y="60" className="graph-node__meta graph-node__meta--dim">{node.parentId}</text> : null}
-          </g>
-        ))}
-      </svg>
-    </div>
-  );
 }
 
 function TimelineView({ timeline }: { timeline: TimelineItem[] }) {
@@ -385,7 +325,7 @@ export default function App() {
 
         <div className="panels">
           <Panel title="Graph" eyebrow="Agent topology" className="panel--wide">
-            <GraphView nodes={snapshot?.state.agentNodes ?? []} />
+            <CanvasRenderer nodes={snapshot?.state.agentNodes ?? []} />
           </Panel>
 
           <Panel title="Timeline" eyebrow="Chronological events">
