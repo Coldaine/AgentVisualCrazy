@@ -200,11 +200,11 @@ function drawRiskVignette(ctx: CanvasRenderingContext2D, width: number, height: 
 // Draws a semi-transparent ghost hexagon with a 🔮 label connected to the agent node with a dashed edge.
 function drawShadowNode(ctx: CanvasRenderingContext2D, agentX: number, agentY: number, time: number, insight: ShadowInsight) {
   const radius = NODE_RADIUS;
-  const color = toRgba(colors.ghost, 0.6);
+  const color = toRgba(colors.stateSubagent, 0.6);
 
   // Breathing/pulse for thinking state
   let pulse = 0;
-  if (insight.riskLevel === 'critical') {
+  if (insight.kind === 'risk') {
     pulse = Math.sin(time * 0.005) * 2;
   }
 
@@ -347,7 +347,7 @@ export default function CanvasRenderer({ agentNodes, riskLevel, latestInsight }:
     if (latestInsightRef.current && nodesRef.current.length > 0) {
       const firstNode = nodesRef.current[0];
       drawShadowNode(ctx, firstNode.x, firstNode.y, time, latestInsightRef.current);
-      drawPredictionTrail(ctx, firstNode.x, firstNode.y, latestInsightRef.current.tgtLabel, latestInsightRef.current.confidence, time);
+      drawPredictionTrail(ctx, firstNode.x, firstNode.y, latestInsightRef.current.summary, latestInsightRef.current.confidence, time);
     }
 
     rafRef.current = requestAnimationFrame(draw);
@@ -381,7 +381,7 @@ export default function CanvasRenderer({ agentNodes, riskLevel, latestInsight }:
       const height = canvas?.offsetHeight ?? 600;
       sim = forceSimulation<SimulationNode>(newNodes)
         .force('charge', forceManyBody().strength(-300))
-        .force('link', forceLink<SimulationNode, SimulationEdge>(simEdges).id((d) => d.id).distance(150))
+        .force('link', forceLink<SimulationNode, SimulationEdge>(simEdges).id((d: SimulationNode) => d.id).distance(150))
         .force('center', forceCenter(width / 2, height / 2))
         .force('collide', forceCollide(COLLIDE_RADIUS))
         .alphaDecay(0.02)

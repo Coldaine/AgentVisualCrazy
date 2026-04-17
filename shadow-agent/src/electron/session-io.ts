@@ -144,7 +144,7 @@ export function buildFixtureSnapshot(): SnapshotPayload {
 }
 
 export async function pickOpenFile(mainWindow: BrowserWindow | null): Promise<string | undefined> {
-  const result = await dialog.showOpenDialog(mainWindow ?? undefined, {
+  const result = await dialog.showOpenDialog(mainWindow ?? null!, {
     title: 'Open transcript or replay file',
     properties: ['openFile'],
     filters: [
@@ -168,7 +168,7 @@ export async function saveReplayFile(
   suggestedFileName = 'shadow-agent-replay.jsonl'
 ): Promise<ExportResult> {
   try {
-    const result = await dialog.showSaveDialog(mainWindow ?? undefined, {
+    const result = await dialog.showSaveDialog(mainWindow ?? null!, {
       title: 'Export replay JSONL',
       defaultPath: suggestedFileName.endsWith('.jsonl') ? suggestedFileName : `${suggestedFileName}.jsonl`,
       filters: [{ name: 'Replay files', extensions: ['jsonl'] }]
