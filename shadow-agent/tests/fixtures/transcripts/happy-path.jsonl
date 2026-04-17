@@ -1,0 +1,6 @@
+{"sessionId":"happy-path","cwd":"/workspace/myapp","message":{"role":"user","content":"Please add a structured logger utility in src/logger.ts."}}
+{"sessionId":"happy-path","message":{"role":"assistant","content":[{"type":"text","text":"I'll read the existing utilities first, then create the logger."},{"type":"tool_use","id":"tu-1","name":"Read","input":{"file_path":"src/utils.ts"}}]}}
+{"sessionId":"happy-path","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"tu-1","content":"export function helper() { return 42; }","is_error":false}]}}
+{"sessionId":"happy-path","message":{"role":"assistant","content":[{"type":"tool_use","id":"tu-2","name":"Write","input":{"file_path":"src/logger.ts","content":"export function log(level: string, msg: string) { console.log(`[${level}] ${msg}`); }"}}]}}
+{"sessionId":"happy-path","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"tu-2","content":"File written successfully","is_error":false}]}}
+{"sessionId":"happy-path","message":{"role":"assistant","content":[{"type":"text","text":"Done! The logger utility has been created in src/logger.ts with level-based output."}]}}

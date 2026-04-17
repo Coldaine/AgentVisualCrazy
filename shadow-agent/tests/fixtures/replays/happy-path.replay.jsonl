@@ -1,0 +1,9 @@
+{"id":"hp-1","sessionId":"happy-path","source":"replay","timestamp":"2026-04-01T10:00:00.000Z","actor":"system","kind":"session_started","payload":{"cwd":"/workspace/myapp"}}
+{"id":"hp-2","sessionId":"happy-path","source":"replay","timestamp":"2026-04-01T10:00:05.000Z","actor":"user","kind":"message","payload":{"text":"Please add a structured logger utility."}}
+{"id":"hp-3","sessionId":"happy-path","source":"replay","timestamp":"2026-04-01T10:00:10.000Z","actor":"assistant","kind":"message","payload":{"text":"I'll read the utilities first."}}
+{"id":"hp-4","sessionId":"happy-path","source":"replay","timestamp":"2026-04-01T10:00:15.000Z","actor":"assistant","kind":"tool_started","payload":{"toolName":"Read","file_path":"src/utils.ts"}}
+{"id":"hp-5","sessionId":"happy-path","source":"replay","timestamp":"2026-04-01T10:00:16.000Z","actor":"assistant","kind":"tool_completed","payload":{"toolName":"Read","file_path":"src/utils.ts"}}
+{"id":"hp-6","sessionId":"happy-path","source":"replay","timestamp":"2026-04-01T10:00:20.000Z","actor":"assistant","kind":"tool_started","payload":{"toolName":"Write","filePath":"src/logger.ts"}}
+{"id":"hp-7","sessionId":"happy-path","source":"replay","timestamp":"2026-04-01T10:00:21.000Z","actor":"assistant","kind":"tool_completed","payload":{"toolName":"Write","filePath":"src/logger.ts"}}
+{"id":"hp-8","sessionId":"happy-path","source":"replay","timestamp":"2026-04-01T10:00:25.000Z","actor":"assistant","kind":"message","payload":{"text":"Done! Logger created at src/logger.ts."}}
+{"id":"hp-9","sessionId":"happy-path","source":"replay","timestamp":"2026-04-01T10:00:30.000Z","actor":"system","kind":"session_ended","payload":{}}

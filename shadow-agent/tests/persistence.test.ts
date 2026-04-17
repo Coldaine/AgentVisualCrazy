@@ -99,4 +99,45 @@ describe('FileReplayStore', () => {
     expect(sessions[0].sessionId).toBe('session-b');
     expect(sessions[1].sessionId).toBe('session-a');
   });
+
+  // ── edge / failure cases ──────────────────────────────────────────────────
+
+  it('loadSession throws on a nonexistent session', async () => {
+    const rootDir = mkdtempSync(join(tmpdir(), 'shadow-agent-persistence-'));
+    const store = new FileReplayStore(rootDir);
+    await expect(store.loadSession('nonexistent-session')).rejects.toThrow();
+  });
+
+  it('listSessions returns empty array for a fresh store', async () => {
+    const rootDir = mkdtempSync(join(tmpdir(), 'shadow-agent-persistence-'));
+    const store = new FileReplayStore(rootDir);
+    const sessions = await store.listSessions();
+    expect(sessions).toEqual([]);
+  });
+
+  it('loadEvents returns empty array for a session with no events', async () => {
+    const rootDir = mkdtempSync(join(tmpdir(), 'shadow-agent-persistence-'));
+    const store = new FileReplayStore(rootDir);
+    // Save a session with an explicit empty event list
+    await store.saveSession('empty-session', [], 'Empty');
+    const events = await store.loadEvents('empty-session');
+    expect(events).toEqual([]);
+  });
+
+  it('session IDs with special characters are encoded/decoded correctly', async () => {
+    const rootDir = mkdtempSync(join(tmpdir(), 'shadow-agent-persistence-'));
+    const store = new FileReplayStore(rootDir);
+    const sessionId = 'session/with spaces & special=chars';
+    const evt = makeEvent({
+      id: 'x-1',
+      sessionId,
+      timestamp: '2026-01-01T00:00:00.000Z',
+      kind: 'session_started',
+      actor: 'system'
+    });
+    await store.saveSession(sessionId, [evt], 'Special');
+    const loaded = await store.loadSession(sessionId);
+    expect(loaded.record.sessionId).toBe(sessionId);
+    expect(loaded.events).toHaveLength(1);
+  });
 });
