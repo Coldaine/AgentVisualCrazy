@@ -1,127 +1,160 @@
-# Finish-Line Plan
+# Finish-Line Plan (Issue + PR Closeout, Beginning to End)
 
 > Last updated: 2026-04-17
 >
-> Purpose: capture the current branch / issue state of `shadow-agent`, identify the
-> remaining work to finish the repo, and give a clean sequence for closing the last
-> open items without creating bookkeeping drift.
+> Goal: resolve **all currently open issues** (`#8`–`#25`) and **all currently open PRs**
+> (`#26`–`#33`) with a deterministic, dependency-safe sequence.
 
 ---
 
-## Why this exists
+## 1) Success criteria
 
-The implementation work is no longer a single linear feature branch. It is now a set of
-branch-backed workstreams with open PRs, a few remaining test gaps, and some historical
-files that can easily drift out of sync if we do not keep a written inventory.
-
-This document is the source of truth for the **finish line**, not the original feature
-plans. It tells us:
-- what is already committed and pushed,
-- which issues are still open,
-- where the remaining code lives,
-- and what order to finish / validate / merge things in.
+Project is considered "all the way home" when:
+- all open issues `#8`–`#25` are closed with linked merge commits/PRs,
+- all open PRs `#26`–`#33` are merged or intentionally closed with rationale,
+- both remaining test workstreams (`#21`, `#24`) are implemented and merged,
+- `shadow-agent` passes `npm test` and `npm run build` on `main`,
+- docs are reconciled (`docs/todo.md` and append-only `docs/history/log.md`).
 
 ---
 
-## Current state snapshot
+## 2) Live backlog inventory
 
-### Already committed and pushed
+### Open issue map (full set)
 
-| Issue(s) | Branch / PR | Status |
-|---|---|---|
-| #8 | `work/canvas-renderer-v2` | Canvas2D renderer implementation branch exists; test coverage still pending in #24 |
-| #9 | `work/event-capture` | Live capture pipeline branch exists and is pushed |
-| #10–#17 | `work/inference-engine` / PR #28 | Inference stack and MCP server are implemented and pushed |
-| #18–#19 | `work/observability` / PR #30 | Logger hardening and structured instrumentation are pushed |
-| #20, #25 | `work/test-phase1` / PR #29 | Phase 1 edge tests + shared fixture corpus are pushed |
-| #22 | `work/renderer-tests` / PR #31 | Electron + renderer contract tests are pushed |
-| #23 | `work/inference-tests` / PR #32 | Inference contract tests are pushed |
+| Issue | Title (short) | Current resolution path | Closure condition |
+|---|---|---|---|
+| #8 | Canvas2D renderer port | PR #26 (`work/canvas-renderer-v2`) | Merge PR #26 |
+| #9 | Live transcript watcher | PR #27 (`work/event-capture`) | Merge PR #27 |
+| #10 | Inference auth loader | PR #28 (`work/inference-engine`) | Merge PR #28 |
+| #11 | OpenCode inference client | PR #28 (`work/inference-engine`) | Merge PR #28 |
+| #12 | Context packager | PR #28 (`work/inference-engine`) | Merge PR #28 |
+| #13 | Prompt builder | PR #28 (`work/inference-engine`) | Merge PR #28 |
+| #14 | Trigger engine | PR #28 (`work/inference-engine`) | Merge PR #28 |
+| #15 | Inference orchestrator | PR #28 (`work/inference-engine`) | Merge PR #28 |
+| #16 | Shadow MCP server | PR #28 (`work/inference-engine`) | Merge PR #28 |
+| #17 | Anthropic fallback client | PR #28 (`work/inference-engine`) | Merge PR #28 |
+| #18 | Logger hardening | PR #30 (`work/observability`) | Merge PR #30 |
+| #19 | Instrumentation coverage | PR #30 (`work/observability`) | Merge PR #30 |
+| #20 | Phase 1 edge coverage | PR #29 (`work/test-phase1`) | Merge PR #29 |
+| #21 | Phase 2 capture tests | **New PR required** (from `work/event-capture`) | Merge new capture-test PR |
+| #22 | Electron/renderer contracts | PR #31 (`work/renderer-tests`) | Merge PR #31 |
+| #23 | Inference contract tests | PR #32 (`work/inference-tests`) | Merge PR #32 |
+| #24 | Canvas2D command/visual tests | **New PR required** (from `work/canvas-renderer-v2`) | Merge new canvas-test PR |
+| #25 | Shared fixture corpus | PR #29 (`work/test-phase1`) | Merge PR #29 |
 
-### Still open
+### Open PR map (full set)
 
-| Issue | What remains |
-|---|---|
-| #21 | Phase 2 capture tests: incremental parser, session discovery, event buffer, watcher, session manager |
-| #24 | Canvas2D command tests + curated visual regression fixtures |
-
----
-
-## Finish-line sequence
-
-### 1) Close the capture pipeline tests (`#21`)
-
-Work from `work/event-capture` and add the tests the plan already calls for:
-- incremental parser coverage for split chunks, CRLF, malformed recovery
-- session discovery against a mock `~/.claude/projects/` tree
-- event buffer ring behavior: eviction order, `getSince()`, subscriptions
-- watcher append / truncate / rotation behavior
-- session-manager orchestration with fake IPC
-
-Use the shared fixture corpus under `shadow-agent/tests/fixtures/` so the tests do not invent
-one-off data.
-
-### 2) Close the Canvas2D test track (`#24`)
-
-Work from `work/canvas-renderer-v2` and finish the test safety net around the renderer:
-- build a recorded 2D context helper
-- cover hex nodes, bezier edges, particle trails, simulation timing, and bloom semantics
-- add a small curated screenshot set for canonical scenes
-- keep the tests headless and deterministic
-
-The existing branch already contains the renderer implementation files; the remaining job is
-verification and regression protection, not a wholesale rewrite.
-
-### 3) Reconcile bookkeeping as each branch lands
-
-After each branch is verified:
-- update `docs/todo.md` so completed items are not still shown as pending
-- append a short note to `docs/history/log.md` with the branch / PR / test result
-- keep the branch-to-issue mapping current in the PR body so the next person does not need
-  to reverse-engineer the history from commit messages
-
-### 4) Final integration gate
-
-Before calling the project done:
-- `npm test`
-- `npm run build`
-- check that the checkout is clean (`git status --short`)
-- verify no stray untracked renderer/canvas artifacts remain in the working tree
-- make sure the PR set can be merged in dependency order without cross-branch surprises
+| PR | Title (short) | Branch | Planned action |
+|---|---|---|---|
+| #26 | Canvas2D renderer | `work/canvas-renderer-v2` | Merge after #29 baseline |
+| #27 | Live capture pipeline | `work/event-capture` | Merge after #29 baseline |
+| #28 | Inference engine + MCP | `work/inference-engine` | Merge after #27 |
+| #29 | Fixtures + Phase 1 tests | `work/test-phase1` | Merge first (test/data foundation) |
+| #30 | Logger + instrumentation | `work/observability` | Merge after #27 and #28 |
+| #31 | Electron/renderer tests | `work/renderer-tests` | Merge after #26 |
+| #32 | Inference contract tests | `work/inference-tests` | Merge after #28 |
+| #33 | Finish-line docs plan | `docs/finish-line-plan` | Merge after operational work is queued/underway |
 
 ---
 
-## Dependency / merge order
+## 3) Execution sequence (beginning to end)
 
-A safe order is:
-1. `#21` capture tests
-2. `#24` canvas command tests / visual regressions
-3. final docs / bookkeeping sync
-4. merge remaining PRs in dependency order
+### Phase A — Foundation merge
 
-If any branch needs a rebase, do that before opening review on the dependent branch.
+1. Rebase PR #29 (`work/test-phase1`) on latest `main` if needed.
+2. Run `shadow-agent` test/build gate on branch.
+3. Merge PR #29.
+4. Close issues #20 and #25.
+
+### Phase B — Core feature lines
+
+5. Rebase and merge PR #26 (Canvas renderer).
+6. Rebase and merge PR #27 (capture runtime).
+7. Rebase and merge PR #28 (inference runtime).
+
+Then close issues:
+- #8 (via #26)
+- #9 (via #27)
+- #10–#17 (via #28)
+
+### Phase C — Observability and contract tests
+
+8. Rebase and merge PR #30 (logger + instrumentation).
+9. Rebase and merge PR #31 (renderer/electron contracts).
+10. Rebase and merge PR #32 (inference contracts).
+
+Then close issues:
+- #18–#19 (via #30)
+- #22 (via #31)
+- #23 (via #32)
+
+### Phase D — Create and land missing issue PRs
+
+11. **Issue #21 (capture tests)**
+   - branch from latest capture line (prefer `work/event-capture` rebased on `main`),
+   - implement required tests from `docs/plans/plan-event-capture.md` and
+     `docs/plans/plan-testing-observability.md`,
+   - open PR (new),
+   - run full test/build gate,
+   - merge PR,
+   - close issue #21.
+
+12. **Issue #24 (Canvas2D command/visual regressions)**
+   - branch from latest canvas line (prefer `work/canvas-renderer-v2` rebased on `main`),
+   - implement recorded-2D-command tests + curated snapshot fixtures,
+   - open PR (new),
+   - run full test/build gate,
+   - merge PR,
+   - close issue #24.
+
+### Phase E — Final docs + bookkeeping + hygiene
+
+13. Merge PR #33 (this plan doc).
+14. Update `docs/todo.md` entries with dated closure notes (`YYYY-MM-DD: ...`).
+15. Append closeout entries to `docs/history/log.md` (append-only).
+16. Delete merged remote branches (or mark retained long-lived branches explicitly).
+17. Final `main` gate:
+    - `npm test`
+    - `npm run build`
+    - clean working tree (`git status --short` empty)
 
 ---
 
-## Risks to watch
+## 4) Dependency constraints
 
-- **Documentation drift**: plan docs and `docs/todo.md` can fall behind pushed branches.
-- **Orphaned working-tree files**: canvas files can appear in the wrong checkout if branch
-  switches are not cleaned up.
-- **Branch confusion**: multiple work branches are already open; always name the branch and
-  issue number in commit messages and PR bodies.
-- **Test scope creep**: the remaining work is test-centric. Avoid expanding it into new
-  features unless a failing test proves the feature is missing.
+- `#29` should land before `#26`, `#27`, `#31`, `#32` because it establishes shared
+  fixtures and test baselines used by later tracks.
+- `#31` should land after `#26` (renderer contract relevance).
+- `#32` should land after `#28` (inference contract relevance).
+- `#21` must be implemented after `#27` is merged (tests target capture runtime).
+- `#24` must be implemented after `#26` is merged (tests target Canvas2D runtime).
 
 ---
 
-## Definition of done
+## 5) Risks and mitigation
 
-The repository is at the finish line when all of the following are true:
-- every open issue has a clear branch / PR / status
-- the only remaining work is intentional follow-up, not drift
-- the checkout is clean
-- `npm test` and `npm run build` pass
-- docs reflect the actual branch state
-- no one has to ask "which branch had that thing again?"
+- **Doc drift**: keep issue/PR references in PR bodies and update `docs/todo.md` immediately after merge.
+- **Cross-branch conflicts**: rebase each branch right before merge; do not batch stale merges.
+- **Untracked renderer artifacts**: enforce clean-tree checks before and after each branch switch.
+- **False-green tests**: run full gate (`npm test` + `npm run build`) on each integration PR before merge.
 
-If that last question comes up, the answer should already be in this file.
+---
+
+## 6) Closure checklist (single page)
+
+- [ ] PR #29 merged → issues #20, #25 closed
+- [ ] PR #26 merged → issue #8 closed
+- [ ] PR #27 merged → issue #9 closed
+- [ ] PR #28 merged → issues #10–#17 closed
+- [ ] PR #30 merged → issues #18–#19 closed
+- [ ] PR #31 merged → issue #22 closed
+- [ ] PR #32 merged → issue #23 closed
+- [ ] New PR for #21 merged → issue #21 closed
+- [ ] New PR for #24 merged → issue #24 closed
+- [ ] PR #33 merged
+- [ ] `docs/todo.md` reconciled with dated entries
+- [ ] `docs/history/log.md` appended with closeout log
+- [ ] `main` passes full build/test gate
+- [ ] no open issue remains in `#8`–`#25`
+- [ ] no unresolved open PR remains in `#26`–`#33`
