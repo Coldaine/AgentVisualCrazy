@@ -1,16 +1,30 @@
 import { startTransition, useEffect, useMemo, useState } from 'react';
 import type { AgentNode, DerivedState, ShadowInsight, SnapshotPayload, TimelineItem } from '../shared/schema';
-import { getShadowAgentBridge } from './bridge';
-import { buildGraphLayout, formatClock, safeFileName, toLabel } from './view-model';
+import CanvasRenderer from './canvas/CanvasRenderer';
+import TimelineScrubber from './components/TimelineScrubber';
+import ShadowPanel from './components/ShadowPanel';
 
-function stateTone(state: AgentNode['state']): string {
-  if (state === 'active') {
-    return 'node--active';
+function formatClock(timestamp: string): string {
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.valueOf())) {
+    return timestamp;
   }
-  if (state === 'completed') {
-    return 'node--completed';
-  }
-  return 'node--idle';
+  return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+}
+
+function toLabel(value: string): string {
+  return value
+    .split(/[_-]/g)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+}
+
+function safeFileName(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 60) || 'shadow-agent';
 }
 
 function statusTone(kind: string): string {
@@ -52,57 +66,6 @@ function Panel({
 
 function Badge({ children, tone = 'neutral' }: { children: React.ReactNode; tone?: 'neutral' | 'accent' | 'danger' }) {
   return <span className={`pill pill--${tone}`}>{children}</span>;
-}
-
-function GraphView({ nodes }: { nodes: AgentNode[] }) {
-  const layout = useMemo(() => buildGraphLayout(nodes), [nodes]);
-  const nodeMap = useMemo(() => new Map(layout.nodes.map((node) => [node.id, node])), [layout.nodes]);
-
-  if (layout.nodes.length === 0) {
-    return <p className="empty-state">No agent graph is available yet.</p>;
-  }
-
-  return (
-    <div className="graph-shell">
-      <svg className="graph" viewBox={`0 0 ${layout.width} ${layout.height}`} role="img" aria-label="Agent graph">
-        <defs>
-          <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto" markerUnits="strokeWidth">
-            <path d="M0,0 L8,4 L0,8 z" fill="rgba(187, 202, 227, 0.85)" />
-          </marker>
-        </defs>
-        {layout.edges.map((edge) => {
-          const from = nodeMap.get(edge.from);
-          const to = nodeMap.get(edge.to);
-          if (!from || !to) {
-            return null;
-          }
-          return (
-            <line
-              key={`${edge.from}-${edge.to}`}
-              x1={from.x + 180}
-              y1={from.y + 35}
-              x2={to.x}
-              y2={to.y + 35}
-              className="graph__edge"
-              markerEnd="url(#arrow)"
-            />
-          );
-        })}
-        {layout.nodes.map((node) => (
-          <g key={node.id} transform={`translate(${node.x}, ${node.y})`} className={`graph-node ${stateTone(node.state)}`}>
-            <rect width="180" height="70" rx="18" ry="18" />
-            <text x="16" y="22" className="graph-node__label">
-              {node.label}
-            </text>
-            <text x="16" y="43" className="graph-node__meta">
-              {node.toolCount} tools • {node.state}
-            </text>
-            {node.parentId ? <text x="16" y="60" className="graph-node__meta graph-node__meta--dim">{node.parentId}</text> : null}
-          </g>
-        ))}
-      </svg>
-    </div>
-  );
 }
 
 function TimelineView({ timeline }: { timeline: TimelineItem[] }) {
@@ -176,79 +139,6 @@ function FileAttentionView({ files }: { files: DerivedState['fileAttention'] }) 
   );
 }
 
-function InsightsView({
-  objective,
-  phase,
-  riskSignals,
-  nextMoves,
-  insights
-}: {
-  objective: string;
-  phase: string;
-  riskSignals: string[];
-  nextMoves: string[];
-  insights: ShadowInsight[];
-}) {
-  return (
-    <div className="insights-grid">
-      <article className="insight-card insight-card--summary">
-        <p className="eyebrow">Objective</p>
-        <h3>{objective}</h3>
-        <div className="insight-card__tags">
-          <Badge tone="accent">{phase}</Badge>
-          <Badge tone="neutral">{insights.length} inferred signals</Badge>
-        </div>
-      </article>
-
-      <article className="insight-card">
-        <p className="eyebrow">Risks</p>
-        {riskSignals.length > 0 ? (
-          <ul className="list">
-            {riskSignals.map((risk) => (
-              <li key={risk}>
-                <Badge tone="danger">{risk}</Badge>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="empty-state">No strong risk signals detected.</p>
-        )}
-      </article>
-
-      <article className="insight-card">
-        <p className="eyebrow">Next Moves</p>
-        {nextMoves.length > 0 ? (
-          <ul className="list">
-            {nextMoves.map((move) => (
-              <li key={move}>
-                <Badge tone="accent">{move}</Badge>
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <p className="empty-state">No recommendation yet.</p>
-        )}
-      </article>
-
-      <article className="insight-card insight-card--wide">
-        <p className="eyebrow">Shadow Insights</p>
-        <div className="stack stack--tight">
-          {insights.map((insight, index) => (
-            <div className="insight-row" key={`${insight.kind}-${index}`}>
-              <div className="insight-row__topline">
-                <span className="insight-row__kind">{toLabel(insight.kind)}</span>
-                <span className={`pill ${statusTone(insight.kind)}`}>{Math.round(insight.confidence * 100)}%</span>
-              </div>
-              <p className="insight-row__summary">{insight.summary}</p>
-              <p className="insight-row__scope">{insight.scope} scope</p>
-            </div>
-          ))}
-        </div>
-      </article>
-    </div>
-  );
-}
-
 export default function App() {
   const [snapshot, setSnapshot] = useState<SnapshotPayload | null>(null);
   const [busy, setBusy] = useState<'booting' | 'loading' | 'exporting' | null>('booting');
@@ -258,7 +148,7 @@ export default function App() {
     let active = true;
     const bootstrap = async () => {
       try {
-        const data = await getShadowAgentBridge().bootstrap();
+        const data = await window.shadowAgent.bootstrap();
         if (!active) {
           return;
         }
@@ -290,7 +180,7 @@ export default function App() {
     setBusy('loading');
     setError(null);
     try {
-      const data = await getShadowAgentBridge().openReplayFile();
+      const data = await window.shadowAgent.openReplayFile();
       if (data) {
         startTransition(() => setSnapshot(data));
       }
@@ -305,7 +195,7 @@ export default function App() {
     setBusy('booting');
     setError(null);
     try {
-      const data = await getShadowAgentBridge().bootstrap();
+      const data = await window.shadowAgent.bootstrap();
       startTransition(() => setSnapshot(data));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unable to reload the fixture.');
@@ -321,7 +211,7 @@ export default function App() {
     setBusy('exporting');
     setError(null);
     try {
-      const result = await getShadowAgentBridge().exportReplayJsonl(snapshot.events, exportName);
+      const result = await window.shadowAgent.exportReplayJsonl(snapshot.events, exportName);
       if (result.error) {
         setError(result.error);
       }
@@ -390,31 +280,32 @@ export default function App() {
           <h2>{snapshot?.state.currentObjective ?? 'Waiting for snapshot data'}</h2>
         </section>
 
-        <div className="panels">
-          <Panel title="Graph" eyebrow="Agent topology" className="panel--wide">
-            <GraphView nodes={snapshot?.state.agentNodes ?? []} />
+        <div className="panels panels--3col">
+          {/* Left column: Graph canvas */}
+          <Panel title="Graph" eyebrow="Agent topology" className="panel--wide panel--graph">
+            <CanvasRenderer agentNodes={snapshot?.state.agentNodes ?? []} />
           </Panel>
 
-          <Panel title="Timeline" eyebrow="Chronological events">
-            <TimelineView timeline={snapshot?.state.timeline ?? []} />
-          </Panel>
+          {/* Left column bottom: Timeline + Transcript */}
+          <div className="panels__left-bottom">
+            <TimelineScrubber timeline={snapshot?.state.timeline ?? []} />
+            <Panel title="Transcript" eyebrow="Observed dialogue">
+              <TranscriptView transcript={snapshot?.state.transcript ?? []} />
+            </Panel>
+          </div>
 
-          <Panel title="Transcript" eyebrow="Observed dialogue">
-            <TranscriptView transcript={snapshot?.state.transcript ?? []} />
-          </Panel>
+          {/* Right column: Shadow interpretation */}
+          <ShadowPanel
+            phase={snapshot ? toLabel(snapshot.state.activePhase) : 'Unknown'}
+            objective={snapshot?.state.currentObjective ?? 'Waiting for data'}
+            riskSignals={snapshot?.state.riskSignals ?? []}
+            nextMoves={snapshot?.state.nextMoves ?? []}
+            insights={snapshot?.state.shadowInsights ?? []}
+          />
 
-          <Panel title="File Attention" eyebrow="Hot spots">
+          {/* Bottom: File Attention */}
+          <Panel title="File Attention" eyebrow="Hot spots" className="panel--wide">
             <FileAttentionView files={snapshot?.state.fileAttention ?? []} />
-          </Panel>
-
-          <Panel title="Insights" eyebrow="Shadow layer" className="panel--wide">
-            <InsightsView
-              objective={snapshot?.state.currentObjective ?? 'Waiting for data'}
-              phase={snapshot ? toLabel(snapshot.state.activePhase) : 'Unknown'}
-              riskSignals={snapshot?.state.riskSignals ?? []}
-              nextMoves={snapshot?.state.nextMoves ?? []}
-              insights={snapshot?.state.shadowInsights ?? []}
-            />
           </Panel>
         </div>
       </main>
