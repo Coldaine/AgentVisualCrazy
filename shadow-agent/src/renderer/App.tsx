@@ -1,5 +1,5 @@
 import { startTransition, useEffect, useMemo, useState } from 'react';
-import type { AgentNode, ShadowInsight, SnapshotPayload } from '../shared/schema';
+import type { AgentNode, DerivedState, ShadowInsight, SnapshotPayload, TimelineItem } from '../shared/schema';
 import CanvasRenderer from './canvas/CanvasRenderer';
 import TimelineScrubber from './components/TimelineScrubber';
 import ShadowPanel from './components/ShadowPanel';

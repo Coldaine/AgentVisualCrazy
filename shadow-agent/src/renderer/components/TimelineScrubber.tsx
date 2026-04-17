@@ -2,6 +2,8 @@ import { useRef, useCallback } from 'react';
 import type { TimelineItem } from '../../shared/schema';
 import { useSpring, animated } from 'react-spring';
 
+const AnimatedDiv = animated.div as React.ElementType;
+
 interface TimelineScrubberProps {
   timeline: TimelineItem[];
 }
@@ -79,7 +81,7 @@ export default function TimelineScrubber({ timeline }: TimelineScrubberProps) {
           <EventMarker key={item.id} item={item} />
         ))}
         {/* Playhead */}
-        <animated.div
+        <AnimatedDiv
           className="timeline-scrubber__playhead"
           style={{
             left: playhead.to((v) => `${v * 100}%`),

@@ -34,8 +34,9 @@ function ConfidenceRing({ confidence }: { confidence: number }) {
   );
 }
 
+const AnimatedAside = animated.aside as React.ElementType;
+
 export default function ShadowPanel({ phase, objective, riskSignals, nextMoves, insights }: ShadowPanelProps) {
-  const [{ x }, api] = useSpring(() => ({ x: 0 }));
   // Slide in from right
   const slideStyle = useSpring({
     from: { opacity: 0, transform: 'translateX(32px)' },
@@ -48,7 +49,7 @@ export default function ShadowPanel({ phase, objective, riskSignals, nextMoves, 
     : 0;
 
   return (
-    <animated.aside className="shadow-panel glass-card" style={slideStyle}>
+    <AnimatedAside className="shadow-panel glass-card" style={slideStyle}>
       <div className="shadow-panel__header">
         <span className="eyebrow">Shadow Interpretation</span>
         <div className="shadow-panel__confidence">
@@ -127,6 +128,6 @@ export default function ShadowPanel({ phase, objective, riskSignals, nextMoves, 
           </section>
         )}
       </div>
-    </animated.aside>
+    </AnimatedAside>
   );
 }
