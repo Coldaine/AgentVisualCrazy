@@ -3,6 +3,7 @@ import path from 'node:path';
 import type { CanonicalEvent } from '../shared/schema';
 import { createLogger } from '../shared/logger';
 import { buildFixtureSnapshot, loadSnapshotFromFile, pickOpenFile, saveReplayFile } from './session-io';
+import { createSessionManager } from '../capture/session-manager';
 
 const APP_TITLE = 'Shadow Agent';
 const logger = createLogger({ minLevel: 'info' });
@@ -93,6 +94,7 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
 
 export function startMainProcess(): void {
   let mainWindow: BrowserWindow | null = null;
+  const sessionManager = createSessionManager(() => mainWindow?.webContents ?? null);
 
   app
     .whenReady()
@@ -103,6 +105,8 @@ export function startMainProcess(): void {
         mainWindow.on('closed', () => {
           mainWindow = null;
         });
+        // Start live transcript capture (non-blocking; falls back gracefully if no session found)
+        void sessionManager.start();
         logger.info('app', 'ready');
       } catch (error) {
         logger.error('app', 'window_create_failed_on_ready', { error });
@@ -132,6 +136,7 @@ export function startMainProcess(): void {
   app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') {
       logger.info('app', 'quit_on_window_all_closed');
+      sessionManager.stop();
       app.quit();
     }
   });

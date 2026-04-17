@@ -22,7 +22,7 @@ describe('renderer bridge', () => {
   });
 
   it('throws a descriptive error when preload bridge is missing', () => {
-    (globalThis as { window: Record<string, unknown> }).window = {};
+    (globalThis as unknown as { window: Record<string, unknown> }).window = {};
 
     expect(() => getShadowAgentBridge()).toThrow(
       'Shadow Agent preload bridge is unavailable. Start the app via Electron main process.'
