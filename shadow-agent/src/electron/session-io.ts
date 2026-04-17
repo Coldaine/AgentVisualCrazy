@@ -6,6 +6,9 @@ import { paymentRefactorSession } from '../shared/fixtures/payment-refactor-sess
 import { buildSessionRecord, parseReplay, serializeEvents } from '../shared/replay-store';
 import type { CanonicalEvent, ExportResult, LoadedSource, SnapshotPayload } from '../shared/schema';
 import { parseClaudeTranscriptJsonl } from '../shared/transcript-adapter';
+import { createLogger } from '../shared/logger';
+
+const logger = createLogger();
 
 function formatErrorMessage(error: unknown): string {
   if (error instanceof Error) {
@@ -42,6 +45,10 @@ export function inferTitle(events: CanonicalEvent[], fallback: string): string {
 export function createSnapshot(events: CanonicalEvent[], source: LoadedSource): SnapshotPayload {
   const title = inferTitle(events, source.label);
   const record = buildSessionRecord(events, title);
+  logger.info('ipc', 'ipc.snapshot.created', {
+    sourceKind: source.kind,
+    eventCount: events.length
+  });
   return {
     source,
     record,
@@ -85,6 +92,8 @@ export async function loadSnapshotFromFile(filePath: string): Promise<SnapshotPa
   const secondaryFormat = primaryFormat === 'replay' ? 'transcript' : 'replay';
   const fileName = path.basename(filePath);
 
+  logger.info('ipc', 'ipc.snapshot.load_started', { fileName, detectedFormat: primaryFormat });
+
   let format = primaryFormat;
   let events: CanonicalEvent[] = [];
   let primaryError: unknown;
@@ -106,6 +115,7 @@ export async function loadSnapshotFromFile(filePath: string): Promise<SnapshotPa
       if (fallbackEvents.length > 0) {
         format = secondaryFormat;
         events = fallbackEvents;
+        logger.info('ipc', 'ipc.snapshot.format_fallback_used', { fileName, fallbackFormat: secondaryFormat });
       }
     } catch (error) {
       secondaryError = error;
@@ -122,13 +132,23 @@ export async function loadSnapshotFromFile(filePath: string): Promise<SnapshotPa
         : 'returned zero events'
       : 'was skipped to preserve replay parser errors';
 
-    throw new Error(
+    const msg =
       `No events could be read from ${fileName}. ` +
-        `Primary parser (${primaryFormat}) ${primaryDetail}. ` +
-        `Secondary parser (${secondaryFormat}) ${secondaryDetail}.`
-    );
+      `Primary parser (${primaryFormat}) ${primaryDetail}. ` +
+      `Secondary parser (${secondaryFormat}) ${secondaryDetail}.`;
+
+    logger.error('ipc', 'ipc.snapshot.load_failed', {
+      fileName,
+      primaryFormat,
+      primaryError,
+      secondaryFormat,
+      secondaryAttempted,
+      secondaryError
+    });
+    throw new Error(msg);
   }
 
+  logger.info('ipc', 'ipc.snapshot.loaded', { fileName, format, eventCount: events.length });
   return createSnapshot(events, {
     kind: format,
     label: fileName,
@@ -137,6 +157,7 @@ export async function loadSnapshotFromFile(filePath: string): Promise<SnapshotPa
 }
 
 export function buildFixtureSnapshot(): SnapshotPayload {
+  logger.info('ipc', 'ipc.snapshot.fixture_built', { eventCount: paymentRefactorSession.length });
   return createSnapshot(paymentRefactorSession, {
     kind: 'fixture',
     label: 'Built-in replay fixture'
@@ -175,12 +196,15 @@ export async function saveReplayFile(
     });
 
     if (result.canceled || !result.filePath) {
+      logger.info('ipc', 'ipc.export.cancelled');
       return { canceled: true };
     }
 
     await writeFile(result.filePath, serializeEvents(events), 'utf8');
+    logger.info('ipc', 'ipc.export.saved', { fileName: path.basename(result.filePath), eventCount: events.length });
     return { canceled: false, filePath: result.filePath };
   } catch (error) {
+    logger.error('ipc', 'ipc.export.failed', { error });
     return {
       canceled: false,
       error: error instanceof Error ? error.message : 'Unable to export replay JSONL.'
