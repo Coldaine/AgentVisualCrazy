@@ -1,12 +1,16 @@
 # Domain: Inference Engine
 
+> **Status: Implementation Reference** — This document describes the full OpenCode
+> inference engine targeted by PR #28. Current main has `src/inference/prompts.ts` and
+> `src/inference/prompt-builder.ts` scaffolding only.
+
 The inference engine is shadow-agent's brain — it consumes the observed agent's event
 stream and produces structured interpretations (phase, risk, predictions, confidence).
 
 Full research spec: `docs/research/shadow-inference-architecture.md`
 Sidecar source patterns: `docs/research/visual-patterns-sidecar.md`
 Implementation plan: `docs/plans/plan-inference-engine.md`
-Prompt documentation: `docs/prompts/shadow-system-prompt.md`
+Prompt source: `prompts/shadow-system-prompt.json`
 
 ## OpenCode Harness
 
@@ -18,6 +22,10 @@ sidecar's 4096), creates sessions, and sends structured prompts with context.
 
 When OpenCode isn't installed, we fall back to `@anthropic-ai/sdk` directly. Simpler
 (no session management, no polling) but locks to Anthropic only.
+
+Inference delivery is local-only by default. Before any prompt is sent off-host, the user
+must explicitly opt in. Sanitized transcript content is the default payload, and raw
+transcript delivery requires a separate explicit opt-in.
 
 ## Auth Chain
 
@@ -38,9 +46,10 @@ phase classification, risk signals with severity and confidence, predicted next 
 factual observations, and file attention. Key constraints: read-only, terse, specific,
 honest confidence scores (not everything warrants 0.9+), JSON-only output.
 
-The prompt lives in `docs/prompts/shadow-system-prompt.md` (canonical, with commentary)
-and is mirrored in `shadow-agent/src/inference/prompts.ts` (runtime). These must match
-character-for-character — see AGENTS.md for the mandatory sync workflow.
+The prompt lives in `prompts/shadow-system-prompt.json` as the single source of truth.
+`docs/prompts/shadow-system-prompt.md` and `shadow-agent/src/inference/prompts.ts` are
+generated from that source and must stay in sync — see AGENTS.md for the mandatory
+generate/check workflow.
 
 ## Context Budget
 
@@ -94,8 +103,8 @@ src/inference/
   auth.ts                — Credential loader
   opencode-client.ts     — OpenCode server + client
   context-packager.ts    — Build ShadowContextPacket from DerivedState
-  prompt-builder.ts      — Assemble system + user message
-  prompts.ts             — Raw prompt strings (must match docs)
+  prompt-builder.ts      — Assemble user message from context packet
+  prompts.ts             — Generated prompt strings from prompts/*.json
   response-parser.ts     — JSON → ShadowInsight[]
   trigger.ts             — When to invoke inference
   shadow-inference-engine.ts  — Orchestrator

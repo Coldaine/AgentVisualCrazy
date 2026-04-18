@@ -1,3 +1,5 @@
+node_modules/
+.husky/_/
 third_party/*
 !third_party/README.md
 

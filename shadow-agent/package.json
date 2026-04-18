@@ -10,7 +10,9 @@
     "build:electron": "node electron.esbuild.mjs",
     "build": "npm run build:renderer && npm run build:electron",
     "start": "electron dist-electron/main.cjs",
-    "test": "vitest run"
+    "test": "vitest run",
+    "prompts:generate": "node scripts/generate-prompts.mjs",
+    "prompts:check": "node scripts/check-prompts.mjs"
   },
   "dependencies": {
     "electron": "^39.8.5",

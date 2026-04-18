@@ -1,11 +1,19 @@
-import { dialog, type BrowserWindow } from 'electron';
+import { dialog, type BrowserWindow, type OpenDialogOptions, type SaveDialogOptions } from 'electron';
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { getTranscriptCaptureAdapter } from '../shared/capture-adapters';
 import { deriveState } from '../shared/derive';
 import { paymentRefactorSession } from '../shared/fixtures/payment-refactor-session';
+import { DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS, resolvePrivacyPolicy } from '../shared/privacy';
 import { buildSessionRecord, parseReplay, serializeEvents } from '../shared/replay-store';
-import type { CanonicalEvent, ExportResult, LoadedSource, SnapshotPayload } from '../shared/schema';
-import { parseClaudeTranscriptJsonl } from '../shared/transcript-adapter';
+import type {
+  CanonicalEvent,
+  ExportResult,
+  LoadedSource,
+  RendererInput,
+  SnapshotPayload,
+  TranscriptPrivacySettings
+} from '../shared/schema';
 
 function formatErrorMessage(error: unknown): string {
   if (error instanceof Error) {
@@ -39,14 +47,15 @@ export function inferTitle(events: CanonicalEvent[], fallback: string): string {
   return fallback;
 }
 
-export function createSnapshot(events: CanonicalEvent[], source: LoadedSource): SnapshotPayload {
+export function createSnapshot(events: CanonicalEvent[], source: LoadedSource): RendererInput {
   const title = inferTitle(events, source.label);
   const record = buildSessionRecord(events, title);
   return {
     source,
     record,
     state: deriveState(events, record.title),
-    events
+    events,
+    privacy: resolvePrivacyPolicy(DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS)
   };
 }
 
@@ -81,6 +90,7 @@ export function detectReplayFormat(raw: string): 'replay' | 'transcript' {
 
 export async function loadSnapshotFromFile(filePath: string): Promise<SnapshotPayload> {
   const raw = await readFile(filePath, 'utf8');
+  const transcriptCaptureAdapter = getTranscriptCaptureAdapter();
   const primaryFormat = detectReplayFormat(raw);
   const secondaryFormat = primaryFormat === 'replay' ? 'transcript' : 'replay';
   const fileName = path.basename(filePath);
@@ -92,7 +102,7 @@ export async function loadSnapshotFromFile(filePath: string): Promise<SnapshotPa
   let secondaryAttempted = false;
 
   try {
-    events = primaryFormat === 'replay' ? parseReplay(raw) : parseClaudeTranscriptJsonl(raw);
+    events = primaryFormat === 'replay' ? parseReplay(raw) : transcriptCaptureAdapter.parse(raw);
   } catch (error) {
     primaryError = error;
     events = [];
@@ -102,7 +112,7 @@ export async function loadSnapshotFromFile(filePath: string): Promise<SnapshotPa
   if (shouldTrySecondary) {
     secondaryAttempted = true;
     try {
-      const fallbackEvents = secondaryFormat === 'replay' ? parseReplay(raw) : parseClaudeTranscriptJsonl(raw);
+      const fallbackEvents = secondaryFormat === 'replay' ? parseReplay(raw) : transcriptCaptureAdapter.parse(raw);
       if (fallbackEvents.length > 0) {
         format = secondaryFormat;
         events = fallbackEvents;
@@ -144,7 +154,7 @@ export function buildFixtureSnapshot(): SnapshotPayload {
 }
 
 export async function pickOpenFile(mainWindow: BrowserWindow | null): Promise<string | undefined> {
-  const result = await dialog.showOpenDialog(mainWindow ?? undefined, {
+  const dialogOptions: OpenDialogOptions = {
     title: 'Open transcript or replay file',
     properties: ['openFile'],
     filters: [
@@ -153,7 +163,8 @@ export async function pickOpenFile(mainWindow: BrowserWindow | null): Promise<st
       { name: 'Text files', extensions: ['txt'] },
       { name: 'All files', extensions: ['*'] }
     ]
-  });
+  };
+  const result = mainWindow ? await dialog.showOpenDialog(mainWindow, dialogOptions) : await dialog.showOpenDialog(dialogOptions);
 
   if (result.canceled || result.filePaths.length === 0) {
     return undefined;
@@ -165,20 +176,26 @@ export async function pickOpenFile(mainWindow: BrowserWindow | null): Promise<st
 export async function saveReplayFile(
   mainWindow: BrowserWindow | null,
   events: CanonicalEvent[],
-  suggestedFileName = 'shadow-agent-replay.jsonl'
+  suggestedFileName = 'shadow-agent-replay.jsonl',
+  options: { storeRawTranscript?: boolean; privacy?: TranscriptPrivacySettings } = {}
 ): Promise<ExportResult> {
   try {
-    const result = await dialog.showSaveDialog(mainWindow ?? undefined, {
+    const dialogOptions: SaveDialogOptions = {
       title: 'Export replay JSONL',
       defaultPath: suggestedFileName.endsWith('.jsonl') ? suggestedFileName : `${suggestedFileName}.jsonl`,
       filters: [{ name: 'Replay files', extensions: ['jsonl'] }]
-    });
+    };
+    const result = mainWindow ? await dialog.showSaveDialog(mainWindow, dialogOptions) : await dialog.showSaveDialog(dialogOptions);
 
     if (result.canceled || !result.filePath) {
       return { canceled: true };
     }
 
-    await writeFile(result.filePath, serializeEvents(events), 'utf8');
+    await writeFile(
+      result.filePath,
+      serializeEvents(events, { storeRawTranscript: options.storeRawTranscript }, options.privacy ?? DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS),
+      'utf8'
+    );
     return { canceled: false, filePath: result.filePath };
   } catch (error) {
     return {
