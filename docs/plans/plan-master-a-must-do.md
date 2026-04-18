@@ -86,6 +86,13 @@ These are the actionable review comments that MUST be addressed before merge.
 ### PRs #27, #28, #30 — No blocking inline comments found
 These have REVIEW_REQUIRED status. No actionable code fixes needed — just need review approval.
 
+### Stream B — Doc Coordination & PR #34
+
+- **PR #34 (`fix/master-plan-remediation`)** contains the consolidated Master Plans A and B.
+- **Decision**: PR #34 should be **retargeted to `main`**. 
+- It represents the definitive architectural response and go-forward plan for the entire project.
+- Merging it to `main` establishes the "Command & Control" center for all subsequent feature branch merges.
+
 ---
 
 ## 2) Merge Sequence (dependency-safe)
