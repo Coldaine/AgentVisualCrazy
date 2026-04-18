@@ -1,11 +1,11 @@
 {"id":"re-1","sessionId":"risk-escalation","source":"replay","timestamp":"2026-04-01T12:00:00.000Z","actor":"system","kind":"session_started","payload":{"cwd":"/workspace/api"}}
 {"id":"re-2","sessionId":"risk-escalation","source":"replay","timestamp":"2026-04-01T12:00:05.000Z","actor":"user","kind":"message","payload":{"text":"Fix the failing migration."}}
 {"id":"re-3","sessionId":"risk-escalation","source":"replay","timestamp":"2026-04-01T12:00:10.000Z","actor":"assistant","kind":"tool_started","payload":{"toolName":"Bash"}}
-{"id":"re-4","sessionId":"risk-escalation","source":"replay","timestamp":"2026-04-01T12:00:11.000Z","actor":"assistant","kind":"tool_failed","payload":{"toolName":"Bash","error":"column already exists"}}
+{"id":"re-4","sessionId":"risk-escalation","source":"replay","timestamp":"2026-04-01T12:00:11.000Z","actor":"assistant","kind":"tool_failed","payload":{"toolName":"Bash","error":"column already exists","is_error":true}}
 {"id":"re-5","sessionId":"risk-escalation","source":"replay","timestamp":"2026-04-01T12:00:15.000Z","actor":"assistant","kind":"tool_started","payload":{"toolName":"Bash"}}
-{"id":"re-6","sessionId":"risk-escalation","source":"replay","timestamp":"2026-04-01T12:00:16.000Z","actor":"assistant","kind":"tool_failed","payload":{"toolName":"Bash","error":"connection refused"}}
+{"id":"re-6","sessionId":"risk-escalation","source":"replay","timestamp":"2026-04-01T12:00:16.000Z","actor":"assistant","kind":"tool_failed","payload":{"toolName":"Bash","error":"connection refused","is_error":true}}
 {"id":"re-7","sessionId":"risk-escalation","source":"replay","timestamp":"2026-04-01T12:00:20.000Z","actor":"assistant","kind":"tool_started","payload":{"toolName":"Bash"}}
-{"id":"re-8","sessionId":"risk-escalation","source":"replay","timestamp":"2026-04-01T12:00:21.000Z","actor":"assistant","kind":"tool_failed","payload":{"toolName":"Bash","error":"no transaction in progress"}}
+{"id":"re-8","sessionId":"risk-escalation","source":"replay","timestamp":"2026-04-01T12:00:21.000Z","actor":"assistant","kind":"tool_failed","payload":{"toolName":"Bash","error":"no transaction in progress","is_error":true}}
 {"id":"re-9","sessionId":"risk-escalation","source":"replay","timestamp":"2026-04-01T12:00:25.000Z","actor":"assistant","kind":"tool_started","payload":{"toolName":"Bash"}}
 {"id":"re-10","sessionId":"risk-escalation","source":"replay","timestamp":"2026-04-01T12:00:26.000Z","actor":"assistant","kind":"tool_completed","payload":{"toolName":"Bash"}}
 {"id":"re-11","sessionId":"risk-escalation","source":"replay","timestamp":"2026-04-01T12:00:30.000Z","actor":"assistant","kind":"message","payload":{"text":"The database container crashed. Restarting."}}

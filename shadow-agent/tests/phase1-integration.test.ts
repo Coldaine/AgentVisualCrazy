@@ -8,13 +8,15 @@
  */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { parseClaudeTranscriptJsonl } from '../src/shared/transcript-adapter';
 import { deriveState } from '../src/shared/derive';
 import { parseReplay } from '../src/shared/replay-store';
 
-const TRANSCRIPT_FIXTURES = join(import.meta.dirname, 'fixtures/transcripts');
-const REPLAY_FIXTURES = join(import.meta.dirname, 'fixtures/replays');
+const FIXTURE_DIR = fileURLToPath(new URL('.', import.meta.url));
+const TRANSCRIPT_FIXTURES = join(FIXTURE_DIR, 'fixtures/transcripts');
+const REPLAY_FIXTURES = join(FIXTURE_DIR, 'fixtures/replays');
 
 describe('Phase 1 integration: transcript → events → deriveState', () => {
   it('happy-path: derives implementation phase + file attention', () => {

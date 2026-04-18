@@ -36,7 +36,7 @@ These are already-normalized `CanonicalEvent` objects in JSONL format, usable di
 
 | File | Description |
 |------|-------------|
-| `happy-path.replay.jsonl` | ~12 clean canonical events; implementation phase |
+| `happy-path.replay.jsonl` | 9 clean canonical events; implementation phase |
 | `subagent-flow.replay.jsonl` | Parent + subagent nodes with tool events |
 | `risk-escalation.replay.jsonl` | Multiple tool failures + bash churn |
 | `corrupt-partial.replay.jsonl` | Valid events followed by a truncated/corrupt line |

@@ -1,10 +1,12 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { buildSessionRecord, parseReplay, serializeEvents } from '../src/shared/replay-store';
 import type { CanonicalEvent } from '../src/shared/schema';
 
-const REPLAY_FIXTURES = join(import.meta.dirname, 'fixtures/replays');
+const FIXTURE_DIR = fileURLToPath(new URL('.', import.meta.url));
+const REPLAY_FIXTURES = join(FIXTURE_DIR, 'fixtures/replays');
 
 const events: CanonicalEvent[] = [
   {

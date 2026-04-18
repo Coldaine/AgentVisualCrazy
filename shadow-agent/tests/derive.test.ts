@@ -1,22 +1,27 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { deriveState } from '../src/shared/derive';
 import { paymentRefactorSession } from '../src/shared/fixtures/payment-refactor-session';
 import { parseReplay } from '../src/shared/replay-store';
 import type { CanonicalEvent } from '../src/shared/schema';
 
-const REPLAY_FIXTURES = join(import.meta.dirname, 'fixtures/replays');
+const TEST_DIR = fileURLToPath(new URL('.', import.meta.url));
+const REPLAY_FIXTURES = join(TEST_DIR, 'fixtures/replays');
+
+let eventCounter = 0;
 
 function makeEvent(
   kind: CanonicalEvent['kind'],
   overrides: Partial<CanonicalEvent> = {}
 ): CanonicalEvent {
+  eventCounter += 1;
   return {
-    id: Math.random().toString(36).slice(2),
+    id: overrides.id ?? `evt-${eventCounter}`,
     sessionId: 'test-session',
     source: 'replay',
-    timestamp: new Date().toISOString(),
+    timestamp: overrides.timestamp ?? `2026-04-18T10:00:${String(eventCounter).padStart(2, '0')}.000Z`,
     actor: 'assistant',
     kind,
     payload: {},
@@ -220,5 +225,27 @@ describe('deriveState', () => {
     const state = deriveState(events);
     expect(state.agentNodes.some((n) => n.id === 'orchestrator')).toBe(true);
     expect(state.agentNodes.some((n) => n.id === 'playwright-setup')).toBe(true);
+  });
+
+  it('handles out-of-order timestamps without crashing', () => {
+    const events = [
+      makeEvent('tool_started', { sessionId: 'oos-session', id: 'evt-late', timestamp: '2026-04-18T10:00:05.000Z', payload: { toolName: 'Write' } }),
+      makeEvent('tool_started', { sessionId: 'oos-session', id: 'evt-early', timestamp: '2026-04-18T10:00:01.000Z', payload: { toolName: 'Read' } }),
+    ];
+
+    const state = deriveState(events);
+    expect(state.sessionId).toBe('oos-session');
+    expect(state.activePhase).toBe('implementation');
+  });
+
+  it('handles duplicate IDs without crashing', () => {
+    const events = [
+      makeEvent('message', { sessionId: 'dup-session', id: 'dup-1', payload: { text: 'first' } }),
+      makeEvent('message', { sessionId: 'dup-session', id: 'dup-1', payload: { text: 'second' } }),
+    ];
+
+    const state = deriveState(events);
+    expect(state.sessionId).toBe('dup-session');
+    expect(state.transcript.length).toBe(2);
   });
 });
