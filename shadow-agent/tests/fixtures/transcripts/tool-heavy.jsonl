@@ -1,0 +1,20 @@
+{"sessionId":"tool-heavy","cwd":"/workspace/app","message":{"role":"user","content":"Debug the failing CI pipeline and fix any issues."}}
+{"sessionId":"tool-heavy","message":{"role":"assistant","content":[{"type":"text","text":"Let me investigate the CI failure."},{"type":"tool_use","id":"th-1","name":"Bash","input":{"command":"npm test 2>&1 | tail -30"}}]}}
+{"sessionId":"tool-heavy","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"th-1","content":"FAIL src/auth.test.ts - 3 failed","is_error":false}]}}
+{"sessionId":"tool-heavy","message":{"role":"assistant","content":[{"type":"tool_use","id":"th-2","name":"Read","input":{"file_path":"src/auth.test.ts"}}]}}
+{"sessionId":"tool-heavy","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"th-2","content":"describe('auth', () => { ... });","is_error":false}]}}
+{"sessionId":"tool-heavy","message":{"role":"assistant","content":[{"type":"tool_use","id":"th-3","name":"Grep","input":{"pattern":"TokenExpired","path":"src"}}]}}
+{"sessionId":"tool-heavy","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"th-3","content":"src/auth.ts:42: throw new TokenExpiredError()","is_error":false}]}}
+{"sessionId":"tool-heavy","message":{"role":"assistant","content":[{"type":"tool_use","id":"th-4","name":"Read","input":{"file_path":"src/auth.ts"}}]}}
+{"sessionId":"tool-heavy","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"th-4","content":"export class TokenExpiredError extends Error {}","is_error":false}]}}
+{"sessionId":"tool-heavy","message":{"role":"assistant","content":[{"type":"tool_use","id":"th-5","name":"Bash","input":{"command":"grep -r 'TokenExpired' src/ --include='*.ts'"}}]}}
+{"sessionId":"tool-heavy","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"th-5","content":"3 matches found","is_error":false}]}}
+{"sessionId":"tool-heavy","message":{"role":"assistant","content":[{"type":"tool_use","id":"th-6","name":"Read","input":{"file_path":"src/middleware/auth.ts"}}]}}
+{"sessionId":"tool-heavy","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"th-6","content":"export function authMiddleware() { ... }","is_error":false}]}}
+{"sessionId":"tool-heavy","message":{"role":"assistant","content":[{"type":"tool_use","id":"th-7","name":"Bash","input":{"command":"npm run lint 2>&1"}}]}}
+{"sessionId":"tool-heavy","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"th-7","content":"0 errors, 2 warnings","is_error":false}]}}
+{"sessionId":"tool-heavy","message":{"role":"assistant","content":[{"type":"tool_use","id":"th-8","name":"Bash","input":{"command":"npm test -- --testPathPattern=auth 2>&1"}}]}}
+{"sessionId":"tool-heavy","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"th-8","content":"FAIL - TokenExpiredError not caught in handler","is_error":false}]}}
+{"sessionId":"tool-heavy","message":{"role":"assistant","content":[{"type":"tool_use","id":"th-9","name":"Glob","input":{"pattern":"src/**/*.test.ts"}}]}}
+{"sessionId":"tool-heavy","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"th-9","content":"12 files matched","is_error":false}]}}
+{"sessionId":"tool-heavy","message":{"role":"assistant","content":[{"type":"text","text":"I can see the issue. The error handler doesn't catch TokenExpiredError. Let me fix it."}]}}

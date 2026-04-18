@@ -1,0 +1,3 @@
+{"id":"ok-1","sessionId":"corrupt-test","source":"replay","timestamp":"2026-04-01T09:00:00.000Z","actor":"system","kind":"session_started","payload":{}}
+{"id":"ok-2","sessionId":"corrupt-test","source":"replay","timestamp":"2026-04-01T09:00:05.000Z","actor":"user","kind":"message","payload":{"text":"Start"}}
+{ THIS LINE IS INTENTIONALLY CORRUPT — missing closing brace and quotes

@@ -2,6 +2,9 @@ import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { buildSessionRecord, parseReplay, serializeEvents } from '../shared/replay-store';
 import type { CanonicalEvent, SessionRecord } from '../shared/schema';
+import { createLogger } from '../shared/logger';
+
+const logger = createLogger();
 
 export interface FileReplayStoreOptions {
   sessionsDirName?: string;
@@ -70,20 +73,39 @@ export class FileReplayStore {
     await writeFile(this.eventsPath(sessionId), eventLog, 'utf8');
     await writeFile(this.recordPath(sessionId), `${JSON.stringify(record, null, 2)}\n`, 'utf8');
 
+    logger.info('persistence', 'persistence.replay.saved', {
+      sessionId,
+      eventCount: events.length
+    });
     return record;
   }
 
   async appendEvent(sessionId: string, event: CanonicalEvent, title?: string): Promise<SessionRecord> {
     const current = await this.loadSession(sessionId).catch(() => undefined);
     const nextEvents = [...(current?.events ?? []), event];
+    logger.debug('persistence', 'persistence.replay.appended', {
+      sessionId,
+      kind: event.kind,
+      totalEvents: nextEvents.length
+    });
     return this.saveSession(sessionId, nextEvents, title ?? current?.record.title);
   }
 
   async loadSession(sessionId: string): Promise<StoredReplaySession> {
-    const eventsText = await readFile(this.eventsPath(sessionId), 'utf8');
-    const events = parseReplay(eventsText);
-    const record = await this.loadRecord(sessionId, events);
-    return { record, events };
+    logger.debug('persistence', 'persistence.replay.load_started', { sessionId });
+    try {
+      const eventsText = await readFile(this.eventsPath(sessionId), 'utf8');
+      const events = parseReplay(eventsText);
+      const record = await this.loadRecord(sessionId, events);
+      logger.info('persistence', 'persistence.replay.loaded', {
+        sessionId,
+        eventCount: events.length
+      });
+      return { record, events };
+    } catch (error) {
+      logger.error('persistence', 'persistence.replay.load_failed', { sessionId, error });
+      throw error;
+    }
   }
 
   async loadEvents(sessionId: string): Promise<CanonicalEvent[]> {
@@ -91,6 +113,7 @@ export class FileReplayStore {
   }
 
   async listSessions(): Promise<SessionRecord[]> {
+    logger.debug('persistence', 'persistence.store.list_started', { rootDir: this.rootDir });
     let entries: Array<{ name: string }> = [];
 
     try {
@@ -112,7 +135,9 @@ export class FileReplayStore {
       })
     );
 
-    return sessions.filter((session): session is SessionRecord => Boolean(session)).sort(sortSessions);
+    const result = sessions.filter((session): session is SessionRecord => Boolean(session)).sort(sortSessions);
+    logger.info('persistence', 'persistence.store.listed', { sessionCount: result.length });
+    return result;
   }
 
   private async loadRecord(sessionId: string, events: CanonicalEvent[]): Promise<SessionRecord> {
