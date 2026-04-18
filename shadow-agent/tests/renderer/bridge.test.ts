@@ -4,7 +4,7 @@ import { getShadowAgentBridge } from '../../src/renderer/bridge';
 
 describe('renderer bridge', () => {
   afterEach(() => {
-    delete (globalThis as { window?: unknown }).window;
+    Reflect.deleteProperty(globalThis, 'window');
   });
 
   it('returns the preload bridge exposed on window', () => {

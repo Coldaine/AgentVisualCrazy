@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { SnapshotPayload } from '../../src/shared/schema';
 
 const handleMock = vi.fn();
@@ -112,9 +113,8 @@ describe('registerIpcHandlers', () => {
   it('open-replay handler loads and returns snapshot for a valid file', async () => {
     const { registerIpcHandlers } = await import('../../src/electron/start-main-process');
     const { pickOpenFile, loadSnapshotFromFile } = await import('../../src/electron/session-io');
-    const filePath = path.join(
-      import.meta.dirname, '../fixtures/replays/happy-path.replay.jsonl'
-    );
+    const fixtureDir = fileURLToPath(new URL('../fixtures/replays', import.meta.url));
+    const filePath = path.join(fixtureDir, 'happy-path.replay.jsonl');
     const snapshot = makeSnapshot();
     vi.mocked(pickOpenFile).mockResolvedValue(filePath);
     vi.mocked(loadSnapshotFromFile).mockResolvedValue(snapshot);
@@ -186,7 +186,7 @@ describe('ShadowAgentBridge surface', () => {
     // No extra methods beyond the three documented ones
     expect(Object.keys(result).sort()).toEqual(['bootstrap', 'exportReplayJsonl', 'openReplayFile']);
 
-    delete (globalThis as { window?: unknown }).window;
+    Reflect.deleteProperty(globalThis, 'window');
   });
 });
 
