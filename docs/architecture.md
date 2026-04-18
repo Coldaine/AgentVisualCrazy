@@ -98,6 +98,29 @@ inference boundaries should have focused integration and contract tests with fak
 temp files, and mocked IPC. The Canvas2D renderer should use a hybrid strategy: command-
 record tests for drawing semantics plus a small curated set of visual regression scenes.
 
+## Current Status & Roadmap
+
+We are currently transitioning from **Phase 1 (MVP)** to **Phase 2 (Release Candidate)**.
+
+### Phase 1: Core Foundation (Completed/Merging)
+- Canonical event schema and derivation logic.
+- File-based persistence and session replay.
+- Initial Electron shell and React renderer.
+- Base fixture corpus for testing.
+- PRs: #29 (Fixtures), #30 (Observability), #31 (Renderer Tests).
+
+### Phase 2: Live Interaction (In Progress)
+- **Live Event Capture**: `fs.watch` based transcript tailing (PR #27).
+- **Advanced Rendering**: Porting Canvas2D + D3-Force from `agent-flow` (PR #26).
+- **Inference Engine**: OpenCode integration and system prompt triggers (PR #28, #32).
+- **Integration**: Full end-to-end flow from agent activity to holographic insight.
+
+### Phase 3+: Advanced Features (Planned)
+- **OpenCode Integration**: Deep bidirectional communication.
+- **VS Code Extension**: Embedding the visualizer as a webview.
+- **Live Hooks**: Moving beyond `fs.watch` to direct agent instrumentation.
+- **Multi-Agent Views**: Visualizing orchestration between multiple agents.
+
 Runtime diagnostics should use structured local logging with redaction by default. We need
 enough signal to explain watcher failures, parser skips, inference triggers, IPC issues,
 and performance problems without flooding logs or dumping full transcript content.
