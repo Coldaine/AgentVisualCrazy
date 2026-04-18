@@ -18,6 +18,7 @@ The current slice is intentionally small:
 
 ```bash
 npm install
+npm run prompts:check
 npm test
 npm run build
 ```

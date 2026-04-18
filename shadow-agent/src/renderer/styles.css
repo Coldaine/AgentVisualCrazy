@@ -172,7 +172,7 @@ button {
 
 .status-strip {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 14px;
   padding: 16px 18px;
   border-radius: 22px;
@@ -364,6 +364,12 @@ button {
   align-items: center;
 }
 
+.transcript-item__meta-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .timeline-item__label,
 .transcript-item__actor,
 .file-row__path,
@@ -447,6 +453,31 @@ button {
 
 .insight-row__summary {
   margin: 8px 0 6px;
+}
+
+.privacy-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.toggle {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 12px 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(131, 154, 186, 0.15);
+  background: rgba(5, 12, 22, 0.42);
+}
+
+.toggle input {
+  width: 18px;
+  height: 18px;
+}
+
+.privacy-note {
+  margin: 0;
+  color: var(--muted);
 }
 
 .list {

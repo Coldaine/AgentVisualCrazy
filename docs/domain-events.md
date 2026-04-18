@@ -1,5 +1,10 @@
 # Domain: Event Capture
 
+> **Status: Implementation Reference** — This document describes the full capture
+> pipeline targeted by PR #27. Current main has `src/shared/transcript-adapter.ts` and
+> `src/persistence/file-replay-store.ts` only. The `src/capture/` directory is on the
+> feature branch.
+
 The event capture pipeline watches an observed agent's transcript files, parses events
 incrementally, normalizes them into a canonical schema, and streams them to the renderer.
 

@@ -1,12 +1,18 @@
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS } from '../shared/privacy';
 import { buildSessionRecord, parseReplay, serializeEvents } from '../shared/replay-store';
-import type { CanonicalEvent, SessionRecord } from '../shared/schema';
+import type { CanonicalEvent, SessionRecord, TranscriptPrivacySettings } from '../shared/schema';
 
 export interface FileReplayStoreOptions {
   sessionsDirName?: string;
   eventsFileName?: string;
   recordFileName?: string;
+  privacy?: TranscriptPrivacySettings;
+}
+
+export interface ReplayStorageOptions {
+  storeRawTranscript?: boolean;
 }
 
 export interface StoredReplaySession {
@@ -41,12 +47,14 @@ export class FileReplayStore {
   private readonly sessionsDir: string;
   private readonly eventsFileName: string;
   private readonly recordFileName: string;
+  private readonly privacy: TranscriptPrivacySettings;
 
   constructor(private readonly rootDir: string, options: FileReplayStoreOptions = {}) {
     const mergedOptions = { ...DEFAULT_OPTIONS, ...options };
     this.sessionsDir = join(rootDir, mergedOptions.sessionsDirName);
     this.eventsFileName = mergedOptions.eventsFileName;
     this.recordFileName = mergedOptions.recordFileName;
+    this.privacy = options.privacy ?? DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS;
   }
 
   private sessionDir(sessionId: string): string {
@@ -61,22 +69,32 @@ export class FileReplayStore {
     return join(this.sessionDir(sessionId), this.recordFileName);
   }
 
-  async saveSession(sessionId: string, events: CanonicalEvent[], title?: string): Promise<SessionRecord> {
+  async saveSession(
+    sessionId: string,
+    events: CanonicalEvent[],
+    title?: string,
+    options: ReplayStorageOptions = {}
+  ): Promise<SessionRecord> {
     const sessionDir = this.sessionDir(sessionId);
     await mkdir(sessionDir, { recursive: true });
 
     const record = buildSessionRecord(events, title);
-    const eventLog = `${serializeEvents(events)}${events.length > 0 ? '\n' : ''}`;
+    const eventLog = `${serializeEvents(events, options, this.privacy)}${events.length > 0 ? '\n' : ''}`;
     await writeFile(this.eventsPath(sessionId), eventLog, 'utf8');
     await writeFile(this.recordPath(sessionId), `${JSON.stringify(record, null, 2)}\n`, 'utf8');
 
     return record;
   }
 
-  async appendEvent(sessionId: string, event: CanonicalEvent, title?: string): Promise<SessionRecord> {
+  async appendEvent(
+    sessionId: string,
+    event: CanonicalEvent,
+    title?: string,
+    options: ReplayStorageOptions = {}
+  ): Promise<SessionRecord> {
     const current = await this.loadSession(sessionId).catch(() => undefined);
     const nextEvents = [...(current?.events ?? []), event];
-    return this.saveSession(sessionId, nextEvents, title ?? current?.record.title);
+    return this.saveSession(sessionId, nextEvents, title ?? current?.record.title, options);
   }
 
   async loadSession(sessionId: string): Promise<StoredReplaySession> {

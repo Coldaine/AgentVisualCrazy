@@ -21,7 +21,7 @@ everything as a live holographic visualization. See `docs/north-star.md` for the
 | Inference engine research | `docs/research/shadow-inference-architecture.md` |
 | Implementation plans | `docs/plans/` |
 | Testing and logging plan | `docs/plans/plan-testing-observability.md` |
-| Prompt engineering | `docs/prompts/shadow-system-prompt.md` |
+| Prompt engineering | `prompts/shadow-system-prompt.json` |
 | Agent-flow visual patterns (source material) | `docs/research/visual-patterns-agent-flow.md` |
 | Sidecar runtime patterns (source material) | `docs/research/visual-patterns-sidecar.md` |
 | Citadel animation primitives (source material) | `docs/research/visual-patterns-citadel.md` |
@@ -48,21 +48,23 @@ No interventions, no corrections, no acting. It watches and interprets only.
 
 ## Prompt Change Workflow (Mandatory)
 
-**Every prompt exists in three locations that must stay in sync:**
+**Every prompt now has one source of truth plus generated artifacts that must stay in sync:**
 
-1. **Documentation** (`docs/prompts/shadow-system-prompt.md`) — canonical, with inline
-   commentary explaining why each section exists.
-2. **Code** (`shadow-agent/src/inference/prompts.ts`) — runtime version, loaded by the app.
-3. **This file** — states they must match.
+1. **Source** (`prompts/shadow-system-prompt.json`) — canonical prompt definition, commentary,
+   and iteration log.
+2. **Documentation** (`docs/prompts/shadow-system-prompt.md`) — generated from the source file.
+3. **Code** (`shadow-agent/src/inference/prompts.ts`) — generated runtime version, loaded by the app.
+4. **This file** — states they must match.
 
 **To change a prompt:**
 
-1. Edit the documentation file first. Update text and commentary.
-2. Update the iteration log at the bottom of the prompt doc.
-3. Update the code file to match character-for-character.
-4. Use a `prompt:` prefix in the commit message.
+1. Edit the source file first.
+2. Update the iteration log in that source file.
+3. Run `npm run prompts:generate`.
+4. Run `npm run prompts:check`.
+5. Use a `prompt:` prefix in the commit message.
 
-Undocumented prompt changes cause regression, drift, and opacity. Don't skip steps.
+Manual edits to generated prompt docs/runtime files cause drift and will fail pre-commit and CI. Don't skip steps.
 
 ## Commit Messages
 
