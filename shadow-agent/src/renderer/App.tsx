@@ -1,7 +1,16 @@
 import { startTransition, useEffect, useMemo, useState } from 'react';
-import type { AgentNode, DerivedState, ShadowInsight, SnapshotPayload, TimelineItem } from '../shared/schema';
+import { DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS, resolvePrivacyPolicy } from '../shared/privacy';
+import type {
+  AgentNode,
+  DerivedState,
+  RendererInput,
+  ShadowInsight,
+  TimelineItem,
+  TranscriptPrivacySettings
+} from '../shared/schema';
 import { getShadowAgentBridge } from './bridge';
-import { buildGraphLayout, formatClock, safeFileName, toLabel } from './view-model';
+import { getGraphLayoutAdapter } from './graph-layout-adapter';
+import { formatClock, safeFileName, toLabel } from './view-model';
 
 function stateTone(state: AgentNode['state']): string {
   if (state === 'active') {
@@ -55,7 +64,8 @@ function Badge({ children, tone = 'neutral' }: { children: React.ReactNode; tone
 }
 
 function GraphView({ nodes }: { nodes: AgentNode[] }) {
-  const layout = useMemo(() => buildGraphLayout(nodes), [nodes]);
+  const graphLayoutAdapter = useMemo(() => getGraphLayoutAdapter(), []);
+  const layout = useMemo(() => graphLayoutAdapter.build(nodes), [graphLayoutAdapter, nodes]);
   const nodeMap = useMemo(() => new Map(layout.nodes.map((node) => [node.id, node])), [layout.nodes]);
 
   if (layout.nodes.length === 0) {
@@ -138,7 +148,10 @@ function TranscriptView({ transcript }: { transcript: DerivedState['transcript']
         <article className="transcript-item" key={entry.id}>
           <div className="transcript-item__meta">
             <span className="transcript-item__actor">{entry.actor}</span>
-            <span className="transcript-item__time">{formatClock(entry.timestamp)}</span>
+            <div className="transcript-item__meta-right">
+              {entry.redacted ? <Badge tone="danger">Sanitized</Badge> : null}
+              <span className="transcript-item__time">{formatClock(entry.timestamp)}</span>
+            </div>
           </div>
           <p className="transcript-item__text">{entry.text}</p>
         </article>
@@ -250,9 +263,10 @@ function InsightsView({
 }
 
 export default function App() {
-  const [snapshot, setSnapshot] = useState<SnapshotPayload | null>(null);
+  const [snapshot, setSnapshot] = useState<RendererInput | null>(null);
   const [busy, setBusy] = useState<'booting' | 'loading' | 'exporting' | null>('booting');
   const [error, setError] = useState<string | null>(null);
+  const [privacySettings, setPrivacySettings] = useState<TranscriptPrivacySettings>(DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS);
 
   useEffect(() => {
     let active = true;
@@ -285,6 +299,8 @@ export default function App() {
     }
     return `${safeFileName(snapshot.record.title)}.jsonl`;
   }, [snapshot]);
+
+  const privacyPolicy = useMemo(() => resolvePrivacyPolicy(privacySettings), [privacySettings]);
 
   const loadReplay = async () => {
     setBusy('loading');
@@ -321,7 +337,9 @@ export default function App() {
     setBusy('exporting');
     setError(null);
     try {
-      const result = await getShadowAgentBridge().exportReplayJsonl(snapshot.events, exportName);
+      const result = await getShadowAgentBridge().exportReplayJsonl(snapshot.events, exportName, {
+        storeRawTranscript: privacySettings.allowRawTranscriptStorage
+      });
       if (result.error) {
         setError(result.error);
       }
@@ -346,8 +364,8 @@ export default function App() {
           <p className="eyebrow">Shadow Agent</p>
           <h1>Passive live observer for agent sessions</h1>
           <p className="lede">
-            Loads a built-in fixture on launch, opens transcript or replay files through Electron, and exports canonical
-            replay JSONL back to disk.
+            Runs in local-only mode by default, sanitizes transcript content before display and export, and requires an
+            explicit opt-in before any raw transcript leaves memory.
           </p>
         </div>
         <div className="topbar__actions">
@@ -358,7 +376,7 @@ export default function App() {
             Open replay / transcript
           </button>
           <button type="button" className="button button--primary" onClick={exportReplay} disabled={!snapshot || busy !== null}>
-            Export replay JSONL
+            {privacySettings.allowRawTranscriptStorage ? 'Export raw replay JSONL' : 'Export sanitized replay JSONL'}
           </button>
         </div>
       </header>
@@ -381,6 +399,10 @@ export default function App() {
             <span className="status-strip__label">Coverage</span>
             <strong>{snapshot ? graphSummary : 'No events yet'}</strong>
           </div>
+          <div className="status-strip__item">
+            <span className="status-strip__label">Privacy</span>
+            <strong>{toLabel(privacyPolicy.processingMode)}</strong>
+          </div>
         </section>
 
         {error ? <div className="error-banner">{error}</div> : null}
@@ -388,6 +410,47 @@ export default function App() {
         <section className="objective-card">
           <p className="eyebrow">Current objective</p>
           <h2>{snapshot?.state.currentObjective ?? 'Waiting for snapshot data'}</h2>
+        </section>
+
+        <section className="panel">
+          <header className="panel__header">
+            <div>
+              <p className="eyebrow">Privacy Controls</p>
+              <h2>Mandatory sanitization with explicit consent gates</h2>
+            </div>
+          </header>
+          <div className="panel__body privacy-panel">
+            <label className="toggle">
+              <input
+                type="checkbox"
+                checked={privacySettings.allowRawTranscriptStorage}
+                onChange={(event) =>
+                  setPrivacySettings((current) => ({
+                    ...current,
+                    allowRawTranscriptStorage: event.target.checked
+                  }))
+                }
+              />
+              <span>Allow raw transcript storage/export for this session</span>
+            </label>
+            <label className="toggle">
+              <input
+                type="checkbox"
+                checked={privacySettings.allowOffHostInference}
+                onChange={(event) =>
+                  setPrivacySettings((current) => ({
+                    ...current,
+                    allowOffHostInference: event.target.checked
+                  }))
+                }
+              />
+              <span>Allow off-host inference for this session</span>
+            </label>
+            <p className="privacy-note">
+              Default behavior is local-only with sanitized transcript rendering and sanitized replay export. Raw storage
+              and off-host delivery stay disabled until you opt in here.
+            </p>
+          </div>
         </section>
 
         <div className="panels">

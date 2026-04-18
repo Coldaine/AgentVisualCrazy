@@ -1,4 +1,5 @@
 import { CanonicalEvent, DerivedState, ShadowInsight } from './schema';
+import { sanitizeTranscriptText } from './privacy';
 
 const TOOL_FILE_KEYS = ['filePath', 'file_path', 'path'];
 
@@ -137,14 +138,16 @@ export function deriveState(events: CanonicalEvent[], title = 'Observed session'
     });
 
     if (event.kind === 'message' && typeof event.payload.text === 'string') {
+      const sanitizedText = sanitizeTranscriptText(event.payload.text);
       transcript.push({
         id: event.id,
         actor: event.actor,
-        text: event.payload.text,
-        timestamp: event.timestamp
+        text: sanitizedText,
+        timestamp: event.timestamp,
+        redacted: sanitizedText !== event.payload.text
       });
       if (event.actor === 'user' && currentObjective === title) {
-        currentObjective = event.payload.text;
+        currentObjective = sanitizedText;
       }
     }
 

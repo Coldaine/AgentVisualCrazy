@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
-import { parseClaudeTranscriptJsonl } from '../src/shared/transcript-adapter';
+import { getTranscriptCaptureAdapter } from '../src/shared/capture-adapters';
+import { claudeTranscriptCaptureAdapter, parseClaudeTranscriptJsonl } from '../src/shared/transcript-adapter';
 
 describe('parseClaudeTranscriptJsonl', () => {
+  it('exposes explicit capture adapter metadata for the Claude transcript implementation', () => {
+    expect(claudeTranscriptCaptureAdapter.id).toBe('claude-transcript-jsonl');
+    expect(claudeTranscriptCaptureAdapter.source).toBe('claude-transcript');
+  });
+
   it('converts text, tool_use, and tool_result blocks into canonical events deterministically', () => {
     const raw = [
       JSON.stringify({
@@ -18,7 +24,7 @@ describe('parseClaudeTranscriptJsonl', () => {
       })
     ].join('\n');
 
-    const events = parseClaudeTranscriptJsonl(raw);
+    const events = claudeTranscriptCaptureAdapter.parse(raw);
     const secondRunEvents = parseClaudeTranscriptJsonl(raw);
 
     expect(events.some((event) => event.kind === 'session_started')).toBe(true);
@@ -27,5 +33,9 @@ describe('parseClaudeTranscriptJsonl', () => {
     expect(events.some((event) => event.kind === 'tool_failed')).toBe(true);
     expect(events.at(-1)?.kind).toBe('session_ended');
     expect(secondRunEvents).toEqual(events);
+  });
+
+  it('routes callers through the internal transcript adapter interface', () => {
+    expect(getTranscriptCaptureAdapter()).toBe(claudeTranscriptCaptureAdapter);
   });
 });

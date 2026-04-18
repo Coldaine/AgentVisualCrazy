@@ -1,3 +1,4 @@
+import type { CaptureAdapter } from './capture-adapter';
 import { CanonicalEvent } from './schema';
 
 interface ClaudeTranscriptEntry {
@@ -18,7 +19,7 @@ function makeTimestamp(eventIndex: number): string {
   return new Date(Date.UTC(2026, 0, 1, 0, 0, eventIndex)).toISOString();
 }
 
-export function parseClaudeTranscriptJsonl(raw: string): CanonicalEvent[] {
+function parseTranscript(raw: string): CanonicalEvent[] {
   const events: CanonicalEvent[] = [];
   const lines = raw.split(/\r?\n/).map((line) => line.trim()).filter(Boolean);
   let activeSessionId = 'claude-transcript-session';
@@ -142,4 +143,14 @@ export function parseClaudeTranscriptJsonl(raw: string): CanonicalEvent[] {
   }
 
   return events;
+}
+
+export const claudeTranscriptCaptureAdapter: CaptureAdapter<string> = {
+  id: 'claude-transcript-jsonl',
+  source: 'claude-transcript',
+  parse: parseTranscript
+};
+
+export function parseClaudeTranscriptJsonl(raw: string): CanonicalEvent[] {
+  return claudeTranscriptCaptureAdapter.parse(raw);
 }

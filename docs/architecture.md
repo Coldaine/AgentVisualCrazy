@@ -37,6 +37,11 @@ When OpenCode isn't available, we fall back to the Anthropic SDK directly. The a
 loads credentials in priority order: `process.env` → `~/.shadow-agent/.env` →
 `~/.local/share/opencode/auth.json`.
 
+Inference and transcript handling are local-only by default. Transcript text is sanitized
+before it is rendered, exported, persisted, or prepared for prompt delivery. Off-host
+inference requires explicit runtime opt-in, and raw transcript storage/export requires its
+own explicit opt-in.
+
 We rejected Codex MCP server only (locks to OpenAI), direct API only (forces manual key
 management), and heuristics-only (can't produce calibrated confidence scores).
 
@@ -79,10 +84,11 @@ systems. Pattern lifted from sidecar's `mcp-server.js`.
 
 ## Prompt Engineering
 
-The shadow inference system prompt lives in `docs/prompts/shadow-system-prompt.md` with
-inline commentary explaining why each section exists. The runtime loads from
-`shadow-agent/src/inference/prompts.ts`, which must match the documented version
-character-for-character. See AGENTS.md for the mandatory prompt change workflow.
+The shadow inference system prompt lives in `prompts/shadow-system-prompt.json` with the
+canonical prompt text, commentary, and iteration log. The generated documentation lives
+in `docs/prompts/shadow-system-prompt.md`, and the generated runtime mirror lives in
+`shadow-agent/src/inference/prompts.ts`. See AGENTS.md for the mandatory prompt
+generate/check workflow.
 
 ## Testing & Observability
 
@@ -115,8 +121,10 @@ docs/
   domain-inference.md         — Inference domain decisions
   domain-events.md           — Event capture domain decisions
   plans/                     — Implementation plans (GUI, events, inference, testing/observability)
-  prompts/                   — Agent prompts with commentary
+  prompts/                   — Generated prompt docs
   research/                  — Visual research, patterns, inspiration
   todo.md                    — Pending tasks
   history/                   — Completed work log (append-only)
+prompts/
+  *.json                     — Prompt source-of-truth definitions
 ```

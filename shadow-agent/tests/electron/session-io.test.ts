@@ -3,7 +3,7 @@ import { mkdtemp, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { buildFixtureSnapshot, createSnapshot, detectReplayFormat, inferTitle } from '../../src/electron/session-io';
-import type { CanonicalEvent } from '../../src/shared/schema';
+import type { CanonicalEvent, RendererInput } from '../../src/shared/schema';
 import { loadSnapshotFromFile } from '../../src/electron/session-io';
 
 function event(overrides: Partial<CanonicalEvent>): CanonicalEvent {
@@ -42,7 +42,7 @@ describe('session-io', () => {
   });
 
   it('builds snapshots from canonical events and fixture data', () => {
-    const snapshot = createSnapshot(
+    const snapshot: RendererInput = createSnapshot(
       [
         event({ kind: 'session_started', payload: { label: 'Custom Session' } }),
         event({ id: 'evt-2', kind: 'message', actor: 'user', payload: { text: 'Ship capture pipeline' } }),

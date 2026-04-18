@@ -11,7 +11,13 @@ export interface InferenceResult {
 
 export type Provider = 'opencode' | 'anthropic' | 'fake';
 
-export interface InferenceClient {
+/**
+ * Concrete inference adapters must ship with focused unit tests that exercise
+ * provider metadata and request/response mapping behavior.
+ */
+export interface InferenceAdapter {
   readonly provider: Provider;
   infer(request: InferenceRequest): Promise<InferenceResult>;
 }
+
+export type InferenceClient = InferenceAdapter;
