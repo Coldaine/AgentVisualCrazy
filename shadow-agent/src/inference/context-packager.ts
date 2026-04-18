@@ -11,6 +11,11 @@ const MAX_RECENT_EVENTS = 30;
 const MAX_TOOL_HISTORY = 20;
 const MAX_TRANSCRIPT_TURNS = 10;
 const MAX_FILE_ATTENTION = 15;
+const MAX_CONTEXT_TOKENS = 10_000;
+
+function estimateTokens(value: unknown): number {
+  return Math.ceil(JSON.stringify(value).length / 4);
+}
 
 function summarizeArgs(args: unknown): string {
   if (!args || typeof args !== 'object') return String(args ?? '');
@@ -66,7 +71,7 @@ export function buildContextPacket(
     severity: 'medium',
   }));
 
-  return {
+  const packet: ShadowContextPacket = {
     sessionId: state.sessionId,
     observedAgent: 'claude-code',
     sessionDuration,
@@ -77,4 +82,43 @@ export function buildContextPacket(
     fileAttention,
     riskSignals,
   };
+
+  let approximateTokens = estimateTokens(packet);
+  if (approximateTokens <= MAX_CONTEXT_TOKENS) {
+    return packet;
+  }
+
+  const truncatedPacket: ShadowContextPacket = {
+    ...packet,
+    recentEvents: [...packet.recentEvents],
+    toolHistory: [...packet.toolHistory],
+    recentTranscript: [...packet.recentTranscript],
+    fileAttention: [...packet.fileAttention],
+  };
+
+  const trimOldest = () => {
+    if (truncatedPacket.recentEvents.length > 1) {
+      truncatedPacket.recentEvents = truncatedPacket.recentEvents.slice(1);
+      return true;
+    }
+    if (truncatedPacket.recentTranscript.length > 1) {
+      truncatedPacket.recentTranscript = truncatedPacket.recentTranscript.slice(1);
+      return true;
+    }
+    if (truncatedPacket.toolHistory.length > 1) {
+      truncatedPacket.toolHistory = truncatedPacket.toolHistory.slice(1);
+      return true;
+    }
+    if (truncatedPacket.fileAttention.length > 1) {
+      truncatedPacket.fileAttention = truncatedPacket.fileAttention.slice(0, -1);
+      return true;
+    }
+    return false;
+  };
+
+  while (approximateTokens > MAX_CONTEXT_TOKENS && trimOldest()) {
+    approximateTokens = estimateTokens(truncatedPacket);
+  }
+
+  return truncatedPacket;
 }
