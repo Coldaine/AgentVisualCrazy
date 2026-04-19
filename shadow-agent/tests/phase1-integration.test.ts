@@ -44,7 +44,7 @@ describe('Phase 1 integration: transcript → events → deriveState', () => {
     expect(state.nextMoves.some((m) => m.toLowerCase().includes('risk'))).toBe(true);
   });
 
-  it('tool-heavy: derives validation or exploration phase + bash-churn risk', () => {
+  it('tool-heavy: derives validation phase + bash-churn risk', () => {
     const raw = readFileSync(join(TRANSCRIPT_FIXTURES, 'tool-heavy.jsonl'), 'utf8');
     const events = parseClaudeTranscriptJsonl(raw);
     const state = deriveState(events);
