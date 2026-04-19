@@ -1,6 +1,12 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import { buildSessionRecord, parseReplay, serializeEvents } from '../src/shared/replay-store';
 import type { CanonicalEvent } from '../src/shared/schema';
+
+const FIXTURE_DIR = fileURLToPath(new URL('.', import.meta.url));
+const REPLAY_FIXTURES = join(FIXTURE_DIR, 'fixtures/replays');
 
 const events: CanonicalEvent[] = [
   {
@@ -46,5 +52,53 @@ describe('replay-store', () => {
       source: 'replay',
       eventCount: 2
     });
+  });
+
+  // ── edge cases ─────────────────────────────────────────────────────────────
+
+  it('buildSessionRecord with empty array uses epoch defaults', () => {
+    const record = buildSessionRecord([], 'Empty');
+    expect(record.sessionId).toBe('unknown');
+    expect(record.eventCount).toBe(0);
+    // timestamps should be the epoch default
+    expect(record.startedAt).toBe(new Date(0).toISOString());
+    expect(record.updatedAt).toBe(new Date(0).toISOString());
+  });
+
+  it('buildSessionRecord ignores invalid timestamps when computing bounds', () => {
+    const badEvents: CanonicalEvent[] = [
+      { id: 'e1', sessionId: 's', source: 'replay', timestamp: 'not-a-date', actor: 'system', kind: 'session_started', payload: {} },
+      { id: 'e2', sessionId: 's', source: 'replay', timestamp: '2026-01-01T00:00:00.000Z', actor: 'user', kind: 'message', payload: {} },
+    ];
+    const record = buildSessionRecord(badEvents);
+    expect(record.eventCount).toBe(2);
+    expect(record.startedAt).toBe('2026-01-01T00:00:00.000Z');
+    expect(record.updatedAt).toBe('2026-01-01T00:00:00.000Z');
+  });
+
+  it('serializeEvents produces one JSON line per event', () => {
+    const lines = serializeEvents(events).split('\n');
+    expect(lines).toHaveLength(2);
+    for (const line of lines) {
+      expect(() => JSON.parse(line)).not.toThrow();
+    }
+  });
+
+  it('parseReplay on a single corrupt line throws with line number', () => {
+    expect(() => parseReplay('not-json-at-all')).toThrow(/line 1/i);
+  });
+
+  it('round-trips the happy-path replay fixture', () => {
+    const raw = readFileSync(join(REPLAY_FIXTURES, 'happy-path.replay.jsonl'), 'utf8');
+    const parsed = parseReplay(raw);
+    expect(parsed.length).toBeGreaterThan(0);
+    expect(parsed[0]?.sessionId).toBe('happy-path');
+    const roundTripped = parseReplay(serializeEvents(parsed));
+    expect(roundTripped).toEqual(parsed);
+  });
+
+  it('parseReplay throws on corrupt-partial fixture (corrupt line)', () => {
+    const raw = readFileSync(join(REPLAY_FIXTURES, 'corrupt-partial.replay.jsonl'), 'utf8');
+    expect(() => parseReplay(raw)).toThrow(/line\s*3/i);
   });
 });

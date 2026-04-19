@@ -1,0 +1,13 @@
+{"id":"sa-1","sessionId":"subagent-flow","source":"replay","timestamp":"2026-04-01T11:00:00.000Z","actor":"system","kind":"session_started","payload":{"cwd":"/workspace/monorepo"}}
+{"id":"sa-2","sessionId":"subagent-flow","source":"replay","timestamp":"2026-04-01T11:00:05.000Z","actor":"user","kind":"message","payload":{"text":"Add E2E tests for checkout."}}
+{"id":"sa-3","sessionId":"subagent-flow","source":"replay","timestamp":"2026-04-01T11:00:10.000Z","actor":"orchestrator","kind":"agent_spawned","payload":{"label":"orchestrator"}}
+{"id":"sa-4","sessionId":"subagent-flow","source":"replay","timestamp":"2026-04-01T11:00:15.000Z","actor":"orchestrator","kind":"subagent_dispatched","payload":{"label":"playwright-setup","parentId":"orchestrator"}}
+{"id":"sa-5","sessionId":"subagent-flow","source":"replay","timestamp":"2026-04-01T11:00:20.000Z","actor":"playwright-setup","kind":"agent_spawned","payload":{"label":"playwright-setup","parentId":"orchestrator"}}
+{"id":"sa-6","sessionId":"subagent-flow","source":"replay","timestamp":"2026-04-01T11:00:25.000Z","actor":"playwright-setup","kind":"tool_started","payload":{"toolName":"Bash","filePath":null}}
+{"id":"sa-7","sessionId":"subagent-flow","source":"replay","timestamp":"2026-04-01T11:00:30.000Z","actor":"playwright-setup","kind":"tool_completed","payload":{"toolName":"Bash"}}
+{"id":"sa-8","sessionId":"subagent-flow","source":"replay","timestamp":"2026-04-01T11:00:35.000Z","actor":"playwright-setup","kind":"agent_completed","payload":{"label":"playwright-setup"}}
+{"id":"sa-9","sessionId":"subagent-flow","source":"replay","timestamp":"2026-04-01T11:00:40.000Z","actor":"orchestrator","kind":"subagent_returned","payload":{"label":"playwright-setup"}}
+{"id":"sa-10","sessionId":"subagent-flow","source":"replay","timestamp":"2026-04-01T11:00:45.000Z","actor":"orchestrator","kind":"tool_started","payload":{"toolName":"Write","filePath":"tests/e2e/checkout.spec.ts"}}
+{"id":"sa-11","sessionId":"subagent-flow","source":"replay","timestamp":"2026-04-01T11:00:46.000Z","actor":"orchestrator","kind":"tool_completed","payload":{"toolName":"Write","filePath":"tests/e2e/checkout.spec.ts"}}
+{"id":"sa-12","sessionId":"subagent-flow","source":"replay","timestamp":"2026-04-01T11:00:50.000Z","actor":"orchestrator","kind":"agent_completed","payload":{"label":"orchestrator"}}
+{"id":"sa-13","sessionId":"subagent-flow","source":"replay","timestamp":"2026-04-01T11:00:55.000Z","actor":"system","kind":"session_ended","payload":{}}
