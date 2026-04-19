@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { deriveState } from '../src/shared/derive';
 import { paymentRefactorSession } from '../src/shared/fixtures/payment-refactor-session';
 import { parseReplay } from '../src/shared/replay-store';
@@ -12,16 +12,21 @@ const REPLAY_FIXTURES = join(TEST_DIR, 'fixtures/replays');
 
 let eventCounter = 0;
 
+beforeEach(() => {
+  eventCounter = 0;
+});
+
 function makeEvent(
   kind: CanonicalEvent['kind'],
   overrides: Partial<CanonicalEvent> = {}
 ): CanonicalEvent {
+  const timestamp = new Date(Date.UTC(2026, 3, 18, 10, 0, eventCounter)).toISOString();
   eventCounter += 1;
   return {
     id: overrides.id ?? `evt-${eventCounter}`,
     sessionId: 'test-session',
     source: 'replay',
-    timestamp: overrides.timestamp ?? `2026-04-18T10:00:${String(eventCounter).padStart(2, '0')}.000Z`,
+    timestamp: overrides.timestamp ?? timestamp,
     actor: 'assistant',
     kind,
     payload: {},

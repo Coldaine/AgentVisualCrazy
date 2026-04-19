@@ -36,6 +36,7 @@ describe('Phase 1 integration: transcript → events → deriveState', () => {
     const events = parseClaudeTranscriptJsonl(raw);
     const state = deriveState(events);
 
+    expect(state.activePhase).toBe('validation');
     expect(state.riskSignals.some((r) => r.includes('failed tool call'))).toBe(true);
     // 4+ bash calls → bash churn risk
     expect(state.riskSignals.some((r) => r.toLowerCase().includes('churn'))).toBe(true);
@@ -48,6 +49,7 @@ describe('Phase 1 integration: transcript → events → deriveState', () => {
     const events = parseClaudeTranscriptJsonl(raw);
     const state = deriveState(events);
 
+    expect(state.activePhase).toBe('validation');
     // Should flag bash churn (4+ Bash tool_started events in the fixture)
     expect(state.riskSignals.some((r) => r.toLowerCase().includes('churn'))).toBe(true);
     // Multiple read/grep/glob (5 in fixture — just under the 6-call exploration threshold)
@@ -97,7 +99,7 @@ describe('Phase 1 integration: replay fixtures → deriveState', () => {
     expect(state.fileAttention.some((f) => f.filePath.includes('.spec.ts'))).toBe(true);
   });
 
-  it('all fixture replays produce valid DerivedState without throwing', () => {
+  it('all valid fixture replays produce valid DerivedState without throwing', () => {
     const fixtures = [
       'happy-path.replay.jsonl',
       'subagent-flow.replay.jsonl',

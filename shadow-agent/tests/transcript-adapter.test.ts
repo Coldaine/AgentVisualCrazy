@@ -45,9 +45,8 @@ describe('parseClaudeTranscriptJsonl', () => {
     ].join('\n');
 
     const events = parseClaudeTranscriptJsonl(raw);
-    expect(events.some((e) => e.kind === 'message')).toBe(true);
-    // Should still produce events from valid lines
-    expect(events.length).toBeGreaterThan(0);
+    const messageEvents = events.filter((e) => e.kind === 'message');
+    expect(messageEvents).toHaveLength(2);
   });
 
   it('returns no events for completely empty input', () => {
@@ -138,8 +137,11 @@ describe('parseClaudeTranscriptJsonl', () => {
     ].join('\n');
     const events = parseClaudeTranscriptJsonl(raw);
     const sessionIds = [...new Set(events.map((e) => e.sessionId))];
-    // Last sessionId wins for new events after the change
+    const sessionEnded = [...events].reverse().find((event) => event.kind === 'session_ended');
+
+    expect(sessionIds).toContain('first-session');
     expect(sessionIds).toContain('second-session');
+    expect(sessionEnded?.sessionId).toBe('second-session');
   });
 
   it('parses the happy-path fixture without errors', () => {

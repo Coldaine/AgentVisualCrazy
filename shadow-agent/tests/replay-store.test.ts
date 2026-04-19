@@ -65,12 +65,13 @@ describe('replay-store', () => {
     expect(record.updatedAt).toBe(new Date(0).toISOString());
   });
 
-  it('buildSessionRecord skips events with invalid timestamps', () => {
+  it('buildSessionRecord ignores invalid timestamps when computing bounds', () => {
     const badEvents: CanonicalEvent[] = [
       { id: 'e1', sessionId: 's', source: 'replay', timestamp: 'not-a-date', actor: 'system', kind: 'session_started', payload: {} },
       { id: 'e2', sessionId: 's', source: 'replay', timestamp: '2026-01-01T00:00:00.000Z', actor: 'user', kind: 'message', payload: {} },
     ];
     const record = buildSessionRecord(badEvents);
+    expect(record.eventCount).toBe(2);
     expect(record.startedAt).toBe('2026-01-01T00:00:00.000Z');
     expect(record.updatedAt).toBe('2026-01-01T00:00:00.000Z');
   });
@@ -98,6 +99,6 @@ describe('replay-store', () => {
 
   it('parseReplay throws on corrupt-partial fixture (corrupt line)', () => {
     const raw = readFileSync(join(REPLAY_FIXTURES, 'corrupt-partial.replay.jsonl'), 'utf8');
-    expect(() => parseReplay(raw)).toThrow(/line/i);
+    expect(() => parseReplay(raw)).toThrow(/line\s*3/i);
   });
 });
