@@ -6,9 +6,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { parseModelResponse } from '../src/inference/response-parser';
 import { buildContextPacket } from '../src/inference/context-packager';
-import { buildInferenceRequest } from '../src/inference/prompt-builder';
+import { SHADOW_SYSTEM_PROMPT, buildInferenceRequest } from '../src/inference/prompt-builder';
 import { createInferenceTrigger } from '../src/inference/trigger';
-import { SHADOW_SYSTEM_PROMPT } from '../src/inference/prompts';
 import type { CanonicalEvent, DerivedState } from '../src/shared/schema';
 
 // ── response parser ────────────────────────────────────────────────────────

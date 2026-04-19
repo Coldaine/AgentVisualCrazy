@@ -40,6 +40,8 @@ When facing a tradeoff, choose visual quality over faster implementation.
 
 You are not required to use all of them. Mix, augment, or ignore as the moment demands.
 The research docs catalog which specific patterns are worth stealing and how to adapt them.
+`third_party/` is reference material, not product surface area: do not add runtime imports from it,
+and if a checkout is no longer useful after its patterns are absorbed, removing it is fine.
 
 ## Read-Only Constraint (v1)
 

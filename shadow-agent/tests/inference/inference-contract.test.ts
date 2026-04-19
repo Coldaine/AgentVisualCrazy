@@ -12,7 +12,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import type { InferenceClient, InferenceRequest, InferenceResult } from '../../src/inference/inference-client';
-import { SHADOW_SYSTEM_PROMPT, buildUserMessage, type ShadowContextPacket } from '../../src/inference/prompts';
+import { SHADOW_SYSTEM_PROMPT, buildUserMessage, type ShadowContextPacket } from '../../src/inference/prompt-builder';
 import { packContext } from '../../src/inference/context-packager';
 import type { CanonicalEvent, DerivedState } from '../../src/shared/schema';
 
@@ -212,11 +212,13 @@ describe('context packager', () => {
     const events: CanonicalEvent[] = [
       makeEvent({ kind: 'tool_started', payload: { toolName: 'read_file', args: { filePath: 'x.ts' } } }),
       makeEvent({ kind: 'tool_completed', payload: { toolName: 'read_file', args: { filePath: 'x.ts' }, result: 'ok' } }),
+      makeEvent({ kind: 'tool_started', payload: { toolName: 'bash', args: { command: 'npm test' } } }),
       makeEvent({ kind: 'tool_failed', payload: { toolName: 'bash', args: { command: 'npm test' }, error: 'cmd not found' } })
     ];
     const { packet } = packContext(emptyDerivedState(), events);
-    expect(packet.toolHistory).toHaveLength(3);
-    expect(packet.toolHistory[2]?.result).toBe('failed');
+    expect(packet.toolHistory).toHaveLength(2);
+    expect(packet.toolHistory[0]?.result).toBe('success');
+    expect(packet.toolHistory[1]?.result).toBe('error');
   });
 
   it('respects recentWindowSize option', () => {

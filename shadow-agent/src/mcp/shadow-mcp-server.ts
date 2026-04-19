@@ -13,7 +13,7 @@ import type { DerivedState, ShadowInsight } from '../shared/schema';
 import { createLogger } from '../shared/logger';
 import type { EventBufferLike } from '../inference/inference-client';
 import type { InferenceClient, InferenceRequest } from '../inference/inference-client';
-import { SHADOW_SYSTEM_PROMPT } from '../inference/prompts';
+import { SHADOW_SYSTEM_PROMPT } from '../inference/prompt-builder';
 
 const logger = createLogger({ minLevel: 'info' });
 

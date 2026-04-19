@@ -1,4 +1,4 @@
-name: Prompt Parity
+name: CI
 
 on:
   pull_request:
@@ -8,7 +8,7 @@ on:
       - master
 
 jobs:
-  prompt-parity:
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -30,3 +30,11 @@ jobs:
 
       - name: Verify generated prompt artifacts
         run: npm run prompts:check
+
+      - name: Run tests
+        run: npm test
+        working-directory: shadow-agent
+
+      - name: Build
+        run: npm run build
+        working-directory: shadow-agent

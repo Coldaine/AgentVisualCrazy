@@ -36,9 +36,11 @@ npm start
 
 ## Project Structure
 
-- `shadow-agent/src/electron/`: Main process code, including IPC handling, session management, and filesystem watching.
-- `shadow-agent/src/renderer/`: React-based UI code, including the Canvas2D visualization engine and D3-Force layout.
-- `shadow-agent/src/shared/`: Code shared between the main and renderer processes (types, utilities, logging).
+- `shadow-agent/src/electron/`: Main process code, including IPC handling, session management, and file loading.
+- `shadow-agent/src/renderer/`: React-based UI code. The full Canvas2D + D3-Force visualization engine is on a feature branch (PR #26); current main uses simplified React panels.
+- `shadow-agent/src/shared/`: Code shared between the main and renderer processes (types, utilities, logging, privacy, transcript parsing, replay store).
+- `shadow-agent/src/inference/`: Shadow inference engine — auth, context packaging, prompt building, response parsing, trigger logic, and Anthropic API fallback. OpenCode client is not yet implemented.
+- `shadow-agent/src/mcp/`: MCP server exposing shadow tools to other agents.
 - `docs/`: Technical documentation, architecture decisions, and project plans.
 
 ## Prompt Workflow

@@ -1,8 +1,10 @@
 # Domain: Inference Engine
 
-> **Status: Implementation Reference** — This document describes the full OpenCode
-> inference engine targeted by PR #28. Current main has `src/inference/prompts.ts` and
-> `src/inference/prompt-builder.ts` scaffolding only.
+> **Status: Partially Implemented** — Current main has auth loader (`auth.ts`), context
+> packager (`context-packager.ts`), prompt builder (`prompt-builder.ts` with
+> `ShadowContextPacket` type and `buildUserMessage`), response parser, inference trigger,
+> shadow inference engine orchestrator, direct Anthropic API fallback, and MCP server.
+> The OpenCode client (`opencode-client.ts`) is not yet implemented.
 
 The inference engine is shadow-agent's brain — it consumes the observed agent's event
 stream and produces structured interpretations (phase, risk, predictions, confidence).
@@ -100,15 +102,15 @@ All tools are `readOnlyHint: true`. Pattern from sidecar's `mcp-server.js`.
 
 ```
 src/inference/
-  auth.ts                — Credential loader
-  opencode-client.ts     — OpenCode server + client
-  context-packager.ts    — Build ShadowContextPacket from DerivedState
-  prompt-builder.ts      — Assemble user message from context packet
-  prompts.ts             — Generated prompt strings from prompts/*.json
-  response-parser.ts     — JSON → ShadowInsight[]
-  trigger.ts             — When to invoke inference
-  shadow-inference-engine.ts  — Orchestrator
-  direct-api.ts          — Anthropic SDK fallback
+  auth.ts                — Credential loader (implemented)
+  opencode-client.ts     — OpenCode server + client (not yet implemented)
+  context-packager.ts    — Build ShadowContextPacket from DerivedState (implemented)
+  prompt-builder.ts      — ShadowContextPacket type, buildUserMessage, buildInferenceRequest (implemented)
+  prompts.ts             — Generated prompt strings from prompts/*.json (implemented)
+  response-parser.ts     — JSON → ShadowInsight[] (implemented)
+  trigger.ts             — When to invoke inference (implemented)
+  shadow-inference-engine.ts  — Orchestrator (implemented)
+  direct-api.ts          — Anthropic SDK fallback (implemented)
 src/mcp/
-  shadow-mcp-server.ts   — MCP server exposing shadow tools
+  shadow-mcp-server.ts   — MCP server exposing shadow tools (implemented)
 ```

@@ -9,27 +9,27 @@
 
 - 2026-04-01: **Implement Phase 2 live transcript watcher** — Build the `shadow-agent/src/capture/` pipeline from `docs/plans/plan-event-capture.md`: session discovery, transcript watcher, incremental parser, normalizer, event buffer, IPC bridge, and session manager. [In Progress - PR #27](https://github.com/Coldaine/AgentVisualCrazy/pull/27)
 
-- 2026-04-01: **Implement inference auth loader** — Create `src/inference/auth.ts`. Copy sidecar's `auth-json.js` pattern. Priority: `process.env` > `~/.shadow-agent/.env` > OpenCode `auth.json`. [In Progress - PR #28](https://github.com/Coldaine/AgentVisualCrazy/pull/28)
+- 2026-04-01: ~~**Implement inference auth loader**~~ — Completed 2026-04-18. `src/inference/auth.ts` implements priority chain: `process.env` → `~/.shadow-agent/.env` → OpenCode `auth.json`. Merged via PR #28.
 
-- 2026-04-01: **Implement OpenCode inference client** — Create `src/inference/opencode-client.ts`. Copy sidecar's `opencode-client.js`. Start server, create session, send prompt, poll completion. [In Progress - PR #28](https://github.com/Coldaine/AgentVisualCrazy/pull/28)
+- 2026-04-01: **Implement OpenCode inference client** — Create `src/inference/opencode-client.ts`. Copy sidecar's `opencode-client.js`. Start server, create session, send prompt, poll completion. Not yet implemented — direct Anthropic API fallback exists as an interim path.
 
-- 2026-04-01: **Build shadow context packager** — Create `src/inference/context-packager.ts`. Takes `DerivedState` + recent events → `ShadowContextPacket`. Token budget ~10k. [In Progress - PR #28](https://github.com/Coldaine/AgentVisualCrazy/pull/28)
+- 2026-04-01: ~~**Build shadow context packager**~~ — Completed 2026-04-18. `src/inference/context-packager.ts` exports `buildContextPacket` and `packContext`. Merged via PR #28.
 
-- 2026-04-01: **Build shadow prompt builder** — Create `src/inference/prompt-builder.ts`. System prompt from `prompts/shadow-system-prompt.json`. User message from context packet. [In Progress - PR #28](https://github.com/Coldaine/AgentVisualCrazy/pull/28)
+- 2026-04-01: ~~**Build shadow prompt builder**~~ — Completed 2026-04-18. `src/inference/prompt-builder.ts` exports `ShadowContextPacket` type, `buildUserMessage`, and `buildInferenceRequest`. Merged via PR #28.
 
-- 2026-04-01: **Wire inference trigger engine** — Create `src/inference/trigger.ts`. Triggers on: N events, 30s timer, risk escalation, specific event kinds. [In Progress - PR #28](https://github.com/Coldaine/AgentVisualCrazy/pull/28)
+- 2026-04-01: ~~**Wire inference trigger engine**~~ — Completed 2026-04-18. `src/inference/trigger.ts` implements event-count, time, and specific-event triggers. Merged via PR #28.
 
-- 2026-04-01: **Wire inference engine** — Create `src/inference/shadow-inference-engine.ts`. Connects trigger → context packager → prompt builder → OpenCode/direct API → response parser → ShadowInsight events. [In Progress - PR #28](https://github.com/Coldaine/AgentVisualCrazy/pull/28)
+- 2026-04-01: ~~**Wire inference engine**~~ — Completed 2026-04-18. `src/inference/shadow-inference-engine.ts` orchestrates trigger → context → prompt → client → parser. Merged via PR #28.
 
-- 2026-04-01: **Build shadow MCP server** — Create `src/mcp/shadow-mcp-server.ts`. Tools: `shadow_status`, `shadow_events`, `shadow_ask`. stdio transport.
+- 2026-04-01: ~~**Build shadow MCP server**~~ — Completed 2026-04-18. `src/mcp/shadow-mcp-server.ts` exposes `shadow_status`, `shadow_events`, `shadow_ask`. Merged via PR #28.
 
-- 2026-04-01: **Implement direct Anthropic API fallback** — Create `src/inference/direct-api.ts`. Fallback when OpenCode not available. [In Progress - PR #28](https://github.com/Coldaine/AgentVisualCrazy/pull/28)
+- 2026-04-01: ~~**Implement direct Anthropic API fallback**~~ — Completed 2026-04-18. `src/inference/direct-api.ts` implements `InferenceClient` using `@anthropic-ai/sdk`. Merged via PR #28.
 
 ## Observability
 
-- 2026-04-12: **Harden logger behavior and sinks** — Add explicit Error serialization, configurable log levels via environment, and durable file-write backpressure/rotation policies for `shadow-agent/src/shared/logger.ts`. [In Progress - PR #30](https://github.com/Coldaine/AgentVisualCrazy/pull/30)
+- 2026-04-12: ~~**Harden logger behavior and sinks**~~ — Completed 2026-04-18. Structured logger with level filtering, memory ring, file sink, redaction, and circular-reference handling. Merged via PR #30.
 
-- 2026-04-12: **Finish instrumentation coverage** — Extend logging across capture, IPC, inference, and persistence boundaries with consistent event names and redacted context payloads. [In Progress - PR #30](https://github.com/Coldaine/AgentVisualCrazy/pull/30)
+- 2026-04-12: **Finish instrumentation coverage** — Extend logging across capture, IPC, inference, and persistence boundaries with consistent event names and redacted context payloads. [Partially done — core seams instrumented; capture pipeline not yet on main]
 
 ## Documentation
 
@@ -37,14 +37,22 @@
 
 ## Testing
 
-- 2026-04-12: **Expand Phase 1 edge coverage** — Add transcript-adapter, derive, replay-store, and persistence edge/corruption tests plus one transcript -> canonical events -> derive integration test. [In Progress - PR #29](https://github.com/Coldaine/AgentVisualCrazy/pull/29)
+- 2026-04-12: ~~**Expand Phase 1 edge coverage**~~ — Completed 2026-04-18. Transcript-adapter, derive, replay-store, and persistence edge/corruption tests plus integration tests. Merged via PR #29.
 
-- 2026-04-12: **Add Phase 2 capture tests before shipping the watcher** — Cover incremental parsing, session discovery, ring buffer behavior, temp-file append/truncation/rotation, and session-manager integration with fake IPC. [In Progress - PR #27](https://github.com/Coldaine/AgentVisualCrazy/pull/27)
+- 2026-04-12: **Add Phase 2 capture tests before shipping the watcher** — Cover incremental parsing, session discovery, ring buffer behavior, temp-file append/truncation/rotation, and session-manager integration with fake IPC. [Blocked — capture pipeline not yet on main]
 
-- 2026-04-12: **Add Electron and renderer contract tests** — Cover preload bridge API drift, main-process replay/export behavior, and renderer busy/error/open/export state transitions. [In Progress - PR #31](https://github.com/Coldaine/AgentVisualCrazy/pull/31)
+- 2026-04-12: ~~**Add Electron and renderer contract tests**~~ — Completed 2026-04-18. Preload bridge API, main-process replay/export, and renderer state machine tests. Merged via PR #31.
 
-- 2026-04-12: **Add inference contract tests with a fake client** — Cover context packing, prompt building, parser fallback, trigger thresholds, and orchestrator behavior with no live model dependency in CI. [In Progress - PR #32](https://github.com/Coldaine/AgentVisualCrazy/pull/32)
+- 2026-04-12: ~~**Add inference contract tests with a fake client**~~ — Completed 2026-04-18. Context packing, prompt building, parser fallback, trigger thresholds, and `FakeInferenceClient`. Merged via PR #32.
 
-- 2026-04-12: **Add Canvas2D command tests and selective visual regressions** — Protect node/edge/particle semantics with a recorded 2D context and add a small curated screenshot suite for canonical scenes. [In Progress - PR #26](https://github.com/Coldaine/AgentVisualCrazy/pull/26)
+- 2026-04-12: **Add Canvas2D command tests and selective visual regressions** — Protect node/edge/particle semantics with a recorded 2D context and add a small curated screenshot suite for canonical scenes. [Blocked — Canvas2D renderer not yet on main]
 
-- 2026-04-12: **Maintain a shared replay fixture corpus** — Store representative transcript/replay fixtures under `shadow-agent/tests/fixtures/` for parsing, derive, renderer, and inference regression coverage. [In Progress - PR #29](https://github.com/Coldaine/AgentVisualCrazy/pull/29)
+- 2026-04-12: ~~**Maintain a shared replay fixture corpus**~~ — Completed 2026-04-18. Transcript and replay fixtures under `shadow-agent/tests/fixtures/`. Merged via PR #29.
+
+## Infrastructure
+
+- 2026-04-19: **Fix broken test suite on main** — `buildUserMessage` and `ShadowContextPacket` were imported from generated `prompts.ts` but never exported; `packContext` was imported from `context-packager.ts` but didn't exist. Fixed by moving `ShadowContextPacket` and `buildUserMessage` to `prompt-builder.ts` and adding `packContext` to `context-packager.ts`. See branch `fix/test-remediation-and-docs-consistency`.
+
+- 2026-04-19: **Add test execution to CI** — The `prompt-parity.yml` workflow only checked prompt sync. Updated to also run `npm test` and `npm run build`. See branch `fix/test-remediation-and-docs-consistency`.
+
+- 2026-04-19: **Add test execution to pre-commit hook** — The Husky pre-commit hook only ran `prompts:check`. Updated to also run `npm test`. See branch `fix/test-remediation-and-docs-consistency`.
