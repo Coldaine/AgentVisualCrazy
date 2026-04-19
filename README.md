@@ -8,7 +8,15 @@ Layout:
 - `third_party/sidecar/`: reference clone for runtime and shadow-session patterns
 - `third_party/agent-flow/`: reference clone for ingestion, replay, and visualization patterns
 
-The `third_party` repos are local references. They are intentionally not part of the main repo history.
+How to read this repo:
+- this root `README.md` explains the workspace-level layout and shared tooling
+- `shadow-agent/README.md` explains the app itself: scope, commands, and current behavior
+
+The `third_party` repos are disposable local references.
+- They exist so we can inspect and port patterns into `shadow-agent/`.
+- Product code should not import from them at runtime.
+- Once a pattern has been absorbed or we no longer need the reference checkout, removing it is fine.
+- They are intentionally not part of the main repo history.
 
 Prompt workflow:
 - `prompts/*.json` are the single source of truth

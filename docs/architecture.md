@@ -100,19 +100,24 @@ record tests for drawing semantics plus a small curated set of visual regression
 
 ## Current Status & Roadmap
 
-We are currently transitioning from **Phase 1 (MVP)** to **Phase 2 (Release Candidate)**.
+We are currently in **Phase 2 (Release Candidate)** with inference scaffolding landed
+and the Canvas2D renderer and live capture pipeline still on feature branches.
 
-### Phase 1: Core Foundation (Completed/Merging)
+### Phase 1: Core Foundation (Completed)
 - Canonical event schema and derivation logic.
 - File-based persistence and session replay.
 - Initial Electron shell and React renderer.
 - Base fixture corpus for testing.
-- PRs: #29 (Fixtures), #30 (Observability), #31 (Renderer Tests).
+- Logger, privacy sanitization, and observability seams.
+- Merged via: #29 (Fixtures), #30 (Observability), #31 (Renderer Tests).
 
 ### Phase 2: Live Interaction (In Progress)
-- **Live Event Capture**: `fs.watch` based transcript tailing (PR #27).
-- **Advanced Rendering**: Porting Canvas2D + D3-Force from `agent-flow` (PR #26).
-- **Inference Engine**: OpenCode integration and system prompt triggers (PR #28, #32).
+- **Inference Engine**: Auth loader, context packager, prompt builder (with
+  `ShadowContextPacket` type and `buildUserMessage`), response parser, trigger logic,
+  shadow inference engine orchestrator, direct Anthropic API fallback, and MCP server.
+  Landed on main via PR #28 and #32. OpenCode client not yet implemented.
+- **Live Event Capture**: `fs.watch` based transcript tailing (PR #27 — not yet merged).
+- **Advanced Rendering**: Porting Canvas2D + D3-Force from `agent-flow` (PR #26 — not yet merged).
 - **Integration**: Full end-to-end flow from agent activity to holographic insight.
 
 ### Phase 3+: Advanced Features (Planned)

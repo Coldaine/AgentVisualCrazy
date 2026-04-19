@@ -1,11 +1,11 @@
 /**
  * Context packager: builds a ShadowContextPacket from DerivedState + recent events.
  *
- * Uses the ShadowContextPacket type defined in prompts.ts (the canonical shape for inference).
+ * Uses the ShadowContextPacket type defined in prompt-builder.ts (the canonical shape for inference).
  * Total context budget: ~10,000 tokens. Truncates from the front — recent events are more valuable.
  */
 import type { CanonicalEvent, DerivedState } from '../shared/schema';
-import type { ShadowContextPacket } from './prompts';
+import type { ShadowContextPacket } from './prompt-builder';
 
 const MAX_RECENT_EVENTS = 30;
 const MAX_TOOL_HISTORY = 20;
@@ -27,16 +27,36 @@ export function buildContextPacket(
   state: DerivedState,
   events: CanonicalEvent[]
 ): ShadowContextPacket {
+  return packContext(state, events).packet;
+}
+
+export interface PackContextOptions {
+  tokenBudget?: number;
+  recentWindowSize?: number;
+}
+
+export interface PackContextResult {
+  packet: ShadowContextPacket;
+  truncated: boolean;
+  approximateTokens: number;
+}
+
+export function packContext(
+  state: DerivedState,
+  events: CanonicalEvent[],
+  options: PackContextOptions = {}
+): PackContextResult {
+  const tokenBudget = options.tokenBudget ?? MAX_CONTEXT_TOKENS;
+  const recentWindowSize = options.recentWindowSize ?? MAX_RECENT_EVENTS;
+
   const first = events[0];
   const last = events.at(-1);
   const sessionDuration = first && last
     ? Math.round((new Date(last.timestamp).getTime() - new Date(first.timestamp).getTime()) / 1000)
     : 0;
 
-  // Recent events
-  const recentEvents = events.slice(-MAX_RECENT_EVENTS);
+  const recentEvents = events.slice(-recentWindowSize);
 
-  // Tool call history (match prompts.ts shape: {tool, result, argsSummary})
   const toolHistory: ShadowContextPacket['toolHistory'] = [];
   for (const event of events) {
     if (event.kind === 'tool_started') {
@@ -47,7 +67,6 @@ export function buildContextPacket(
         result: 'pending',
       });
     } else if (event.kind === 'tool_completed' || event.kind === 'tool_failed') {
-      // Update the last pending tool call
       for (let i = toolHistory.length - 1; i >= 0; i--) {
         if (toolHistory[i]!.result === 'pending') {
           toolHistory[i]!.result = event.kind === 'tool_completed' ? 'success' : 'error';
@@ -57,15 +76,12 @@ export function buildContextPacket(
     }
   }
 
-  // Transcript turns
   const recentTranscript = state.transcript
     .slice(-MAX_TRANSCRIPT_TURNS)
     .map((t) => ({ actor: t.actor, text: t.text.slice(0, 500) }));
 
-  // File attention
   const fileAttention = state.fileAttention.slice(0, MAX_FILE_ATTENTION);
 
-  // Risk signals (convert string[] → {signal, severity}[])
   const riskSignals: ShadowContextPacket['riskSignals'] = state.riskSignals.map((s) => ({
     signal: s,
     severity: 'medium',
@@ -84,8 +100,8 @@ export function buildContextPacket(
   };
 
   let approximateTokens = estimateTokens(packet);
-  if (approximateTokens <= MAX_CONTEXT_TOKENS) {
-    return packet;
+  if (approximateTokens <= tokenBudget) {
+    return { packet, truncated: false, approximateTokens };
   }
 
   const truncatedPacket: ShadowContextPacket = {
@@ -96,7 +112,7 @@ export function buildContextPacket(
     fileAttention: [...packet.fileAttention],
   };
 
-  const trimOldest = () => {
+  const trimOldest = (): boolean => {
     if (truncatedPacket.recentEvents.length > 1) {
       truncatedPacket.recentEvents = truncatedPacket.recentEvents.slice(1);
       return true;
@@ -116,9 +132,9 @@ export function buildContextPacket(
     return false;
   };
 
-  while (approximateTokens > MAX_CONTEXT_TOKENS && trimOldest()) {
+  while (approximateTokens > tokenBudget && trimOldest()) {
     approximateTokens = estimateTokens(truncatedPacket);
   }
 
-  return truncatedPacket;
+  return { packet: truncatedPacket, truncated: true, approximateTokens };
 }

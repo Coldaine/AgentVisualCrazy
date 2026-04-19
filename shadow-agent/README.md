@@ -2,6 +2,9 @@
 
 `shadow-agent` is a passive observer for agent sessions.
 
+This README is for the app inside the larger workspace. For workspace layout, shared tooling,
+and the role of `third_party/`, see the repo-root [README.md](../README.md).
+
 It combines:
 - Sidecar-style separation between the observed agent and a secondary shadow runtime
 - Agent Flow-style event ingestion, replay, and visualization
