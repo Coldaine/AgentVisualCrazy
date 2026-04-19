@@ -9,6 +9,7 @@
  */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import type { InferenceClient, InferenceRequest, InferenceResult } from '../../src/inference/inference-client';
 import { SHADOW_SYSTEM_PROMPT, buildUserMessage, type ShadowContextPacket } from '../../src/inference/prompts';
@@ -67,7 +68,9 @@ export class FakeInferenceClient implements InferenceClient {
 // Helpers
 // ---------------------------------------------------------------------------
 
-const FIXTURES = join(import.meta.dirname, '../fixtures');
+const TEST_DIR = fileURLToPath(new URL('.', import.meta.url));
+const FIXTURES = join(TEST_DIR, '../fixtures');
+let eventCounter = 0;
 
 function emptyDerivedState(overrides: Partial<DerivedState> = {}): DerivedState {
   return {
@@ -87,14 +90,15 @@ function emptyDerivedState(overrides: Partial<DerivedState> = {}): DerivedState 
 }
 
 function makeEvent(overrides: Partial<CanonicalEvent> = {}): CanonicalEvent {
+  eventCounter += 1;
   return {
-    id: Math.random().toString(36).slice(2),
+    id: overrides.id ?? `evt-${eventCounter}`,
     sessionId: 'test-session',
     source: 'replay',
     timestamp: new Date().toISOString(),
     actor: 'agent',
     kind: 'tool_started',
-    payload: { tool: 'read_file', path: 'src/index.ts' },
+    payload: { toolName: 'read_file', args: { filePath: 'src/index.ts' } },
     ...overrides
   };
 }
@@ -206,9 +210,9 @@ describe('context packager', () => {
 
   it('builds tool history from tool_started/completed/failed events', () => {
     const events: CanonicalEvent[] = [
-      makeEvent({ kind: 'tool_started', payload: { tool: 'read_file', path: 'x.ts' } }),
-      makeEvent({ kind: 'tool_completed', payload: { tool: 'read_file', result: 'ok' } }),
-      makeEvent({ kind: 'tool_failed', payload: { tool: 'bash', error: 'cmd not found' } })
+      makeEvent({ kind: 'tool_started', payload: { toolName: 'read_file', args: { filePath: 'x.ts' } } }),
+      makeEvent({ kind: 'tool_completed', payload: { toolName: 'read_file', args: { filePath: 'x.ts' }, result: 'ok' } }),
+      makeEvent({ kind: 'tool_failed', payload: { toolName: 'bash', args: { command: 'npm test' }, error: 'cmd not found' } })
     ];
     const { packet } = packContext(emptyDerivedState(), events);
     expect(packet.toolHistory).toHaveLength(3);
@@ -238,9 +242,7 @@ describe('context packager', () => {
 
 describe('prompt builder — character equality with docs', () => {
   it('SHADOW_SYSTEM_PROMPT matches the full prompt in docs/prompts/shadow-system-prompt.md', () => {
-    const docsPath = join(
-      import.meta.dirname, '../../../docs/prompts/shadow-system-prompt.md'
-    );
+    const docsPath = join(TEST_DIR, '../../../docs/prompts/shadow-system-prompt.md');
     const docsContent = readFileSync(docsPath, 'utf8').replace(/\r\n/g, '\n');
 
     // Extract the prompt string from the Full Prompt (Copy-Paste Ready) section.
