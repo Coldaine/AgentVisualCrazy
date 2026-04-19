@@ -11,7 +11,7 @@ import { SHADOW_SYSTEM_PROMPT } from './prompts';
 export { SHADOW_SYSTEM_PROMPT } from './prompts';
 import type { InferenceRequest } from './inference-client';
 import type { CanonicalEvent } from '../shared/schema';
-import { sanitizeTranscriptText } from '../shared/privacy';
+import { DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS, sanitizeTranscriptText } from '../shared/privacy';
 import type { TranscriptPrivacySettings } from '../shared/schema';
 
 export interface ShadowContextPacket {
@@ -37,7 +37,7 @@ export function buildUserMessage(
   options: BuildUserMessageOptions = {}
 ): string {
   const delivery = options.delivery ?? 'local';
-  const privacy = options.privacy ?? { allowRawTranscriptStorage: false, allowOffHostInference: false };
+  const privacy = options.privacy ?? DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS;
 
   if (delivery === 'off-host' && !privacy.allowOffHostInference) {
     throw new Error('Off-host inference is disabled until the user explicitly opts in.');
@@ -63,7 +63,7 @@ export function buildUserMessage(
     '',
     `--- Recent Events (${packet.recentEvents.length}) ---`,
     ...packet.recentEvents.map((e) =>
-      `${e.timestamp} [${e.kind}] ${e.actor}: ${sanitize(JSON.stringify(e.payload).slice(0, 120))}`
+      `${e.timestamp} [${e.kind}] ${e.actor}: ${sanitize(JSON.stringify(e.payload)).slice(0, 120)}`
     ),
     '',
     `--- Tool History (${packet.toolHistory.length}) ---`,

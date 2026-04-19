@@ -1,3 +1,4 @@
 #!/usr/bin/env sh
+set -e
 npm run prompts:check
 npm test --prefix shadow-agent
