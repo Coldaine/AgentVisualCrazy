@@ -48,7 +48,7 @@ describe('FileReplayStore', () => {
         sessionId,
         timestamp: '2026-03-26T10:05:00.000Z',
         kind: 'message',
-        payload: { text: 'Working through the payment gateway refactor.' }
+        payload: { text: 'Working through the payment gateway refactor for dev@example.com in D:\\workspace.' }
       })
     ];
 
@@ -64,8 +64,62 @@ describe('FileReplayStore', () => {
       eventCount: 2
     });
     expect(loaded.record).toEqual(record);
-    expect(loaded.events).toEqual(events);
+    expect(loaded.events[1].payload).toEqual({
+      text: 'Working through the payment gateway refactor for [redacted-email] in [redacted-path]'
+    });
     expect(rawEvents.trim().split(/\r?\n/)).toHaveLength(2);
+  });
+
+  it('requires explicit opt-in before storing raw transcripts', async () => {
+    const rootDir = mkdtempSync(join(tmpdir(), 'shadow-agent-persistence-'));
+    const store = new FileReplayStore(rootDir);
+
+    await expect(
+      store.saveSession(
+        'raw-session',
+        [
+          makeEvent({
+            id: 'evt-1',
+            sessionId: 'raw-session',
+            timestamp: '2026-03-26T10:00:00.000Z',
+            kind: 'message',
+            payload: { text: 'secret sk-abcdefghijklmnop' }
+          })
+        ],
+        'Raw Session',
+        { storeRawTranscript: true }
+      )
+    ).rejects.toThrow(/explicit opt-in/i);
+  });
+
+  it('stores raw transcripts when the store is configured with opt-in', async () => {
+    const rootDir = mkdtempSync(join(tmpdir(), 'shadow-agent-persistence-'));
+    const store = new FileReplayStore(rootDir, {
+      privacy: {
+        allowRawTranscriptStorage: true,
+        allowOffHostInference: false
+      }
+    });
+    const sessionId = 'raw-opt-in';
+    const rawText = 'secret sk-abcdefghijklmnop';
+
+    await store.saveSession(
+      sessionId,
+      [
+        makeEvent({
+          id: 'evt-1',
+          sessionId,
+          timestamp: '2026-03-26T10:00:00.000Z',
+          kind: 'message',
+          payload: { text: rawText }
+        })
+      ],
+      'Raw Opt In',
+      { storeRawTranscript: true }
+    );
+
+    const loaded = await store.loadEvents(sessionId);
+    expect(loaded[0].payload).toEqual({ text: rawText });
   });
 
   it('appends events and lists sessions in updated order', async () => {

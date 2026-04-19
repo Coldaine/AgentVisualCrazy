@@ -52,18 +52,31 @@ export interface SessionRecord {
   eventCount: number;
 }
 
+export interface TranscriptPrivacySettings {
+  allowRawTranscriptStorage: boolean;
+  allowOffHostInference: boolean;
+}
+
+export interface PrivacyPolicy extends TranscriptPrivacySettings {
+  processingMode: 'local-only' | 'off-host-opted-in';
+  transcriptHandling: 'sanitized-by-default';
+}
+
 export interface LoadedSource {
   kind: 'fixture' | 'replay' | 'transcript';
   label: string;
   path?: string;
 }
 
-export interface SnapshotPayload {
+export interface RendererInput {
   source: LoadedSource;
   record: SessionRecord;
   state: DerivedState;
   events: CanonicalEvent[];
+  privacy: PrivacyPolicy;
 }
+
+export interface SnapshotPayload extends RendererInput {}
 
 export interface ExportResult {
   canceled: boolean;
@@ -74,7 +87,11 @@ export interface ExportResult {
 export interface ShadowAgentBridge {
   bootstrap: () => Promise<SnapshotPayload>;
   openReplayFile: () => Promise<SnapshotPayload | null>;
-  exportReplayJsonl: (events: CanonicalEvent[], suggestedFileName?: string) => Promise<ExportResult>;
+  exportReplayJsonl: (
+    events: CanonicalEvent[],
+    suggestedFileName?: string,
+    options?: { storeRawTranscript?: boolean }
+  ) => Promise<ExportResult>;
 }
 
 export interface AgentNode {
@@ -99,7 +116,7 @@ export interface DerivedState {
   activePhase: string;
   agentNodes: AgentNode[];
   timeline: TimelineItem[];
-  transcript: Array<{ id: string; actor: string; text: string; timestamp: string }>;
+  transcript: Array<{ id: string; actor: string; text: string; timestamp: string; redacted: boolean }>;
   fileAttention: Array<{ filePath: string; touches: number }>;
   riskSignals: string[];
   nextMoves: string[];

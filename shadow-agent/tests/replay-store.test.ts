@@ -30,11 +30,34 @@ const events: CanonicalEvent[] = [
 ];
 
 describe('replay-store', () => {
-  it('round-trips replay JSONL and ignores blank lines', () => {
+  it('sanitizes replay JSONL by default and ignores blank lines', () => {
     const serialized = serializeEvents(events);
     const parsed = parseReplay(`\n${serialized}\n\n`);
 
-    expect(parsed).toEqual(events);
+    expect(parsed[0].payload).toEqual({ text: 'Later event first.' });
+    expect(parsed[1]).toEqual(events[1]);
+  });
+
+  it('preserves raw replay JSONL only when explicitly opted in', () => {
+    const sensitiveEvents: CanonicalEvent[] = [
+      {
+        id: 'evt-sensitive',
+        sessionId: 'session-a',
+        source: 'replay',
+        timestamp: '2026-03-26T10:10:00.000Z',
+        actor: 'agent',
+        kind: 'message',
+        payload: { text: 'Email me at dev@example.com and use sk-abcdefghijklmnop' }
+      }
+    ];
+
+    const serialized = serializeEvents(sensitiveEvents, { storeRawTranscript: true }, {
+      allowRawTranscriptStorage: true,
+      allowOffHostInference: false
+    });
+    const [parsed] = parseReplay(serialized);
+
+    expect(parsed.payload).toEqual(sensitiveEvents[0].payload);
   });
 
   it('reports replay parse errors with a line number', () => {

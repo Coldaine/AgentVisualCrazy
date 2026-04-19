@@ -5,31 +5,31 @@
 
 ## Implementation
 
-- 2026-04-01: **Port agent-flow Canvas2D renderer** — Copy `third_party/agent-flow/web/components/agent-visualizer/canvas/` into `shadow-agent/src/renderer/canvas/`. Replace SVG graph with Canvas2D + D3-Force. Add `d3-force` dependency. This is the biggest single task.
+- 2026-04-01: **Port agent-flow Canvas2D renderer** — Copy `third_party/agent-flow/web/components/agent-visualizer/canvas/` into `shadow-agent/src/renderer/canvas/`. Replace SVG graph with Canvas2D + D3-Force. Add `d3-force` dependency. This is the biggest single task. [In Progress - PR #26](https://github.com/Coldaine/AgentVisualCrazy/pull/26)
 
-- 2026-04-01: **Implement Phase 2 live transcript watcher** — Build the `shadow-agent/src/capture/` pipeline from `docs/plans/plan-event-capture.md`: session discovery, transcript watcher, incremental parser, normalizer, event buffer, IPC bridge, and session manager.
+- 2026-04-01: **Implement Phase 2 live transcript watcher** — Build the `shadow-agent/src/capture/` pipeline from `docs/plans/plan-event-capture.md`: session discovery, transcript watcher, incremental parser, normalizer, event buffer, IPC bridge, and session manager. [In Progress - PR #27](https://github.com/Coldaine/AgentVisualCrazy/pull/27)
 
-- 2026-04-01: **Implement inference auth loader** — Create `src/inference/auth.ts`. Copy sidecar's `auth-json.js` pattern. Priority: `process.env` > `~/.shadow-agent/.env` > OpenCode `auth.json`.
+- 2026-04-01: **Implement inference auth loader** — Create `src/inference/auth.ts`. Copy sidecar's `auth-json.js` pattern. Priority: `process.env` > `~/.shadow-agent/.env` > OpenCode `auth.json`. [In Progress - PR #28](https://github.com/Coldaine/AgentVisualCrazy/pull/28)
 
-- 2026-04-01: **Implement OpenCode inference client** — Create `src/inference/opencode-client.ts`. Copy sidecar's `opencode-client.js`. Start server, create session, send prompt, poll completion.
+- 2026-04-01: **Implement OpenCode inference client** — Create `src/inference/opencode-client.ts`. Copy sidecar's `opencode-client.js`. Start server, create session, send prompt, poll completion. [In Progress - PR #28](https://github.com/Coldaine/AgentVisualCrazy/pull/28)
 
-- 2026-04-01: **Build shadow context packager** — Create `src/inference/context-packager.ts`. Takes `DerivedState` + recent events → `ShadowContextPacket`. Token budget ~10k.
+- 2026-04-01: **Build shadow context packager** — Create `src/inference/context-packager.ts`. Takes `DerivedState` + recent events → `ShadowContextPacket`. Token budget ~10k. [In Progress - PR #28](https://github.com/Coldaine/AgentVisualCrazy/pull/28)
 
-- 2026-04-01: **Build shadow prompt builder** — Create `src/inference/prompt-builder.ts`. System prompt from `docs/prompts/shadow-system-prompt.md`. User message from context packet.
+- 2026-04-01: **Build shadow prompt builder** — Create `src/inference/prompt-builder.ts`. System prompt from `prompts/shadow-system-prompt.json`. User message from context packet. [In Progress - PR #28](https://github.com/Coldaine/AgentVisualCrazy/pull/28)
 
-- 2026-04-01: **Wire inference trigger engine** — Create `src/inference/trigger.ts`. Triggers on: N events, 30s timer, risk escalation, specific event kinds.
+- 2026-04-01: **Wire inference trigger engine** — Create `src/inference/trigger.ts`. Triggers on: N events, 30s timer, risk escalation, specific event kinds. [In Progress - PR #28](https://github.com/Coldaine/AgentVisualCrazy/pull/28)
 
-- 2026-04-01: **Wire inference engine** — Create `src/inference/shadow-inference-engine.ts`. Connects trigger → context packager → prompt builder → OpenCode/direct API → response parser → ShadowInsight events.
+- 2026-04-01: **Wire inference engine** — Create `src/inference/shadow-inference-engine.ts`. Connects trigger → context packager → prompt builder → OpenCode/direct API → response parser → ShadowInsight events. [In Progress - PR #28](https://github.com/Coldaine/AgentVisualCrazy/pull/28)
 
 - 2026-04-01: **Build shadow MCP server** — Create `src/mcp/shadow-mcp-server.ts`. Tools: `shadow_status`, `shadow_events`, `shadow_ask`. stdio transport.
 
-- 2026-04-01: **Implement direct Anthropic API fallback** — Create `src/inference/direct-api.ts`. Fallback when OpenCode not available.
+- 2026-04-01: **Implement direct Anthropic API fallback** — Create `src/inference/direct-api.ts`. Fallback when OpenCode not available. [In Progress - PR #28](https://github.com/Coldaine/AgentVisualCrazy/pull/28)
 
 ## Observability
 
-- 2026-04-12: **Harden logger behavior and sinks** — Add explicit Error serialization, configurable log levels via environment, and durable file-write backpressure/rotation policies for `shadow-agent/src/shared/logger.ts`.
+- 2026-04-12: **Harden logger behavior and sinks** — Add explicit Error serialization, configurable log levels via environment, and durable file-write backpressure/rotation policies for `shadow-agent/src/shared/logger.ts`. [In Progress - PR #30](https://github.com/Coldaine/AgentVisualCrazy/pull/30)
 
-- 2026-04-12: **Finish instrumentation coverage** — Extend logging across capture, IPC, inference, and persistence boundaries with consistent event names and redacted context payloads.
+- 2026-04-12: **Finish instrumentation coverage** — Extend logging across capture, IPC, inference, and persistence boundaries with consistent event names and redacted context payloads. [In Progress - PR #30](https://github.com/Coldaine/AgentVisualCrazy/pull/30)
 
 ## Documentation
 
@@ -37,14 +37,14 @@
 
 ## Testing
 
-- 2026-04-12: **Expand Phase 1 edge coverage** — Add transcript-adapter, derive, replay-store, and persistence edge/corruption tests plus one transcript -> canonical events -> derive integration test.
+- 2026-04-12: **Expand Phase 1 edge coverage** — Add transcript-adapter, derive, replay-store, and persistence edge/corruption tests plus one transcript -> canonical events -> derive integration test. [In Progress - PR #29](https://github.com/Coldaine/AgentVisualCrazy/pull/29)
 
-- 2026-04-12: **Add Phase 2 capture tests before shipping the watcher** — Cover incremental parsing, session discovery, ring buffer behavior, temp-file append/truncation/rotation, and session-manager integration with fake IPC.
+- 2026-04-12: **Add Phase 2 capture tests before shipping the watcher** — Cover incremental parsing, session discovery, ring buffer behavior, temp-file append/truncation/rotation, and session-manager integration with fake IPC. [In Progress - PR #27](https://github.com/Coldaine/AgentVisualCrazy/pull/27)
 
-- 2026-04-12: **Add Electron and renderer contract tests** — Cover preload bridge API drift, main-process replay/export behavior, and renderer busy/error/open/export state transitions.
+- 2026-04-12: **Add Electron and renderer contract tests** — Cover preload bridge API drift, main-process replay/export behavior, and renderer busy/error/open/export state transitions. [In Progress - PR #31](https://github.com/Coldaine/AgentVisualCrazy/pull/31)
 
-- 2026-04-12: **Add inference contract tests with a fake client** — Cover context packing, prompt building, parser fallback, trigger thresholds, and orchestrator behavior with no live model dependency in CI.
+- 2026-04-12: **Add inference contract tests with a fake client** — Cover context packing, prompt building, parser fallback, trigger thresholds, and orchestrator behavior with no live model dependency in CI. [In Progress - PR #32](https://github.com/Coldaine/AgentVisualCrazy/pull/32)
 
-- 2026-04-12: **Add Canvas2D command tests and selective visual regressions** — Protect node/edge/particle semantics with a recorded 2D context and add a small curated screenshot suite for canonical scenes.
+- 2026-04-12: **Add Canvas2D command tests and selective visual regressions** — Protect node/edge/particle semantics with a recorded 2D context and add a small curated screenshot suite for canonical scenes. [In Progress - PR #26](https://github.com/Coldaine/AgentVisualCrazy/pull/26)
 
-- 2026-04-12: **Maintain a shared replay fixture corpus** — Store representative transcript/replay fixtures under `shadow-agent/tests/fixtures/` for parsing, derive, renderer, and inference regression coverage.
+- 2026-04-12: **Maintain a shared replay fixture corpus** — Store representative transcript/replay fixtures under `shadow-agent/tests/fixtures/` for parsing, derive, renderer, and inference regression coverage. [In Progress - PR #29](https://github.com/Coldaine/AgentVisualCrazy/pull/29)

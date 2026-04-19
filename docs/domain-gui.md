@@ -1,5 +1,9 @@
 # Domain: GUI & Rendering
 
+> **Status: Implementation Reference** — This document describes the Canvas2D + D3-Force
+> rendering targeted by PR #26. Current main uses simplified React + SVG panels. The
+> full Canvas2D renderer is on the feature branch.
+
 The rendering layer is shadow-agent's identity. Everything here is ported from or inspired
 by agent-flow (`third_party/agent-flow/`), adapted to shadow-agent's data model.
 

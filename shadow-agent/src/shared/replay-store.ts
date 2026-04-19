@@ -1,7 +1,13 @@
 import { CanonicalEvent, SessionRecord } from './schema';
+import { DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS, prepareEventsForStorage } from './privacy';
 
-export function serializeEvents(events: CanonicalEvent[]): string {
-  return events.map((event) => JSON.stringify(event)).join('\n');
+export function serializeEvents(
+  events: CanonicalEvent[],
+  options: { storeRawTranscript?: boolean } = {},
+  privacy = DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS
+): string {
+  const prepared = prepareEventsForStorage(events, privacy, options);
+  return prepared.map((event) => JSON.stringify(event)).join('\n');
 }
 
 export function parseReplay(text: string): CanonicalEvent[] {

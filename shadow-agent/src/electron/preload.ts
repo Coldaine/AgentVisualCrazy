@@ -4,8 +4,8 @@ import type { CanonicalEvent, ExportResult, ShadowAgentBridge, SnapshotPayload }
 const bridge: ShadowAgentBridge = {
   bootstrap: () => ipcRenderer.invoke('shadow-agent:bootstrap') as Promise<SnapshotPayload>,
   openReplayFile: () => ipcRenderer.invoke('shadow-agent:open-replay-file') as Promise<SnapshotPayload | null>,
-  exportReplayJsonl: (events: CanonicalEvent[], suggestedFileName?: string) =>
-    ipcRenderer.invoke('shadow-agent:export-replay-jsonl', events, suggestedFileName) as Promise<ExportResult>
+  exportReplayJsonl: (events: CanonicalEvent[], suggestedFileName?: string, options?: { storeRawTranscript?: boolean }) =>
+    ipcRenderer.invoke('shadow-agent:export-replay-jsonl', events, suggestedFileName, options) as Promise<ExportResult>
 };
 
 contextBridge.exposeInMainWorld('shadowAgent', bridge);

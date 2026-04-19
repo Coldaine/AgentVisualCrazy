@@ -28,6 +28,29 @@
 - Unified visual design strategy document
 - Shadow inference engine architecture spec (OpenCode harness + direct API fallback)
 
+## 2026-04-18 — Master coordination + architecture assessment
+
+- Investigated 9 architectural critique claims from external GPT-5 Pro review
+- 5 of 9 already addressed, 3 partially addressed, 1 valid (doc drift)
+- Wrote Master Plan A (must-do forward items): PR comment fixes, merge order, doc cleanup
+- Wrote Master Plan B (architecture opinion): honest assessment, what not to over-engineer
+- Added implementation status headers to `docs/domain-events.md`, `docs/domain-gui.md`, `docs/domain-inference.md`
+- Archived RepoVis docs (separate product, wrong repo location)
+- Created `docs/getting-started.md`
+- Opened documentation PRs #33 (Finish-line Plan) and updated metadata-sync workflows
+- Finalized Phase 1 remediation checklist
+
+## 2026-04-12 — Phase 1 implementation PRs
+
+- Opened PR #26 (Canvas2D renderer with D3-Force layout)
+- Opened PR #27 (Event capture pipeline: watcher, parser, buffer)
+- Opened PR #28 (Inference engine: OpenCode + fallback)
+- Opened PR #29 (Fixtures + Phase 1 Tests)
+- Opened PR #30 (Observability: structured logging, metrics, health checks)
+- Opened PR #31 (Renderer core testing suite)
+- Opened PR #32 (Inference contract tests with fake client)
+- All 18 issues (#8-#25) opened to track remaining work
+
 ## 2026-04-01 — Documentation structure overhaul
 
 - Created `docs/north-star.md` — project vision and pillars

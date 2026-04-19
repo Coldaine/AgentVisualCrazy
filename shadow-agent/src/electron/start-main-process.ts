@@ -75,12 +75,20 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
   });
 
   ipcMain.removeHandler('shadow-agent:export-replay-jsonl');
-  ipcMain.handle('shadow-agent:export-replay-jsonl', async (_event, events: CanonicalEvent[], suggestedFileName?: string) => {
+  ipcMain.handle(
+    'shadow-agent:export-replay-jsonl',
+    async (
+      _event,
+      events: CanonicalEvent[],
+      suggestedFileName?: string,
+      options?: { storeRawTranscript?: boolean }
+    ) => {
     try {
-      return await saveReplayFile(getMainWindow(), events, suggestedFileName);
+      return await saveReplayFile(getMainWindow(), events, suggestedFileName, options);
     } catch (error) {
       logger.error('ipc', 'export_replay_failed', {
         suggestedFileName: suggestedFileName ? path.basename(suggestedFileName) : undefined,
+        storeRawTranscript: options?.storeRawTranscript === true,
         error
       });
       return {
@@ -88,7 +96,8 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
         error: error instanceof Error ? error.message : 'Unable to export replay JSONL.'
       };
     }
-  });
+    }
+  );
 }
 
 export function startMainProcess(): void {
