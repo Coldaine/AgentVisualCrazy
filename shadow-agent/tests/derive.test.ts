@@ -20,13 +20,13 @@ function makeEvent(
   kind: CanonicalEvent['kind'],
   overrides: Partial<CanonicalEvent> = {}
 ): CanonicalEvent {
-  const timestamp = new Date(Date.UTC(2026, 3, 18, 10, 0, eventCounter)).toISOString();
-  eventCounter += 1;
+  const sequence = eventCounter + 1;
+  eventCounter = sequence;
   return {
-    id: overrides.id ?? `evt-${eventCounter}`,
+    id: overrides.id ?? `evt-${sequence}`,
     sessionId: 'test-session',
     source: 'replay',
-    timestamp: overrides.timestamp ?? timestamp,
+    timestamp: overrides.timestamp ?? new Date(Date.UTC(2026, 3, 18, 10, 0, sequence)).toISOString(),
     actor: 'assistant',
     kind,
     payload: {},

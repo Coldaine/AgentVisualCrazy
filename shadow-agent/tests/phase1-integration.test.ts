@@ -18,9 +18,17 @@ const FIXTURE_DIR = fileURLToPath(new URL('.', import.meta.url));
 const TRANSCRIPT_FIXTURES = join(FIXTURE_DIR, 'fixtures/transcripts');
 const REPLAY_FIXTURES = join(FIXTURE_DIR, 'fixtures/replays');
 
+function readTranscriptFixture(name: string): string {
+  return readFileSync(join(TRANSCRIPT_FIXTURES, name), 'utf8');
+}
+
+function readReplayFixture(name: string): string {
+  return readFileSync(join(REPLAY_FIXTURES, name), 'utf8');
+}
+
 describe('Phase 1 integration: transcript → events → deriveState', () => {
   it('happy-path: derives implementation phase + file attention', () => {
-    const raw = readFileSync(join(TRANSCRIPT_FIXTURES, 'happy-path.jsonl'), 'utf8');
+    const raw = readTranscriptFixture('happy-path.jsonl');
     const events = parseClaudeTranscriptJsonl(raw);
     const state = deriveState(events);
 
@@ -32,7 +40,7 @@ describe('Phase 1 integration: transcript → events → deriveState', () => {
   });
 
   it('risk-escalation: derives validation phase + multiple risk signals', () => {
-    const raw = readFileSync(join(TRANSCRIPT_FIXTURES, 'risk-escalation.jsonl'), 'utf8');
+    const raw = readTranscriptFixture('risk-escalation.jsonl');
     const events = parseClaudeTranscriptJsonl(raw);
     const state = deriveState(events);
 
@@ -45,7 +53,7 @@ describe('Phase 1 integration: transcript → events → deriveState', () => {
   });
 
   it('tool-heavy: derives validation phase + bash-churn risk', () => {
-    const raw = readFileSync(join(TRANSCRIPT_FIXTURES, 'tool-heavy.jsonl'), 'utf8');
+    const raw = readTranscriptFixture('tool-heavy.jsonl');
     const events = parseClaudeTranscriptJsonl(raw);
     const state = deriveState(events);
 
@@ -57,7 +65,7 @@ describe('Phase 1 integration: transcript → events → deriveState', () => {
   });
 
   it('subagent-flow: captures objective from first user message', () => {
-    const raw = readFileSync(join(TRANSCRIPT_FIXTURES, 'subagent-flow.jsonl'), 'utf8');
+    const raw = readTranscriptFixture('subagent-flow.jsonl');
     const events = parseClaudeTranscriptJsonl(raw);
     const state = deriveState(events);
 
@@ -68,7 +76,7 @@ describe('Phase 1 integration: transcript → events → deriveState', () => {
 
 describe('Phase 1 integration: replay fixtures → deriveState', () => {
   it('happy-path replay: implementation phase, logger.ts in file attention', () => {
-    const raw = readFileSync(join(REPLAY_FIXTURES, 'happy-path.replay.jsonl'), 'utf8');
+    const raw = readReplayFixture('happy-path.replay.jsonl');
     const events = parseReplay(raw);
     const state = deriveState(events, 'Happy Path Session');
 
@@ -78,7 +86,7 @@ describe('Phase 1 integration: replay fixtures → deriveState', () => {
   });
 
   it('risk-escalation replay: multiple failed tools → risk signals present', () => {
-    const raw = readFileSync(join(REPLAY_FIXTURES, 'risk-escalation.replay.jsonl'), 'utf8');
+    const raw = readReplayFixture('risk-escalation.replay.jsonl');
     const events = parseReplay(raw);
     const state = deriveState(events, 'Risk Session');
 
@@ -87,7 +95,7 @@ describe('Phase 1 integration: replay fixtures → deriveState', () => {
   });
 
   it('subagent-flow replay: parent + subagent nodes in agentNodes', () => {
-    const raw = readFileSync(join(REPLAY_FIXTURES, 'subagent-flow.replay.jsonl'), 'utf8');
+    const raw = readReplayFixture('subagent-flow.replay.jsonl');
     const events = parseReplay(raw);
     const state = deriveState(events, 'Subagent Session');
 
@@ -106,7 +114,7 @@ describe('Phase 1 integration: replay fixtures → deriveState', () => {
       'risk-escalation.replay.jsonl',
     ];
     for (const fname of fixtures) {
-      const raw = readFileSync(join(REPLAY_FIXTURES, fname), 'utf8');
+      const raw = readReplayFixture(fname);
       expect(() => {
         const events = parseReplay(raw);
         deriveState(events);
