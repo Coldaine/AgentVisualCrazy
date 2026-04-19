@@ -1,6 +1,7 @@
-import { startTransition, useEffect, useMemo, useState } from 'react';
-import type { AgentNode, DerivedState, ShadowInsight, SnapshotPayload, TimelineItem } from '../shared/schema';
+import { startTransition, useEffect, useMemo, useReducer } from 'react';
+import type { AgentNode, DerivedState, ShadowInsight, TimelineItem } from '../shared/schema';
 import { getShadowAgentBridge } from './bridge';
+import { appReducer, initialAppState } from './app-state';
 import { buildGraphLayout, formatClock, safeFileName, toLabel } from './view-model';
 
 function stateTone(state: AgentNode['state']): string {
@@ -250,9 +251,8 @@ function InsightsView({
 }
 
 export default function App() {
-  const [snapshot, setSnapshot] = useState<SnapshotPayload | null>(null);
-  const [busy, setBusy] = useState<'booting' | 'loading' | 'exporting' | null>('booting');
-  const [error, setError] = useState<string | null>(null);
+  const [state, dispatch] = useReducer(appReducer, undefined, initialAppState);
+  const { snapshot, busy, error } = state;
 
   useEffect(() => {
     let active = true;
@@ -262,14 +262,12 @@ export default function App() {
         if (!active) {
           return;
         }
-        startTransition(() => setSnapshot(data));
-        setBusy(null);
+        startTransition(() => dispatch({ type: 'BOOT_SUCCESS', snapshot: data }));
       } catch (err) {
         if (!active) {
           return;
         }
-        setError(err instanceof Error ? err.message : 'Unable to load the built-in fixture.');
-        setBusy(null);
+        dispatch({ type: 'BOOT_ERROR', message: err instanceof Error ? err.message : 'Unable to load the built-in fixture.' });
       }
     };
 
@@ -287,30 +285,26 @@ export default function App() {
   }, [snapshot]);
 
   const loadReplay = async () => {
-    setBusy('loading');
-    setError(null);
+    dispatch({ type: 'LOAD_START' });
     try {
       const data = await getShadowAgentBridge().openReplayFile();
       if (data) {
-        startTransition(() => setSnapshot(data));
+        startTransition(() => dispatch({ type: 'LOAD_SUCCESS', snapshot: data }));
+      } else {
+        dispatch({ type: 'LOAD_CANCELLED' });
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to open the replay file.');
-    } finally {
-      setBusy(null);
+      dispatch({ type: 'LOAD_ERROR', message: err instanceof Error ? err.message : 'Unable to open the replay file.' });
     }
   };
 
   const reloadFixture = async () => {
-    setBusy('booting');
-    setError(null);
+    dispatch({ type: 'BOOT_START' });
     try {
       const data = await getShadowAgentBridge().bootstrap();
-      startTransition(() => setSnapshot(data));
+      startTransition(() => dispatch({ type: 'BOOT_SUCCESS', snapshot: data }));
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to reload the fixture.');
-    } finally {
-      setBusy(null);
+      dispatch({ type: 'BOOT_ERROR', message: err instanceof Error ? err.message : 'Unable to reload the fixture.' });
     }
   };
 
@@ -318,17 +312,16 @@ export default function App() {
     if (!snapshot) {
       return;
     }
-    setBusy('exporting');
-    setError(null);
+    dispatch({ type: 'EXPORT_START' });
     try {
       const result = await getShadowAgentBridge().exportReplayJsonl(snapshot.events, exportName);
       if (result.error) {
-        setError(result.error);
+        dispatch({ type: 'EXPORT_ERROR', message: result.error });
+      } else {
+        dispatch({ type: 'EXPORT_SUCCESS' });
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unable to export replay JSONL.');
-    } finally {
-      setBusy(null);
+      dispatch({ type: 'EXPORT_ERROR', message: err instanceof Error ? err.message : 'Unable to export replay JSONL.' });
     }
   };
 
