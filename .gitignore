@@ -1,5 +1,11 @@
 node_modules/
-.husky/_/
+.claude/agents/
+.gemini/agents/
+.githooks/commit-msg
+.githooks/post-commit
+.githooks/pre-push
+.githooks/prepare-commit-msg
+.githooks/*.pre-entire
 third_party/*
 !third_party/README.md
 

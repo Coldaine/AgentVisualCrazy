@@ -21,6 +21,6 @@ The `third_party` repos are disposable local references.
 Prompt workflow:
 - `prompts/*.json` are the single source of truth
 - `docs/prompts/*.md` and runtime prompt files are generated artifacts
-- repo-root `npm install` enables the Husky pre-commit parity check
+- repo-root Git hooks are sourced from `.githooks/`
 - run `npm run prompts:generate` after prompt edits
 - run `npm run prompts:check` to verify parity locally and in CI

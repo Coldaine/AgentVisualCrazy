@@ -2,11 +2,7 @@
   "name": "agent-visual-crazy",
   "private": true,
   "scripts": {
-    "prepare": "husky",
     "prompts:generate": "npm --prefix shadow-agent run prompts:generate",
     "prompts:check": "npm --prefix shadow-agent run prompts:check"
-  },
-  "devDependencies": {
-    "husky": "^9.1.7"
   }
 }
