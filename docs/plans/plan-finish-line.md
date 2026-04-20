@@ -1,6 +1,6 @@
 # Finish-Line Plan (Issue + PR Closeout, Beginning to End)
 
-> Last updated: 2026-04-17
+> Last updated: 2026-04-17T00:00:00Z
 >
 > Goal: resolve **all currently open issues** (`#8`–`#25`) and **all currently open PRs**
 > (`#26`–`#33`) with a deterministic, dependency-safe sequence.
@@ -63,15 +63,26 @@ Project is considered "all the way home" when:
 ### Phase A — Foundation merge
 
 1. Rebase PR #29 (`work/test-phase1`) on latest `main` if needed.
-2. Run `shadow-agent` test/build gate on branch.
+2. Run `shadow-agent` test/build gate on branch:
+   ```bash
+   cd shadow-agent
+   npm test
+   npm run build
+   ```
 3. Merge PR #29.
 4. Close issues #20 and #25.
 
 ### Phase B — Core feature lines
 
-5. Rebase and merge PR #26 (Canvas renderer).
-6. Rebase and merge PR #27 (capture runtime).
-7. Rebase and merge PR #28 (inference runtime).
+- **5.** Rebase and merge PR #26 (Canvas renderer).
+- **6.** Rebase and merge PR #27 (capture runtime).
+- **7.** Rebase and merge PR #28 (inference runtime).
+   - For all of the above, ensure clean local gate:
+     ```bash
+     cd shadow-agent
+     npm test
+     npm run build
+     ```
 
 Then close issues:
 - #8 (via #26)
@@ -80,9 +91,16 @@ Then close issues:
 
 ### Phase C — Observability and contract tests
 
-8. Rebase and merge PR #30 (logger + instrumentation).
-9. Rebase and merge PR #31 (renderer/electron contracts).
-10. Rebase and merge PR #32 (inference contracts).
+- **8.** Rebase and merge PR #30 (logger + instrumentation).
+- **9.** Rebase and merge PR #31 (renderer/electron contracts).
+- **10.** Rebase and merge PR #32 (inference contracts).
+
+Each merge should follow the standard verification:
+```bash
+cd shadow-agent
+npm test
+npm run build
+```
 
 Then close issues:
 - #18–#19 (via #30)
@@ -91,30 +109,30 @@ Then close issues:
 
 ### Phase D — Create and land missing issue PRs
 
-11. **Issue #21 (capture tests)**
-   - branch from latest capture line (prefer `work/event-capture` rebased on `main`),
-   - implement required tests from `docs/plans/plan-event-capture.md` and
-     `docs/plans/plan-testing-observability.md`,
-   - open PR (new),
-   - run full test/build gate,
-   - merge PR,
-   - close issue #21.
+- **11. Issue #21 (capture tests)**
+    1. branch from latest capture line (prefer `work/event-capture` rebased on `main`),
+    2. implement required tests from `docs/plans/plan-event-capture.md` and
+       `docs/plans/plan-testing-observability.md`,
+    3. open PR (new),
+    4. run full test/build gate,
+    5. merge PR,
+    6. close issue #21.
 
-12. **Issue #24 (Canvas2D command/visual regressions)**
-   - branch from latest canvas line (prefer `work/canvas-renderer-v2` rebased on `main`),
-   - implement recorded-2D-command tests + curated snapshot fixtures,
-   - open PR (new),
-   - run full test/build gate,
-   - merge PR,
-   - close issue #24.
+- **12. Issue #24 (Canvas2D command/visual regressions)**
+    1. branch from latest canvas line (prefer `work/canvas-renderer-v2` rebased on `main`),
+    2. implement recorded-2D-command tests + curated snapshot fixtures,
+    3. open PR (new),
+    4. run full test/build gate,
+    5. merge PR,
+    6. close issue #24.
 
 ### Phase E — Final docs + bookkeeping + hygiene
 
-13. Merge PR #33 (this plan doc).
-14. Update `docs/todo.md` entries with dated closure notes (`YYYY-MM-DD: ...`).
-15. Append closeout entries to `docs/history/log.md` (append-only).
-16. Delete merged remote branches (or mark retained long-lived branches explicitly).
-17. Final `main` gate:
+- **13.** Merge PR #33 (this plan doc).
+- **14.** Update `docs/todo.md` entries with dated closure notes (`YYYY-MM-DD: ...`).
+- **15.** Append closeout entries to `docs/history/log.md` (append-only).
+- **16.** Delete merged remote branches (or mark retained long-lived branches explicitly).
+- **17.** Final `main` gate:
     - `npm test`
     - `npm run build`
     - clean working tree (`git status --short` empty)
@@ -158,3 +176,5 @@ Then close issues:
 - [ ] `main` passes full build/test gate
 - [ ] no open issue remains in `#8`–`#25`
 - [ ] no unresolved open PR remains in `#26`–`#33`
+
+
