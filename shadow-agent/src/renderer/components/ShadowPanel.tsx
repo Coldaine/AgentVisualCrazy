@@ -1,4 +1,4 @@
-import { useSpring, animated } from 'react-spring';
+import { animated, useSpring } from '@react-spring/web';
 import type { ShadowInsight } from '../../shared/schema';
 
 interface ShadowPanelProps {

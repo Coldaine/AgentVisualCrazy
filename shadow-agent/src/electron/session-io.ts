@@ -1,10 +1,17 @@
 import { dialog, type BrowserWindow } from 'electron';
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-import { deriveState } from '../shared/derive';
 import { paymentRefactorSession } from '../shared/fixtures/payment-refactor-session';
-import { buildSessionRecord, parseReplay, serializeEvents } from '../shared/replay-store';
-import type { CanonicalEvent, ExportResult, LoadedSource, SnapshotPayload } from '../shared/schema';
+import { parseReplay, serializeEvents } from '../shared/replay-store';
+import { DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS } from '../shared/privacy';
+import type {
+  CanonicalEvent,
+  ExportResult,
+  LoadedSource,
+  SnapshotPayload,
+  TranscriptPrivacySettings
+} from '../shared/schema';
+import { buildRendererInput, inferRendererInputTitle } from '../shared/renderer-input-adapter';
 import { parseClaudeTranscriptJsonl } from '../shared/transcript-adapter';
 import { createLogger } from '../shared/logger';
 
@@ -17,44 +24,24 @@ function formatErrorMessage(error: unknown): string {
   return String(error);
 }
 
-export function inferTitle(events: CanonicalEvent[], fallback: string): string {
-  const labeledSession = events.find(
-    (event) => event.kind === 'session_started' && typeof event.payload.label === 'string' && event.payload.label.length > 0
-  );
-  if (labeledSession) {
-    return String(labeledSession.payload.label);
-  }
+export const inferTitle = inferRendererInputTitle;
 
-  const sessionTitle = events.find(
-    (event) => event.kind === 'context_snapshot' && typeof event.payload.title === 'string' && event.payload.title.length > 0
-  );
-  if (sessionTitle) {
-    return String(sessionTitle.payload.title);
-  }
+export function createSnapshot(
+  events: CanonicalEvent[],
+  source: LoadedSource,
+  privacySettings: TranscriptPrivacySettings = DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS
+): SnapshotPayload {
+  const snapshot = buildRendererInput(events, {
+    source,
+    fallbackTitle: source.label,
+    privacySettings
+  });
 
-  const firstUserMessage = events.find(
-    (event) => event.kind === 'message' && event.actor === 'user' && typeof event.payload.text === 'string'
-  );
-  if (firstUserMessage) {
-    return String(firstUserMessage.payload.text).slice(0, 80);
-  }
-
-  return fallback;
-}
-
-export function createSnapshot(events: CanonicalEvent[], source: LoadedSource): SnapshotPayload {
-  const title = inferTitle(events, source.label);
-  const record = buildSessionRecord(events, title);
   logger.info('ipc', 'ipc.snapshot.created', {
     sourceKind: source.kind,
     eventCount: events.length
   });
-  return {
-    source,
-    record,
-    state: deriveState(events, record.title),
-    events
-  };
+  return snapshot;
 }
 
 export function detectReplayFormat(raw: string): 'replay' | 'transcript' {
@@ -86,7 +73,10 @@ export function detectReplayFormat(raw: string): 'replay' | 'transcript' {
   return 'transcript';
 }
 
-export async function loadSnapshotFromFile(filePath: string): Promise<SnapshotPayload> {
+export async function loadSnapshotFromFile(
+  filePath: string,
+  privacySettings: TranscriptPrivacySettings = DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS
+): Promise<SnapshotPayload> {
   const raw = await readFile(filePath, 'utf8');
   const primaryFormat = detectReplayFormat(raw);
   const secondaryFormat = primaryFormat === 'replay' ? 'transcript' : 'replay';
@@ -153,15 +143,17 @@ export async function loadSnapshotFromFile(filePath: string): Promise<SnapshotPa
     kind: format,
     label: fileName,
     path: filePath
-  });
+  }, privacySettings);
 }
 
-export function buildFixtureSnapshot(): SnapshotPayload {
+export function buildFixtureSnapshot(
+  privacySettings: TranscriptPrivacySettings = DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS
+): SnapshotPayload {
   logger.info('ipc', 'ipc.snapshot.fixture_built', { eventCount: paymentRefactorSession.length });
   return createSnapshot(paymentRefactorSession, {
     kind: 'fixture',
     label: 'Built-in replay fixture'
-  });
+  }, privacySettings);
 }
 
 export async function pickOpenFile(mainWindow: BrowserWindow | null): Promise<string | undefined> {
@@ -186,7 +178,9 @@ export async function pickOpenFile(mainWindow: BrowserWindow | null): Promise<st
 export async function saveReplayFile(
   mainWindow: BrowserWindow | null,
   events: CanonicalEvent[],
-  suggestedFileName = 'shadow-agent-replay.jsonl'
+  suggestedFileName = 'shadow-agent-replay.jsonl',
+  options: { storeRawTranscript?: boolean } = {},
+  privacySettings: TranscriptPrivacySettings = DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS
 ): Promise<ExportResult> {
   try {
     const result = await dialog.showSaveDialog(mainWindow ?? null!, {
@@ -200,7 +194,7 @@ export async function saveReplayFile(
       return { canceled: true };
     }
 
-    await writeFile(result.filePath, serializeEvents(events), 'utf8');
+    await writeFile(result.filePath, serializeEvents(events, options, privacySettings), 'utf8');
     logger.info('ipc', 'ipc.export.saved', { fileName: path.basename(result.filePath), eventCount: events.length });
     return { canceled: false, filePath: result.filePath };
   } catch (error) {

@@ -30,6 +30,7 @@ export type AppAction =
   | { type: 'BOOT_START' }
   | { type: 'BOOT_SUCCESS'; snapshot: SnapshotPayload }
   | { type: 'BOOT_ERROR'; message: string }
+  | { type: 'LIVE_UPDATE'; snapshot: SnapshotPayload }
   | { type: 'LOAD_START' }
   | { type: 'LOAD_SUCCESS'; snapshot: SnapshotPayload }
   | { type: 'LOAD_CANCELLED' }
@@ -56,6 +57,9 @@ export function appReducer(state: AppState, action: AppAction): AppState {
 
     case 'BOOT_ERROR':
       return { ...state, busy: null, error: action.message };
+
+    case 'LIVE_UPDATE':
+      return { ...state, error: null, snapshot: action.snapshot };
 
     case 'LOAD_START':
       return { ...state, busy: 'loading', error: null };

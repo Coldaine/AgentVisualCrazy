@@ -14,23 +14,59 @@ The current slice is intentionally small:
 - opens replay JSONL or Claude transcript JSONL from disk
 - normalizes events into a canonical schema
 - derives a lightweight session state with risks, next moves, and file attention
-- renders an Electron dashboard with graph, timeline, transcript, and insight panels
+- renders a platform-agnostic web dashboard with graph, timeline, transcript, and insight panels
 - exports canonical replay JSONL back to disk
+
+Electron is now just one optional host shell. The shared renderer mounts through a host contract,
+ships a standalone library build, and can also be registered as a custom element for web embeds.
+
+## Privacy Defaults
+
+Shadow-agent runs in local-only mode by default.
+
+- Transcript-like content is sanitized before it is rendered, exported, persisted, or prepared for prompt delivery.
+- Off-host inference stays disabled until the user explicitly opts in.
+- Raw transcript storage/export requires its own explicit opt-in.
+
+Opt in through process environment variables or `~/.shadow-agent/.env`:
+
+```bash
+SHADOW_ALLOW_OFF_HOST_INFERENCE=true
+SHADOW_ALLOW_RAW_TRANSCRIPT_STORAGE=true
+```
 
 ## Commands
 
 ```bash
 npm install
+npm run prompts:generate
 npm run prompts:check
 npm test
+npm run build:web
 npm run build
 ```
 
-After building, launch the desktop shell with:
+`npm install` also bootstraps the repo's `.githooks/` pre-commit checks so
+prompt parity and the test suite run before each commit.
+
+`npm run build:web` emits the reusable renderer bundle in `dist-web/`.
+
+After `npm run build`, launch the Electron shell with:
 
 ```bash
 npx electron dist-electron/main.cjs
 ```
+
+## Credentials
+
+Inference credentials prefer secure sources:
+
+- `process.env`
+- `~/.shadow-agent/credentials.enc.json` (encrypted local store)
+- legacy plaintext fallbacks only when `SHADOW_ALLOW_FILE_CREDENTIAL_FALLBACK=1`
+
+See [`docs/domain-inference.md`](../docs/domain-inference.md) for the consent workflow
+and secure permission guidance.
 
 ## Scope
 

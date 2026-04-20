@@ -1,11 +1,13 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { parse as parseYaml } from 'yaml';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const repoRoot = path.resolve(__dirname, '..', '..');
 const promptsDir = path.join(repoRoot, 'prompts');
+const promptDefinitionExtensions = new Set(['.json', '.yaml', '.yml']);
 
 function codeFence(language, content) {
   return `\`\`\`${language}\n${content}\n\`\`\``;
@@ -18,19 +20,38 @@ function blockquote(text) {
     .join('\n');
 }
 
-export async function loadPromptDefinitions() {
-  const entries = await fs.readdir(promptsDir, { withFileTypes: true });
+export async function loadPromptDefinitions(directory = promptsDir) {
+  const entries = await fs.readdir(directory, { withFileTypes: true });
   const definitions = [];
 
   for (const entry of entries) {
-    if (!entry.isFile() || !entry.name.endsWith('.json')) {
+    if (!entry.isFile()) {
       continue;
     }
 
-    const filePath = path.join(promptsDir, entry.name);
+    const filePath = path.join(directory, entry.name);
+    const extension = path.extname(filePath).toLowerCase();
+
+    if (!promptDefinitionExtensions.has(extension)) {
+      continue;
+    }
+
     const raw = await fs.readFile(filePath, 'utf8');
-    const definition = JSON.parse(raw);
-    definitions.push(definition);
+    const definition =
+      extension === '.json'
+        ? JSON.parse(raw)
+        : parseYaml(raw);
+
+    if (!definition || typeof definition !== 'object' || Array.isArray(definition)) {
+      throw new Error(`Prompt definition ${filePath} did not parse to an object.`);
+    }
+
+    definitions.push({
+      ...definition,
+      sourcePath:
+        definition.sourcePath ??
+        path.relative(repoRoot, filePath).split(path.sep).join('/'),
+    });
   }
 
   return definitions.sort((a, b) => a.id.localeCompare(b.id));
@@ -144,6 +165,17 @@ async function writeFileIfChanged(targetPath, content) {
   return true;
 }
 
+async function readFileIfPresent(targetPath) {
+  try {
+    return await fs.readFile(targetPath, 'utf8');
+  } catch (error) {
+    if (error.code === 'ENOENT') {
+      return null;
+    }
+    throw error;
+  }
+}
+
 export async function generatePromptArtifacts() {
   const definitions = await loadPromptDefinitions();
   const results = [];
@@ -179,13 +211,17 @@ export async function checkPromptArtifacts() {
     const docsPath = path.join(repoRoot, definition.docsPath);
     const runtimePath = path.join(repoRoot, definition.runtimePath);
 
-    const actualDocs = await fs.readFile(docsPath, 'utf8');
-    if (actualDocs !== expectedDocs) {
+    const actualDocs = await readFileIfPresent(docsPath);
+    if (actualDocs === null) {
+      mismatches.push(`${definition.docsPath} is missing for ${definition.sourcePath}`);
+    } else if (actualDocs !== expectedDocs) {
       mismatches.push(`${definition.docsPath} is out of date with ${definition.sourcePath}`);
     }
 
-    const actualRuntime = await fs.readFile(runtimePath, 'utf8');
-    if (actualRuntime !== expectedRuntime) {
+    const actualRuntime = await readFileIfPresent(runtimePath);
+    if (actualRuntime === null) {
+      mismatches.push(`${definition.runtimePath} is missing for ${definition.sourcePath}`);
+    } else if (actualRuntime !== expectedRuntime) {
       mismatches.push(`${definition.runtimePath} is out of date with ${definition.sourcePath}`);
     }
   }

@@ -6,8 +6,9 @@
  * new session is detected.
  */
 import type { WebContents } from 'electron';
-import type { SnapshotPayload, LoadedSource } from '../shared/schema';
-import { deriveState } from '../shared/derive';
+import { DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS } from '../shared/privacy';
+import type { SnapshotPayload, LoadedSource, TranscriptPrivacySettings } from '../shared/schema';
+import { buildRendererInput } from '../shared/renderer-input-adapter';
 import { discoverActiveSession, type DiscoveredSession } from './session-discovery';
 import { watchTranscript, type TranscriptWatcher } from './transcript-watcher';
 import { createIncrementalParser } from './incremental-parser';
@@ -25,36 +26,46 @@ export interface SessionManager {
   start(overridePath?: string): Promise<void>;
   stop(): void;
   getBuffer(): EventBuffer;
-  getCurrentSnapshot(): SnapshotPayload | null;
+  getCurrentSnapshot(): Promise<SnapshotPayload | null>;
 }
 
 export function createSessionManager(
-  getWebContents: () => WebContents | null
+  getWebContents: () => WebContents | null,
+  options: {
+    privacy?: TranscriptPrivacySettings;
+    queuePersistenceRoot?: string;
+    queueMemoryCapacity?: number;
+    queueTotalCapacity?: number;
+  } = {}
 ): SessionManager {
-  const buffer = createEventBuffer();
+  const privacy = options.privacy ?? DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS;
+  const buffer = createEventBuffer({
+    persistenceRoot: options.queuePersistenceRoot,
+    memoryCapacity: options.queueMemoryCapacity,
+    totalCapacity: options.queueTotalCapacity
+  });
   let activeSession: DiscoveredSession | null = null;
   let activeWatcher: TranscriptWatcher | null = null;
   let rediscoveryTimer: ReturnType<typeof setInterval> | null = null;
   let bridgeCleanup: (() => void) | null = null;
   let sessionTitle = 'Live session';
 
-  const buildSnapshot = (): SnapshotPayload | null => {
-    const events = buffer.getAll();
-    const state = deriveState(events);
+  const buildSnapshot = async (): Promise<SnapshotPayload | null> => {
+    const events = await buffer.getAll();
     const source: LoadedSource = {
       kind: 'transcript',
       label: sessionTitle,
-      path: activeSession?.filePath,
+      path: activeSession?.filePath
     };
-    const record = {
-      sessionId: state.sessionId || activeSession?.sessionId || 'unknown',
-      title: sessionTitle,
-      startedAt: events[0]?.timestamp ?? new Date().toISOString(),
-      updatedAt: events.at(-1)?.timestamp ?? new Date().toISOString(),
-      source: 'claude-transcript' as const,
-      eventCount: events.length,
+
+    return {
+      ...buildRendererInput(events, {
+        source,
+        fallbackTitle: sessionTitle,
+        privacySettings: privacy
+      }),
+      captureQueue: buffer.getMetrics()
     };
-    return { source, record, state, events };
   };
 
   const teardown = () => {
@@ -69,6 +80,7 @@ export function createSessionManager(
     teardown();
     activeSession = session;
     sessionTitle = `Live: ${session.sessionId.slice(0, 12)}`;
+    await buffer.setSession(session.sessionId);
 
     logger.info('capture', 'session_manager.start_session', {
       filePath: session.filePath,
@@ -88,8 +100,11 @@ export function createSessionManager(
         }
       });
       if (catchupEvents.length > 0) {
-        buffer.push(catchupEvents);
-        logger.info('capture', 'session_manager.catchup', { count: catchupEvents.length });
+        const result = await buffer.push(catchupEvents);
+        logger.info('capture', 'session_manager.catchup', {
+          count: catchupEvents.length,
+          backpressureLevel: result.backpressure.level
+        });
       }
     } catch (err) {
       logger.warn('capture', 'session_manager.catchup_failed', { error: err });
@@ -99,13 +114,24 @@ export function createSessionManager(
     const parser = createIncrementalParser((entry) => {
       const events = normalizeEntry(entry, session.sessionId);
       if (events.length > 0) {
-        buffer.push(events);
+        void buffer.push(events).catch((error) => {
+          logger.error('capture', 'session_manager.push_failed', {
+            sessionId: session.sessionId,
+            error
+          });
+        });
       }
     });
 
-    activeWatcher = watchTranscript(session.filePath, (chunk) => {
-      parser.push(chunk);
-    });
+    activeWatcher = watchTranscript(
+      session.filePath,
+      (chunk) => {
+        parser.push(chunk);
+      },
+      {
+        getBackpressure: () => buffer.getBackpressure()
+      }
+    );
   };
 
   const runRediscovery = async (overridePath?: string) => {
@@ -117,7 +143,6 @@ export function createSessionManager(
       logger.info('capture', 'session_manager.new_session_detected', {
         filePath: found.filePath,
       });
-      buffer.clear();
       await startSession(found);
     }
   };
@@ -129,6 +154,7 @@ export function createSessionManager(
         buffer,
         getWebContents,
         buildSnapshot,
+        privacy,
       });
       bridgeCleanup = bridge.start();
 

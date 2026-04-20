@@ -19,8 +19,8 @@ The `third_party` repos are disposable local references.
 - They are intentionally not part of the main repo history.
 
 Prompt workflow:
-- `prompts/*.json` are the single source of truth
+- `prompts/*.{json,yaml,yml}` are the single source of truth
 - `docs/prompts/*.md` and runtime prompt files are generated artifacts
-- repo-root Git hooks are sourced from `.githooks/`
+- repo-root Git hooks are sourced from `.githooks/` and auto-installed during `npm install`
 - run `npm run prompts:generate` after prompt edits
 - run `npm run prompts:check` to verify parity locally and in CI

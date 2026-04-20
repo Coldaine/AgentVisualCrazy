@@ -52,7 +52,13 @@ function makeSnapshot(): SnapshotPayload {
       agentNodes: [], timeline: [], transcript: [], fileAttention: [],
       riskSignals: [], nextMoves: [], shadowInsights: []
     },
-    events: []
+    events: [],
+    privacy: {
+      allowRawTranscriptStorage: false,
+      allowOffHostInference: false,
+      processingMode: 'local-only',
+      transcriptHandling: 'sanitized-by-default'
+    }
   };
 }
 
@@ -123,7 +129,13 @@ describe('registerIpcHandlers', () => {
     const handler = getHandlerFor('shadow-agent:open-replay-file');
     const result = await handler();
 
-    expect(loadSnapshotFromFile).toHaveBeenCalledWith(filePath);
+    expect(loadSnapshotFromFile).toHaveBeenCalledWith(
+      filePath,
+      expect.objectContaining({
+        allowRawTranscriptStorage: false,
+        allowOffHostInference: false
+      })
+    );
     expect(result).toBe(snapshot);
   });
 
@@ -157,10 +169,10 @@ describe('registerIpcHandlers', () => {
 
     registerIpcHandlers(() => null);
     const handler = getHandlerFor('shadow-agent:export-replay-jsonl');
-    const result = await handler(undefined, [], 'out.jsonl') as { error: string };
+    const result = await handler(undefined, [], 'out.jsonl') as { canceled: boolean; error?: string };
 
     expect(result.error).toBe('disk full');
-    expect((result as { canceled: boolean }).canceled).toBe(false);
+    expect(result.canceled).toBe(false);
   });
 });
 
@@ -169,22 +181,31 @@ describe('registerIpcHandlers', () => {
 // ---------------------------------------------------------------------------
 
 describe('ShadowAgentBridge surface', () => {
-  it('exposes exactly the three expected methods', async () => {
+  it('exposes the live bridge methods alongside the file operations', async () => {
     // Import the type and verify the bridge object shape matches
-    const { getShadowAgentBridge } = await import('../../src/renderer/bridge');
+    const { getShadowAgentBridge } = await import('../../src/electron/renderer-host');
     const bridge = {
       bootstrap: async () => makeSnapshot(),
+      onLiveEvents: () => () => undefined,
+      getLiveSnapshot: async () => null as SnapshotPayload | null,
       openReplayFile: async () => null as SnapshotPayload | null,
-      exportReplayJsonl: async () => ({ canceled: true })
+      exportReplayJsonl: async (_events = [], _suggestedFileName?: string, _options?: { storeRawTranscript?: boolean }) => ({ canceled: true })
     };
-    (globalThis as { window: { shadowAgent: typeof bridge } }).window = { shadowAgent: bridge };
+    (globalThis as unknown as { window: { shadowAgent: typeof bridge } }).window = { shadowAgent: bridge };
 
     const result = getShadowAgentBridge();
     expect(typeof result.bootstrap).toBe('function');
+    expect(typeof result.onLiveEvents).toBe('function');
+    expect(typeof result.getLiveSnapshot).toBe('function');
     expect(typeof result.openReplayFile).toBe('function');
     expect(typeof result.exportReplayJsonl).toBe('function');
-    // No extra methods beyond the three documented ones
-    expect(Object.keys(result).sort()).toEqual(['bootstrap', 'exportReplayJsonl', 'openReplayFile']);
+    expect(Object.keys(result).sort()).toEqual([
+      'bootstrap',
+      'exportReplayJsonl',
+      'getLiveSnapshot',
+      'onLiveEvents',
+      'openReplayFile'
+    ]);
 
     Reflect.deleteProperty(globalThis, 'window');
   });

@@ -2,7 +2,7 @@ import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS } from '../shared/privacy';
 import { buildSessionRecord, parseReplay, serializeEvents } from '../shared/replay-store';
-import type { CanonicalEvent, SessionRecord } from '../shared/schema';
+import type { CanonicalEvent, SessionRecord, TranscriptPrivacySettings } from '../shared/schema';
 import { createLogger } from '../shared/logger';
 
 const logger = createLogger();
@@ -23,7 +23,7 @@ export interface StoredReplaySession {
   events: CanonicalEvent[];
 }
 
-const DEFAULT_OPTIONS: Required<FileReplayStoreOptions> = {
+const DEFAULT_OPTIONS: Omit<Required<FileReplayStoreOptions>, 'privacy'> = {
   sessionsDirName: 'sessions',
   eventsFileName: 'events.jsonl',
   recordFileName: 'session.json'
@@ -106,7 +106,7 @@ export class FileReplayStore {
       kind: event.kind,
       totalEvents: nextEvents.length
     });
-    return this.saveSession(sessionId, nextEvents, title ?? current?.record.title);
+    return this.saveSession(sessionId, nextEvents, title ?? current?.record.title, options);
   }
 
   async loadSession(sessionId: string): Promise<StoredReplaySession> {

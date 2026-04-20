@@ -6,9 +6,11 @@
   "description": "Passive shadow observer that visualizes and interprets agent activity.",
   "main": "dist-electron/main.cjs",
   "scripts": {
+    "build:web": "vite build --config vite.lib.config.ts",
     "build:renderer": "vite build",
     "build:electron": "node electron.esbuild.mjs",
-    "build": "npm run build:renderer && npm run build:electron",
+    "build": "npm run build:web && npm run build:renderer && npm run build:electron",
+    "prepare": "npm --prefix .. run hooks:install",
     "start": "electron dist-electron/main.cjs",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
@@ -16,14 +18,15 @@
     "prompts:check": "node scripts/check-prompts.mjs"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.90.0",
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-tooltip": "^1.2.8",
+    "@react-spring/web": "^9.7.5",
     "class-variance-authority": "^0.7.1",
     "d3-force": "^3.0.0",
     "electron": "^39.8.5",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0",
-    "react-spring": "^9.7.5"
+    "react-dom": "^19.1.0"
   },
   "devDependencies": {
     "@types/d3-force": "^3.0.10",
@@ -35,6 +38,7 @@
     "esbuild": "^0.25.6",
     "typescript": "^5.8.3",
     "vite": "^7.3.2",
-    "vitest": "^3.2.4"
+    "vitest": "^3.2.4",
+    "yaml": "^2.8.1"
   }
 }

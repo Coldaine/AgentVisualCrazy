@@ -38,6 +38,12 @@ function makeSnapshot(overrides: Partial<SnapshotPayload> = {}): SnapshotPayload
       shadowInsights: []
     },
     events: [],
+    privacy: {
+      allowRawTranscriptStorage: false,
+      allowOffHostInference: false,
+      processingMode: 'local-only',
+      transcriptHandling: 'sanitized-by-default'
+    },
     ...overrides
   };
 }
@@ -83,6 +89,18 @@ describe('appReducer — boot flow', () => {
     expect(next.error).toBe('fixture failed');
     // snapshot is preserved from before (was null)
     expect(next.snapshot).toBeNull();
+  });
+
+  it('LIVE_UPDATE replaces snapshot, clears error, and preserves busy state', () => {
+    const priorSnapshot = makeSnapshot({ source: { kind: 'fixture', label: 'fixture.jsonl' } });
+    const liveSnapshot = makeSnapshot({ source: { kind: 'transcript', label: 'Live: session-1' } });
+    const prior: AppState = { busy: null, error: 'old error', snapshot: priorSnapshot };
+
+    const next = appReducer(prior, { type: 'LIVE_UPDATE', snapshot: liveSnapshot });
+
+    expect(next.busy).toBeNull();
+    expect(next.error).toBeNull();
+    expect(next.snapshot).toBe(liveSnapshot);
   });
 });
 

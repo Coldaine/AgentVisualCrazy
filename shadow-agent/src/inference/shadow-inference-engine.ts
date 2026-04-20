@@ -6,8 +6,13 @@
  * Only one inference call is in flight at a time. If a new trigger fires while
  * an inference is running, it is queued (only one pending allowed; extras are dropped).
  */
-import type { CanonicalEvent, DerivedState, ShadowInsight } from '../shared/schema';
+import type {
+  DerivedState,
+  ShadowInsight,
+  TranscriptPrivacySettings
+} from '../shared/schema';
 import { createLogger } from '../shared/logger';
+import { DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS } from '../shared/privacy';
 import { buildContextPacket } from './context-packager';
 import { buildInferenceRequest } from './prompt-builder';
 import { parseModelResponse } from './response-parser';
@@ -18,14 +23,16 @@ import type { InferenceClient } from './inference-client';
 import type { EventBufferLike } from './inference-client';
 
 const logger = createLogger({ minLevel: 'info' });
+const INFERENCE_CONSUMER_ID = 'inference-trigger';
 
 export type InsightCallback = (insights: ShadowInsight[]) => void;
 
 export interface InferenceEngineOptions {
   buffer: EventBufferLike;
-  getState: () => DerivedState;
+  getState: () => DerivedState | Promise<DerivedState>;
   onInsights: InsightCallback;
   triggerConfig?: Partial<TriggerConfig>;
+  privacy?: TranscriptPrivacySettings;
 }
 
 export interface InferenceEngine {
@@ -35,10 +42,17 @@ export interface InferenceEngine {
 
 export function createInferenceEngine(opts: InferenceEngineOptions): InferenceEngine {
   const { buffer, getState, onInsights } = opts;
+  const privacy = opts.privacy ?? DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS;
   let client: InferenceClient | null = null;
   let inflight = false;
   let pendingTrigger = false;
   let unsubscribeBuffer: (() => void) | null = null;
+  let drainingPending = false;
+  let pendingDrain = false;
+  const supportsBufferedDrain =
+    typeof buffer.registerConsumer === 'function' &&
+    typeof buffer.readPending === 'function' &&
+    typeof buffer.commitCheckpoint === 'function';
 
   const runInference = async () => {
     if (!client) return;
@@ -49,10 +63,13 @@ export function createInferenceEngine(opts: InferenceEngineOptions): InferenceEn
 
     inflight = true;
     try {
-      const state = getState();
-      const events = buffer.getAll();
+      const state = await getState();
+      const events = await buffer.getAll();
       const packet = buildContextPacket(state, events);
-      const request = buildInferenceRequest(packet);
+      const request = buildInferenceRequest(packet, {
+        delivery: 'off-host',
+        privacy
+      });
 
       logger.info('inference', 'engine.run_start', { eventCount: events.length });
       const result = await client.infer(request);
@@ -79,9 +96,43 @@ export function createInferenceEngine(opts: InferenceEngineOptions): InferenceEn
 
   const trigger = createInferenceTrigger(() => void runInference(), opts.triggerConfig);
 
+  const drainPendingEvents = async () => {
+    if (!supportsBufferedDrain) {
+      return;
+    }
+    if (drainingPending) {
+      pendingDrain = true;
+      return;
+    }
+
+    drainingPending = true;
+    try {
+      do {
+        pendingDrain = false;
+        const pending = await buffer.readPending(INFERENCE_CONSUMER_ID);
+        if (pending.events.length === 0) {
+          continue;
+        }
+
+        trigger.onEvents(pending.events);
+        await buffer.commitCheckpoint(INFERENCE_CONSUMER_ID, pending.events.at(-1)!.id);
+      } while (pendingDrain);
+    } finally {
+      drainingPending = false;
+    }
+  };
+
   return {
     async start() {
       await loadCredentials();
+
+      if (!privacy.allowOffHostInference) {
+        logger.info('inference', 'engine.local_only_mode', {
+          message: 'Off-host inference is disabled until the user explicitly opts in.'
+        });
+        return;
+      }
+
       client = await createDirectApiClient();
 
       if (!client) {
@@ -93,7 +144,15 @@ export function createInferenceEngine(opts: InferenceEngineOptions): InferenceEn
 
       logger.info('inference', 'engine.started', { provider: client.provider });
 
+      if (supportsBufferedDrain) {
+        await buffer.registerConsumer(INFERENCE_CONSUMER_ID, { startAt: 'latest' });
+      }
+
       unsubscribeBuffer = buffer.subscribe((events) => {
+        if (supportsBufferedDrain) {
+          void drainPendingEvents();
+          return;
+        }
         trigger.onEvents(events);
       });
     },

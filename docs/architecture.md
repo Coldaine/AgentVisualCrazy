@@ -19,8 +19,8 @@ cheap, no extra runtime dependency beyond Canvas2D). A Three.js particle field
 (`@react-three/fiber`) is an optional alternative when deeper parallax is wanted;
 see the **Optional Background Atmosphere Layer (Choose One)** step in
 [`docs/plans/plan-gui-rendering.md`](plans/plan-gui-rendering.md) for the decision
-and tradeoffs. React 19 + Tailwind handle the glass panel overlays. The rendering
-layer is Electron-native but portable enough to embed in VS Code later.
+and tradeoffs. React 19 + Tailwind handle the glass panel overlays. The renderer now
+ships as a shared web surface that Electron hosts today and other shells can embed later.
 
 We rejected React Flow (less visual control), Three.js-only (overkill for 2D), and
 keeping SVG (can't achieve the target visual quality).
@@ -39,8 +39,17 @@ already has OpenCode configured, shadow-agent inherits credentials automatically
 additional auth setup.
 
 When OpenCode isn't available, we fall back to the Anthropic SDK directly. The auth chain
-loads credentials in priority order: `process.env` → `~/.shadow-agent/.env` →
-`~/.local/share/opencode/auth.json`.
+loads credentials in priority order: `process.env` →
+`~/.shadow-agent/credentials.enc.json` (Electron `safeStorage` encrypted local store) →
+legacy file-based fallbacks when `SHADOW_ALLOW_FILE_CREDENTIAL_FALLBACK=1` is explicitly set.
+Those legacy fallbacks are `~/.shadow-agent/.env` and `~/.local/share/opencode/auth.json`.
+When consented legacy credentials are loaded, shadow-agent migrates supported provider keys
+into the encrypted store for future runs.
+
+On POSIX systems, `~/.shadow-agent/` should be owner-only (`0700`) and
+`credentials.enc.json` should be read/write for the owner only (`0600`). On Windows,
+keep the store inside the user's profile so it inherits per-user ACL protection; do not
+copy it into shared folders.
 
 Inference and transcript handling are local-only by default. Transcript text is sanitized
 before it is rendered, exported, persisted, or prepared for prompt delivery. Off-host
@@ -59,8 +68,8 @@ budget.
 We watch Claude Code's JSONL transcript files via a filesystem watcher. This is the
 simplest reliable approach — Claude Code writes JSONL, we tail it. No need to configure
 hooks on the observed agent's side. Events are parsed incrementally, normalized into
-`CanonicalEvent` objects, and streamed to the renderer via Electron IPC through an
-in-memory ring buffer.
+`CanonicalEvent` objects, and streamed to the renderer via IPC through a bounded event
+queue with a hot in-memory window, spill-to-disk persistence, and per-consumer checkpoints.
 
 An HTTP hook server may come later (Phase 3+) for lower latency, but the architecture
 is transport-agnostic — the buffer and IPC bridge don't care where events come from.
@@ -73,10 +82,10 @@ watcher, canonical schema, normalizer, session discovery, IPC bridge.
 
 ## Desktop Shell
 
-Standalone Electron app with React 19 renderer, bundled by Vite. Already implemented in
-the Phase 1 prototype. Electron gives us native file access, tray integration, and
-system-level observation. We build the standalone app first; VS Code webview embedding
-is future work.
+Electron is the first host shell, bundled by Vite, because it gives us native file access,
+tray integration, and system-level observation. The renderer itself is now host-agnostic:
+Electron mounts it today, `build:web` emits a reusable bundle, and custom-element/webview
+embedding stays open for future phases.
 
 ## Shadow Exposes Itself (MCP Server)
 
@@ -107,12 +116,11 @@ record tests for drawing semantics plus a small curated set of visual regression
 
 ## Current Status & Roadmap
 
-We are currently in **Phase 2 (In Progress)**. Inference scaffolding has landed on
-main (auth, context packager, prompt builder, response parser, trigger, orchestrator,
-direct-API fallback, MCP server). The Canvas2D renderer (PR #26) and live capture
-pipeline (PR #27) are still on feature branches and are the next product features to
-ship. This is not a release candidate — Phase 2 closes when those two PRs land and
-inference is wired to live events.
+We are currently in **Phase 2 (Substantially Complete)**. The core feature lines are on
+main: Canvas2D + D3-Force rendering (PR #26), live transcript capture (PR #27),
+inference scaffolding plus MCP exposure (PR #28), and observability hardening (PR #30).
+Phase 2 closes when the live capture → inference → renderer loop is polished and the
+remaining optional harness work is either implemented or explicitly deferred.
 
 ### Phase 1: Core Foundation (Completed)
 - Canonical event schema and derivation logic.
@@ -122,14 +130,18 @@ inference is wired to live events.
 - Logger, privacy sanitization, and observability seams.
 - Merged via: #29 (Fixtures), #30 (Observability), #31 (Renderer Tests).
 
-### Phase 2: Live Interaction (In Progress)
+### Phase 2: Live Interaction (Substantially Complete)
 - **Inference Engine**: Auth loader, context packager, prompt builder (with
   `ShadowContextPacket` type and `buildUserMessage`), response parser, trigger logic,
   shadow inference engine orchestrator, direct Anthropic API fallback, and MCP server.
-  Landed on main via PR #28 and #32. OpenCode client not yet implemented.
-- **Live Event Capture**: `fs.watch` based transcript tailing (PR #27 — not yet merged).
-- **Advanced Rendering**: Porting Canvas2D + D3-Force from `agent-flow` (PR #26 — not yet merged).
-- **Integration**: Full end-to-end flow from agent activity to holographic insight.
+  Landed on main via PR #28, #32, and follow-up hardening work on 2026-04-20. OpenCode
+  client remains the main deferred item.
+- **Live Event Capture**: `fs.watch` transcript tailing, bounded event queue, IPC bridge,
+  and session manager landed on main via PR #27.
+- **Advanced Rendering**: Canvas2D + D3-Force renderer, overlay panels, and host abstraction
+  landed on main via PR #26 and follow-up renderer hardening.
+- **Integration**: End-to-end local flow now exists on main; remaining work is fit-and-finish,
+  embed surfaces, and deeper inference-provider support.
 
 ### Phase 3+: Advanced Features (Planned)
 - **OpenCode Integration**: Deep bidirectional communication.
