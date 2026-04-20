@@ -242,18 +242,20 @@ describe('structured logger — file rotation', () => {
 });
 
 describe('structured logger — bounded write queue backpressure', () => {
-  it('drops writes and increments droppedWriteCount when queue is full', () => {
+  it('drops writes and increments droppedWriteCount when queue is full', async () => {
+    const tempDir = await mkdtemp(path.join(os.tmpdir(), 'shadow-logger-backpressure-'));
+    const logFile = path.join(tempDir, 'shadow.log');
     const logger = createLogger({
       minLevel: 'debug',
       includeConsole: false,
       includeMemory: false,
-      filePath: '/dev/null',
+      filePath: logFile,
       maxQueueDepth: 1
     });
 
     // write_1: pushed, then immediately shifted into drainQueue before first await
-    // write_2: queue empty again → pushed (depth=1 reached)
-    // write_3: queue length=1 >= maxQueueDepth=1 → dropped
+    // write_2: queue empty again then pushed (depth=1 reached)
+    // write_3: queue length=1 >= maxQueueDepth=1 then dropped
     logger.info('app', 'write_1');
     logger.info('app', 'write_2');
     logger.info('app', 'write_3');

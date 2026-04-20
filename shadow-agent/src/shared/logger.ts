@@ -1,4 +1,4 @@
-import { appendFile, mkdir, rename, stat } from 'node:fs/promises';
+import { appendFile, mkdir, rename, rm, stat } from 'node:fs/promises';
 import path from 'node:path';
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
@@ -62,7 +62,7 @@ function serializeCause(cause: unknown, redacted: boolean, depth: number): unkno
     return serializeError(
       cause as { name?: unknown; message?: unknown; stack?: unknown; cause?: unknown },
       redacted,
-      depth + 1
+      depth
     );
   }
   return String(cause);
@@ -309,19 +309,27 @@ export class StructuredLogger {
 
   /** Serially drain the write queue, applying rotation before each write. */
   private async drainQueue(): Promise<void> {
-    while (this.writeQueue.length > 0) {
-      const entry = this.writeQueue.shift()!;
-      try {
-        await this.maybeRotate();
-        await writeJsonLine(this.filePath!, entry);
-      } catch (error) {
-        this.writeFailureCount += 1;
-        if (this.includeConsole) {
-          console.error('logger_write_failed', error);
+    while (true) {
+      while (this.writeQueue.length > 0) {
+        const entry = this.writeQueue.shift()!;
+        try {
+          await this.maybeRotate();
+          await writeJsonLine(this.filePath!, entry);
+        } catch (error) {
+          this.writeFailureCount += 1;
+          if (this.includeConsole) {
+            console.error('logger_write_failed', error);
+          }
         }
       }
+
+      this.isProcessingQueue = false;
+      if (this.writeQueue.length === 0) {
+        return;
+      }
+
+      this.isProcessingQueue = true;
     }
-    this.isProcessingQueue = false;
   }
 
   /**
@@ -334,10 +342,15 @@ export class StructuredLogger {
     }
     const size = await getFileSizeBytes(this.filePath);
     if (size >= this.rotationMaxBytes) {
+      const rotatedPath = `${this.filePath}.1`;
       try {
-        await rename(this.filePath, `${this.filePath}.1`);
-      } catch {
-        // Rotation failed (e.g. concurrent rename); proceed without rotating.
+        await rm(rotatedPath, { force: true });
+        await rename(this.filePath, rotatedPath);
+      } catch (error) {
+        this.writeFailureCount += 1;
+        if (this.includeConsole) {
+          console.error('logger_rotate_failed', error);
+        }
       }
     }
   }
