@@ -8,8 +8,8 @@
 > #26 (Canvas2D renderer), #27 (live capture), #28 (inference engine — *note:*
 > inference scaffolding actually landed via PR #28 on 2026-04-12; see history log),
 > #30 (observability), and #33 (docs/finish-line). The RepoVis archival and domain
-> status-header work called out below under §3 are **done** and kept here for
-> historical traceability — do not re-execute.
+> status-header work called out in [the Documentation Remediation section](#3-documentation-remediation-must-do)
+> below are **done** and kept here for historical traceability — do not re-execute.
 
 ---
 
@@ -134,11 +134,12 @@ For each PR: address comments → rebase on main → `npm test` + `npm run build
 
 ## 4) Pre-Commit / CI — RESOLVED
 
-Previously the `prompts:check` pre-commit hook (then under `.husky/pre-commit`) was
-failing because `docs/prompts/shadow-system-prompt.md` was out of date. Resolved
-via PR #34 (regenerated prompt artifacts) and PR #35 (hook now also runs
-`npm test`). The hook has since migrated to `.githooks/pre-commit` — see
-`AGENTS.md` for the active prompt-sync workflow. No further action required here.
+Previously the `prompts:check` pre-commit hook at `.husky/pre-commit` was failing
+because `docs/prompts/shadow-system-prompt.md` was out of date. Resolved via
+PR #34 (regenerated prompt artifacts) and PR #35 (hook now also runs
+`npm test --prefix shadow-agent`). The active hook still lives at
+`.husky/pre-commit`; see [`AGENTS.md`](../../AGENTS.md) for the prompt-sync
+workflow. No further action required here.
 
 ---
 

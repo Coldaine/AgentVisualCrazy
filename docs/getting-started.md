@@ -28,9 +28,12 @@ older commit, `npm test` may fail because the inference test suite depended on
 exports that were only added in PR #35 — update to a newer main or skip that
 suite if you are bisecting older history.
 
-CI runs `npm test` and `npm run build` on every PR via the `prompt-parity`
-workflow. A pre-commit hook (see `.githooks/pre-commit` / `AGENTS.md`) runs
-`prompts:check` locally. Run `npm test` yourself before opening a PR.
+CI runs the prompt-parity check, tests, and build on every PR via the `CI`
+workflow (defined in `.github/workflows/prompt-parity.yml`). A Husky pre-commit
+hook at `.husky/pre-commit` runs `npm run prompts:check` and
+`npm test --prefix shadow-agent` locally before each commit. Run `npm test`
+yourself before opening a PR — the pre-commit hook will also run it, but
+catching failures earlier is cheaper.
 
 ## Run
 

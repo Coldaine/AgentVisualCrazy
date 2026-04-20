@@ -17,9 +17,10 @@ An atmospheric background layer sits behind the canvas for depth. The preferred
 implementation is a Citadel-style canvas dot-grid with a pulse API (spring-damped,
 cheap, no extra runtime dependency beyond Canvas2D). A Three.js particle field
 (`@react-three/fiber`) is an optional alternative when deeper parallax is wanted;
-see [`docs/plans/plan-gui-rendering.md`](plans/plan-gui-rendering.md) §8 for the
-decision and tradeoffs. React 19 + Tailwind handle the glass panel overlays. The
-rendering layer is Electron-native but portable enough to embed in VS Code later.
+see the **Optional Background Atmosphere Layer (Choose One)** step in
+[`docs/plans/plan-gui-rendering.md`](plans/plan-gui-rendering.md) for the decision
+and tradeoffs. React 19 + Tailwind handle the glass panel overlays. The rendering
+layer is Electron-native but portable enough to embed in VS Code later.
 
 We rejected React Flow (less visual control), Three.js-only (overkill for 2D), and
 keeping SVG (can't achieve the target visual quality).

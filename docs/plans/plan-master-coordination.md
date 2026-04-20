@@ -129,12 +129,17 @@ The three parallel streams produced their findings on 2026-04-18 and those were
 synthesized into the two master plan docs. The empty scratchpad sections that
 previously lived here have been removed; see:
 
-- Stream A (PR review / rebase / merge readiness) → `plan-master-a-must-do.md` §1
-  (per-PR fix lists) and §2 (merge sequence).
-- Stream B (architecture critique) → `plan-master-b-architecture-opinion.md` in full.
-- Stream C (documentation audit) → `plan-master-a-must-do.md` §3 (remediation
-  checklist) and the subsequent drift-remediation PR (status headers normalized,
-  § cross-refs converted to Markdown links, RepoVis archive, history log rewrite).
+- Stream A (PR review / rebase / merge readiness) →
+  [`plan-master-a-must-do.md`](plan-master-a-must-do.md) — the "PR Comment
+  Remediation" and "Merge Sequence" sections.
+- Stream B (architecture critique) →
+  [`plan-master-b-architecture-opinion.md`](plan-master-b-architecture-opinion.md)
+  in full.
+- Stream C (documentation audit) →
+  [`plan-master-a-must-do.md`](plan-master-a-must-do.md) — the "Documentation
+  Remediation" section — and the subsequent drift-remediation PR (status
+  headers normalized, section-sign cross-refs converted to Markdown links,
+  RepoVis archive, history log rewrite).
 
 ---
 
@@ -145,6 +150,7 @@ previously lived here have been removed; see:
    getting-started doc created (2026-04-18 via PR #34) and later normalized in the
    drift-remediation pass (2026-04-19).
 3. ✅ Dispatched PR fix work — PRs #29, #31, #32, #34, #35 all merged 2026-04-19.
-   Remaining open PRs (#26, #27, #30, #33) carry review-comment TODOs tracked in
-   `plan-master-a-must-do.md` §1.
+   Remaining open PRs (#26, #27, #30, #33) carry review-comment TODOs tracked
+   under the "PR Comment Remediation" section of
+   [`plan-master-a-must-do.md`](plan-master-a-must-do.md).
 4. ✅ Final commit + push — closeout PR merged.
