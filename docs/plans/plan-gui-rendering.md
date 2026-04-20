@@ -53,7 +53,7 @@ three@^0.170.0
 
 ## 2. Color System & CSS Variables
 
-Create `shadow-agent/src/renderer/theme/colors.ts` exporting the full palette from `visual-design-strategy.md` §2. Simultaneously update `styles.css` to define CSS custom properties for both the cold canvas palette (`--void`, `--holo-base`, etc.) and the warm control palette (`--surface`, `--accent`, etc.).
+Create `shadow-agent/src/renderer/theme/colors.ts` exporting the full palette from [`visual-design-strategy.md`](../research/visual-design-strategy.md) — section 2 (Color System). Simultaneously update `styles.css` to define CSS custom properties for both the cold canvas palette (`--void`, `--holo-base`, etc.) and the warm control palette (`--surface`, `--accent`, etc.).
 
 This is the first thing to land — every subsequent component references these tokens.
 
@@ -116,7 +116,7 @@ Agent-flow uses its own `Agent` interface. Shadow-agent uses `AgentNode` and `De
 
 Create `src/renderer/canvas/simulation.ts`.
 
-Initialize the D3-Force simulation per the spec in `visual-design-strategy.md` §4:
+Initialize the D3-Force simulation per the spec in [`visual-design-strategy.md`](../research/visual-design-strategy.md) — section 4 (Graph Visualization):
 
 ```
 forceSimulation(nodes)
@@ -149,7 +149,7 @@ Particle spawning: when a `tool_started` or `subagent_dispatched` event fires, s
 
 ## 7. Panel Layout Overhaul
 
-Replace the current `<main className="dashboard">` grid with the layout from `visual-design-strategy.md` §5:
+Replace the current `<main className="dashboard">` grid with the layout from [`visual-design-strategy.md`](../research/visual-design-strategy.md) — section 5 (Panel Layout):
 
 | Panel | Position | Component File |
 |-------|----------|---------------|

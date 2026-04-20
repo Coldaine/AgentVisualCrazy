@@ -13,18 +13,24 @@ npm install
 
 ## Test
 
-We use [Vitest](https://vitest.dev/) for unit and integration testing.
+We use [Vitest](https://vitest.dev/) for unit and integration testing. Tests run
+from inside the `shadow-agent/` directory.
 
 ```bash
-# Run all tests
-npm test
-
-# Run tests with coverage
-npm run test:coverage
-
-# Run specific test file
-npx vitest tests/derive.test.ts
+cd shadow-agent
+npm test               # run all tests
+npm run test:coverage  # run with coverage report
+npx vitest tests/derive.test.ts   # run a single file
 ```
+
+All tests on `main` pass as of PR #35 (merged 2026-04-19). If you check out an
+older commit, `npm test` may fail because the inference test suite depended on
+exports that were only added in PR #35 — update to a newer main or skip that
+suite if you are bisecting older history.
+
+CI runs `npm test` and `npm run build` on every PR via the `prompt-parity`
+workflow. A pre-commit hook (see `.githooks/pre-commit` / `AGENTS.md`) runs
+`prompts:check` locally. Run `npm test` yourself before opening a PR.
 
 ## Run
 

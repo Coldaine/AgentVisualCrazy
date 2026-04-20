@@ -1,10 +1,16 @@
 # Master Coordination Plan — PR Closeout + Architecture Remediation + Doc Renewal
 
-> Last updated: 2026-04-18
-> Status: ACTIVE — subagents are dispatched against this plan
+> Last updated: 2026-04-19 (closed out)
+> Status: COMPLETE — all three work streams synthesized into:
 >
-> This file is a **shared scratchpad**. Subagents may append findings under their
-> designated section. Do not overwrite another agent's section.
+> - `docs/plans/plan-master-a-must-do.md` (Stream A and doc remediation outputs)
+> - `docs/plans/plan-master-b-architecture-opinion.md` (Stream B output)
+> - `docs/history/log.md` (chronological record of what shipped)
+>
+> Preserved here as the audit trail of how the 2026-04-18 coordination was set up.
+> Subagents originally appended findings under their designated sections; those
+> findings have since been promoted into the two master plan docs above and the
+> empty scratchpads removed. Do not treat this file as a live worklist.
 
 ---
 
@@ -117,23 +123,28 @@ The subagent's honest assessment of and recommended approach to:
 
 ---
 
-## 3) Subagent Scratchpad
+## 3) Subagent Scratchpad — promoted
 
-### Stream A Findings
-_(subagent appends here)_
+The three parallel streams produced their findings on 2026-04-18 and those were
+synthesized into the two master plan docs. The empty scratchpad sections that
+previously lived here have been removed; see:
 
-### Stream B Findings
-_(subagent appends here)_
-
-### Stream C Findings
-_(subagent appends here)_
+- Stream A (PR review / rebase / merge readiness) → `plan-master-a-must-do.md` §1
+  (per-PR fix lists) and §2 (merge sequence).
+- Stream B (architecture critique) → `plan-master-b-architecture-opinion.md` in full.
+- Stream C (documentation audit) → `plan-master-a-must-do.md` §3 (remediation
+  checklist) and the subsequent drift-remediation PR (status headers normalized,
+  § cross-refs converted to Markdown links, RepoVis archive, history log rewrite).
 
 ---
 
-## 4) Round 2 Dispatch (post-synthesis)
+## 4) Round 2 Dispatch — executed
 
-After gathering from all 3 streams:
-1. Write Master Plan A and Master Plan B to `/docs/plans/`
-2. Dispatch doc renewal subagent with specific file-by-file instructions
-3. Dispatch PR fix subagent with specific per-PR fix lists
-4. Final commit + push
+1. ✅ Wrote Master Plan A and Master Plan B to `docs/plans/`.
+2. ✅ Dispatched doc renewal work — RepoVis archived, domain status headers added,
+   getting-started doc created (2026-04-18 via PR #34) and later normalized in the
+   drift-remediation pass (2026-04-19).
+3. ✅ Dispatched PR fix work — PRs #29, #31, #32, #34, #35 all merged 2026-04-19.
+   Remaining open PRs (#26, #27, #30, #33) carry review-comment TODOs tracked in
+   `plan-master-a-must-do.md` §1.
+4. ✅ Final commit + push — closeout PR merged.

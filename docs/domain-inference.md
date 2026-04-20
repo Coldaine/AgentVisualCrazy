@@ -1,10 +1,11 @@
 # Domain: Inference Engine
 
-> **Status: Partially Implemented** — Current main has auth loader (`auth.ts`), context
-> packager (`context-packager.ts`), prompt builder (`prompt-builder.ts` with
-> `ShadowContextPacket` type and `buildUserMessage`), response parser, inference trigger,
-> shadow inference engine orchestrator, direct Anthropic API fallback, and MCP server.
-> The OpenCode client (`opencode-client.ts`) is not yet implemented.
+> **Status: Partial on main** — Auth loader (`auth.ts`), context packager
+> (`context-packager.ts` with `packContext`), prompt builder (`prompt-builder.ts`
+> exporting `ShadowContextPacket` and `buildUserMessage`), response parser, inference
+> trigger, shadow inference engine orchestrator, direct Anthropic API fallback, and
+> MCP server have landed. The OpenCode client (`opencode-client.ts`) is not yet
+> implemented — direct Anthropic API is the current runtime path.
 
 The inference engine is shadow-agent's brain — it consumes the observed agent's event
 stream and produces structured interpretations (phase, risk, predictions, confidence).

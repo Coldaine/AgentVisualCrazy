@@ -87,7 +87,7 @@ The packet assembles:
 - Recent transcript turns (last 10 actor + text entries)
 - Touched files list
 
-Total context budget: ~10,000 tokens. Each component has a max allocation (see `shadow-inference-architecture.md` §Context Budget). The packager truncates aggressively — recent events are more valuable than old ones, so truncate from the front.
+Total context budget: ~10,000 tokens. Each component has a max allocation (see [`shadow-inference-architecture.md`](../research/shadow-inference-architecture.md) — **Context Packet Format** section). The packager truncates aggressively — recent events are more valuable than old ones, so truncate from the front.
 
 ---
 

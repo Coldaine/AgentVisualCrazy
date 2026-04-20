@@ -12,7 +12,7 @@
 
 Build the live event capture pipeline that watches Claude Code's JSONL transcript files, parses new events incrementally, normalizes them into `CanonicalEvent` objects, and streams them to the renderer via Electron IPC. This replaces the current fixture-only data flow.
 
-Architecture reference: `docs/research/shadow-inference-architecture.md` (architecture diagram), `docs/research/visual-patterns-sidecar.md` §5 (session management), `docs/research/visual-patterns-agent-flow.md` §5 (event pipeline).
+Architecture reference: [`docs/research/shadow-inference-architecture.md`](../research/shadow-inference-architecture.md) (architecture diagram), [`docs/research/visual-patterns-sidecar.md`](../research/visual-patterns-sidecar.md) — section 5 (Session Management), [`docs/research/visual-patterns-agent-flow.md`](../research/visual-patterns-agent-flow.md) — section 5 (Architecture: Event Pipeline).
 
 ---
 
