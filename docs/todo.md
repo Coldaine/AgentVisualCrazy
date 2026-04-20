@@ -5,9 +5,15 @@
 
 ## Implementation
 
-- 2026-04-01: **Port agent-flow Canvas2D renderer** — Copy `third_party/agent-flow/web/components/agent-visualizer/canvas/` into `shadow-agent/src/renderer/canvas/`. Replace SVG graph with Canvas2D + D3-Force. Add `d3-force` dependency. This is the biggest single task. [In Progress - PR #26](https://github.com/Coldaine/AgentVisualCrazy/pull/26)
+- 2026-04-13: ~~**Port agent-flow Canvas2D renderer**~~ ✅ DONE — `shadow-agent/src/renderer/canvas/CanvasRenderer.tsx` + `types.ts` + `theme/colors.ts`. SVG GraphView replaced with Canvas2D + D3-Force. Hexagonal nodes, tapered bezier edges, particle trails, hex grid background. Branch: `work/repovis-canvas-port`. Next: wire Three.js dot-grid background, then GlassCard components.
 
-- 2026-04-01: **Implement Phase 2 live transcript watcher** — Build the `shadow-agent/src/capture/` pipeline from `docs/plans/plan-event-capture.md`: session discovery, transcript watcher, incremental parser, normalizer, event buffer, IPC bridge, and session manager. [In Progress - PR #27](https://github.com/Coldaine/AgentVisualCrazy/pull/27)
+- 2026-04-13: ~~**GlassCard + react-spring panels**~~ ✅ DONE — `GlassCard.tsx` (CVA variants: size, glow, slide), `TimelineScrubber.tsx` (event markers + playhead + spring animation), `ShadowPanel.tsx` (confidence rings, risk signals, next moves). 3-column CSS Grid layout wired in App.tsx. Done.
+
+- 2026-04-13: ~~**Shadow canvas overlays**~~ ✅ DONE — `drawRiskVignette`, `drawShadowNode`, `drawPredictionTrail` in CanvasRenderer. Risk vignette keyed to risk level, ghost hexagon with 🔮, dashed prediction trail with label + confidence.
+
+- 2026-04-13: **Wire Three.js dot-grid background** — Optional Citadel-style canvas dot-grid OR @react-three/fiber ParticleField as Layer 0 behind the Canvas2D visualization. Subtle parallax, very low opacity. LOW PRIORITY — canvas looks fine without it.
+
+- 2026-04-01: **Implement Phase 2 live transcript watcher** — Create `shadow-agent/src/adapters/session-watcher.ts`. FileSystemWatcher on Claude Code JSONL session directory. Stream new events to renderer via IPC.
 
 - 2026-04-01: ~~**Implement inference auth loader**~~ — Completed 2026-04-18. `src/inference/auth.ts` implements priority chain: `process.env` → `~/.shadow-agent/.env` → OpenCode `auth.json`. Merged via PR #28.
 
@@ -25,34 +31,10 @@
 
 - 2026-04-01: ~~**Implement direct Anthropic API fallback**~~ — Completed 2026-04-18. `src/inference/direct-api.ts` implements `InferenceClient` using `@anthropic-ai/sdk`. Merged via PR #28.
 
-## Observability
-
-- 2026-04-12: ~~**Harden logger behavior and sinks**~~ — Completed 2026-04-18. Structured logger with level filtering, memory ring, file sink, redaction, and circular-reference handling. Merged via PR #30.
-
-- 2026-04-12: **Finish instrumentation coverage** — Extend logging across capture, IPC, inference, and persistence boundaries with consistent event names and redacted context payloads. [Partially done — core seams instrumented; capture pipeline not yet on main]
-
 ## Documentation
 
 - 2026-04-01: **Enable GitHub Issues** on the AgentVisualCrazy repo (currently disabled) and create issues for each implementation task above.
 
 ## Testing
 
-- 2026-04-12: ~~**Expand Phase 1 edge coverage**~~ — Completed 2026-04-18. Transcript-adapter, derive, replay-store, and persistence edge/corruption tests plus integration tests. Merged via PR #29.
-
-- 2026-04-12: **Add Phase 2 capture tests before shipping the watcher** — Cover incremental parsing, session discovery, ring buffer behavior, temp-file append/truncation/rotation, and session-manager integration with fake IPC. [Blocked — capture pipeline not yet on main]
-
-- 2026-04-12: ~~**Add Electron and renderer contract tests**~~ — Completed 2026-04-18. Preload bridge API, main-process replay/export, and renderer state machine tests. Merged via PR #31.
-
-- 2026-04-12: ~~**Add inference contract tests with a fake client**~~ — Completed 2026-04-18. Context packing, prompt building, parser fallback, trigger thresholds, and `FakeInferenceClient`. Merged via PR #32.
-
-- 2026-04-12: **Add Canvas2D command tests and selective visual regressions** — Protect node/edge/particle semantics with a recorded 2D context and add a small curated screenshot suite for canonical scenes. [Blocked — Canvas2D renderer not yet on main]
-
-- 2026-04-12: ~~**Maintain a shared replay fixture corpus**~~ — Completed 2026-04-18. Transcript and replay fixtures under `shadow-agent/tests/fixtures/`. Merged via PR #29.
-
-## Infrastructure
-
-- 2026-04-19: **Fix broken test suite on main** — `buildUserMessage` and `ShadowContextPacket` were imported from generated `prompts.ts` but never exported; `packContext` was imported from `context-packager.ts` but didn't exist. Fixed by moving `ShadowContextPacket` and `buildUserMessage` to `prompt-builder.ts` and adding `packContext` to `context-packager.ts`. See branch `fix/test-remediation-and-docs-consistency`.
-
-- 2026-04-19: **Add test execution to CI** — The `prompt-parity.yml` workflow only checked prompt sync. Updated to also run `npm test` and `npm run build`. See branch `fix/test-remediation-and-docs-consistency`.
-
-- 2026-04-19: **Add test execution to pre-commit hook** — The Husky pre-commit hook only ran `prompts:check`. Updated to also run `npm test`. See branch `fix/test-remediation-and-docs-consistency`.
+- 2026-04-01: **Execute test plan** — See `docs/shadow-agent-test-plan.md` for the full roadmap. Blocked on seam refactors.
