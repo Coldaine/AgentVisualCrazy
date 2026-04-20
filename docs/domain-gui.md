@@ -1,8 +1,8 @@
 # Domain: GUI & Rendering
 
-> **Status: Implementation Reference** — This document describes the Canvas2D + D3-Force
-> rendering targeted by PR #26. Current main uses simplified React + SVG panels. The
-> full Canvas2D renderer is on the feature branch.
+> **Status: Planned** — The full Canvas2D + D3-Force renderer described here is on
+> PR #26 and has not yet merged. Current main ships simplified React + SVG panels as
+> a placeholder. Treat this doc as the contract the merged renderer must satisfy.
 
 The rendering layer is shadow-agent's identity. Everything here is ported from or inspired
 by agent-flow (`third_party/agent-flow/`), adapted to shadow-agent's data model.
@@ -30,7 +30,7 @@ The control panels use sidecar's warm palette — charcoal (`#2D2B2A`), cream te
 (`#E8E0D8`), burnt orange accent (`#D97757`). This contrast (cold visualization + warm
 controls) creates the feeling of a human operator watching an alien intelligence.
 
-Full CSS variable definitions in `visual-design-strategy.md` §2.
+Full CSS variable definitions in [`docs/research/visual-design-strategy.md`](research/visual-design-strategy.md) — section 2 (Color System).
 
 ## Node Types
 

@@ -20,37 +20,6 @@
 - Extracted project-specific history (347 messages from 15 Codex + 1 Claude session)
 - Restored accidentally deleted global history
 
-## 2026-04-01 — Visual research and design documentation
-
-- Deep audit of agent-flow rendering patterns (Canvas2D, D3-Force, particles, glass cards)
-- Deep audit of sidecar runtime patterns (Electron, OpenCode SDK, MCP, fold, drift detection)
-- Visual inspiration catalog from 8 portfolio + open-source references
-- Unified visual design strategy document
-- Shadow inference engine architecture spec (OpenCode harness + direct API fallback)
-
-## 2026-04-18 — Master coordination + architecture assessment
-
-- Investigated 9 architectural critique claims from external GPT-5 Pro review
-- 5 of 9 already addressed, 3 partially addressed, 1 valid (doc drift)
-- Wrote Master Plan A (must-do forward items): PR comment fixes, merge order, doc cleanup
-- Wrote Master Plan B (architecture opinion): honest assessment, what not to over-engineer
-- Added implementation status headers to `docs/domain-events.md`, `docs/domain-gui.md`, `docs/domain-inference.md`
-- Archived RepoVis docs (separate product, wrong repo location)
-- Created `docs/getting-started.md`
-- Opened documentation PRs #33 (Finish-line Plan) and updated metadata-sync workflows
-- Finalized Phase 1 remediation checklist
-
-## 2026-04-12 — Phase 1 implementation PRs
-
-- Opened PR #26 (Canvas2D renderer with D3-Force layout)
-- Opened PR #27 (Event capture pipeline: watcher, parser, buffer)
-- Opened PR #28 (Inference engine: OpenCode + fallback)
-- Opened PR #29 (Fixtures + Phase 1 Tests)
-- Opened PR #30 (Observability: structured logging, metrics, health checks)
-- Opened PR #31 (Renderer core testing suite)
-- Opened PR #32 (Inference contract tests with fake client)
-- All 18 issues (#8-#25) opened to track remaining work
-
 ## 2026-04-01 — Documentation structure overhaul
 
 - Created `docs/north-star.md` — project vision and pillars
@@ -64,3 +33,42 @@
 - Created `docs/todo.md` — pending task tracker (mirrors GitHub issues)
 - Created `docs/history/` — append-only completed work log
 - Moved research docs to `docs/research/`
+
+## 2026-04-01 — Visual research and design documentation
+
+- Deep audit of agent-flow rendering patterns (Canvas2D, D3-Force, particles, glass cards)
+- Deep audit of sidecar runtime patterns (Electron, OpenCode SDK, MCP, fold, drift detection)
+- Visual inspiration catalog from 8 portfolio + open-source references
+- Unified visual design strategy document
+- Shadow inference engine architecture spec (OpenCode harness + direct API fallback)
+
+## 2026-04-12 — Phase 1 implementation PRs
+
+- Opened PR #26 (Canvas2D renderer with D3-Force layout)
+- Opened PR #27 (Event capture pipeline: watcher, parser, buffer)
+- Opened PR #28 (Inference engine: OpenCode + fallback)
+- Opened PR #29 (Fixtures + Phase 1 Tests)
+- Opened PR #30 (Observability: structured logging, metrics, health checks)
+- Opened PR #31 (Renderer core testing suite)
+- Opened PR #32 (Inference contract tests with fake client)
+- All 18 issues (#8-#25) opened to track remaining work
+
+## 2026-04-18 — Master coordination + architecture assessment
+
+- Investigated 9 architectural critique claims from external GPT-5 Pro review
+- 5 of 9 already addressed, 3 partially addressed, 1 valid (doc drift)
+- Wrote Master Plan A (must-do forward items): PR comment fixes, merge order, doc cleanup
+- Wrote Master Plan B (architecture opinion): honest assessment, what not to over-engineer
+- Added implementation status headers to `docs/domain-events.md`, `docs/domain-gui.md`, `docs/domain-inference.md`
+- Archived RepoVis docs (separate product, wrong repo location)
+- Created `docs/getting-started.md`
+- Opened documentation PRs #33 (Finish-line Plan) and updated metadata-sync workflows
+- Finalized Phase 1 remediation checklist
+
+## 2026-04-19 — Phase 2 foundation PRs merged
+
+- PR #29 merged: shared replay fixture corpus (happy-path, tool-heavy, risk-escalation, subagent-flow, corrupt-partial) plus transcript-adapter and derive edge-case tests (closes #20, #25)
+- PR #31 merged: renderer refactored to `useReducer` state machine with 16 transition tests and 7 expanded preload/IPC contract tests (closes #22)
+- PR #32 merged: `FakeInferenceClient` seam, deterministic context packager, prompt-builder character-equality checks, parser fallback tests (closes #23)
+- PR #34 merged: master-plan remediation landed `docs/getting-started.md`, architecture phase split, `docs/todo.md` sync, and history log update
+- PR #35 merged: fixed 14 failing tests on main by adding `packContext`, `buildUserMessage`, and `ShadowContextPacket` exports; added coverage tooling; re-aligned docs with current codebase

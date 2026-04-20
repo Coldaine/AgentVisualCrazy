@@ -13,15 +13,20 @@ are practical in SVG or React Flow. D3-Force handles organic, self-organizing gr
 so we don't manually position nodes. Agent-flow already proved this exact stack works
 beautifully for agent visualization at 60fps with 100+ animated nodes.
 
-A subtle Three.js particle field sits behind the canvas for depth. React 19 + Tailwind
-handle the glass panel overlays. The rendering layer is Electron-native but portable
-enough to embed in VS Code later.
+An atmospheric background layer sits behind the canvas for depth. The preferred
+implementation is a Citadel-style canvas dot-grid with a pulse API (spring-damped,
+cheap, no extra runtime dependency beyond Canvas2D). A Three.js particle field
+(`@react-three/fiber`) is an optional alternative when deeper parallax is wanted;
+see the **Optional Background Atmosphere Layer (Choose One)** step in
+[`docs/plans/plan-gui-rendering.md`](plans/plan-gui-rendering.md) for the decision
+and tradeoffs. React 19 + Tailwind handle the glass panel overlays. The rendering
+layer is Electron-native but portable enough to embed in VS Code later.
 
 We rejected React Flow (less visual control), Three.js-only (overkill for 2D), and
 keeping SVG (can't achieve the target visual quality).
 
-→ @docs/domain-gui.md for the full rendering domain: color palette, node types, panel
-layout, animation standards, what we port from agent-flow.
+→ See [`docs/domain-gui.md`](domain-gui.md) for the full rendering domain: color
+palette, node types, panel layout, animation standards, what we port from agent-flow.
 
 ## How the Shadow Model Works
 
@@ -45,8 +50,9 @@ own explicit opt-in.
 We rejected Codex MCP server only (locks to OpenAI), direct API only (forces manual key
 management), and heuristics-only (can't produce calibrated confidence scores).
 
-→ @docs/domain-inference.md for the inference domain: OpenCode integration, auth chain,
-prompt strategy, trigger logic, MCP server, context budget.
+→ See [`docs/domain-inference.md`](domain-inference.md) for the inference domain:
+OpenCode integration, auth chain, prompt strategy, trigger logic, MCP server, context
+budget.
 
 ## Event Capture
 
@@ -62,8 +68,8 @@ is transport-agnostic — the buffer and IPC bridge don't care where events come
 We rejected HTTP hook server for Phase 2 (more complex, requires observed agent
 configuration) and direct process attachment (fragile, platform-specific).
 
-→ @docs/domain-events.md for the event domain: transcript watcher, canonical schema,
-normalizer, session discovery, IPC bridge.
+→ See [`docs/domain-events.md`](domain-events.md) for the event domain: transcript
+watcher, canonical schema, normalizer, session discovery, IPC bridge.
 
 ## Desktop Shell
 
@@ -80,7 +86,8 @@ interpretations. Three tools: `shadow_status` (current phase/risk/predictions),
 with a question). This makes shadow-agent composable — it becomes a tool in larger agent
 systems. Pattern lifted from sidecar's `mcp-server.js`.
 
-→ @docs/domain-inference.md §MCP Server for tool signatures and implementation.
+→ See [`docs/domain-inference.md`](domain-inference.md) — **MCP Server** section — for
+tool signatures and implementation.
 
 ## Prompt Engineering
 
@@ -100,8 +107,12 @@ record tests for drawing semantics plus a small curated set of visual regression
 
 ## Current Status & Roadmap
 
-We are currently in **Phase 2 (Release Candidate)** with inference scaffolding landed
-and the Canvas2D renderer and live capture pipeline still on feature branches.
+We are currently in **Phase 2 (In Progress)**. Inference scaffolding has landed on
+main (auth, context packager, prompt builder, response parser, trigger, orchestrator,
+direct-API fallback, MCP server). The Canvas2D renderer (PR #26) and live capture
+pipeline (PR #27) are still on feature branches and are the next product features to
+ship. This is not a release candidate — Phase 2 closes when those two PRs land and
+inference is wired to live events.
 
 ### Phase 1: Core Foundation (Completed)
 - Canonical event schema and derivation logic.
@@ -130,8 +141,9 @@ Runtime diagnostics should use structured local logging with redaction by defaul
 enough signal to explain watcher failures, parser skips, inference triggers, IPC issues,
 and performance problems without flooding logs or dumping full transcript content.
 
-→ @docs/plans/plan-testing-observability.md for the current testing layers, seam refactors,
-logging requirements, and pre-merge quality gates.
+→ See [`docs/plans/plan-testing-observability.md`](plans/plan-testing-observability.md)
+for the current testing layers, seam refactors, logging requirements, and pre-merge
+quality gates.
 
 ## The Read-Only Constraint
 

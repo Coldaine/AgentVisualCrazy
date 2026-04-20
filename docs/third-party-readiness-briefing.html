@@ -1,0 +1,587 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Third-Party Readiness Briefing</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #08111a;
+      --panel: #0f1c29;
+      --panel-2: #142435;
+      --text: #edf4fb;
+      --muted: #9bb2c9;
+      --line: #294158;
+      --good: #3ed598;
+      --warn: #ffbf5a;
+      --bad: #ff7878;
+      --info: #7cc5ff;
+      --shadow: 0 18px 40px rgba(0, 0, 0, 0.35);
+      --radius: 16px;
+      font-family: "Segoe UI", Arial, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at top right, rgba(124, 197, 255, 0.14), transparent 28%),
+        radial-gradient(circle at top left, rgba(62, 213, 152, 0.1), transparent 24%),
+        var(--bg);
+      color: var(--text);
+      line-height: 1.55;
+    }
+
+    main {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 32px 20px 56px;
+    }
+
+    h1,
+    h2,
+    h3 {
+      margin: 0 0 10px;
+      line-height: 1.2;
+    }
+
+    p {
+      margin: 0 0 14px;
+      color: var(--muted);
+    }
+
+    code {
+      font-family: Consolas, "Courier New", monospace;
+      color: var(--text);
+      background: rgba(255, 255, 255, 0.06);
+      border-radius: 6px;
+      padding: 1px 6px;
+    }
+
+    .hero {
+      display: grid;
+      gap: 18px;
+      margin-bottom: 24px;
+    }
+
+    .hero-card,
+    .panel {
+      background: linear-gradient(180deg, rgba(20, 36, 53, 0.96), rgba(12, 24, 36, 0.98));
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .hero-card {
+      padding: 28px;
+    }
+
+    .eyebrow {
+      color: var(--info);
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    .summary-grid,
+    .panel-grid,
+    .metric-grid {
+      display: grid;
+      gap: 18px;
+    }
+
+    .summary-grid {
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      margin-top: 10px;
+    }
+
+    .metric-card {
+      padding: 18px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 14px;
+    }
+
+    .metric-card strong {
+      display: block;
+      font-size: 34px;
+      line-height: 1;
+      margin-bottom: 8px;
+      color: var(--text);
+    }
+
+    .metric-card span {
+      display: block;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .panel-grid {
+      grid-template-columns: 1.5fr 1fr;
+      align-items: start;
+      margin-bottom: 18px;
+    }
+
+    .panel {
+      padding: 24px;
+    }
+
+    .callout {
+      padding: 14px 16px;
+      border-radius: 12px;
+      margin-top: 14px;
+      font-weight: 600;
+    }
+
+    .callout.good {
+      background: rgba(62, 213, 152, 0.12);
+      border: 1px solid rgba(62, 213, 152, 0.35);
+      color: #c7f7e5;
+    }
+
+    .callout.warn {
+      background: rgba(255, 191, 90, 0.1);
+      border: 1px solid rgba(255, 191, 90, 0.35);
+      color: #ffe4ad;
+    }
+
+    .progress-list {
+      display: grid;
+      gap: 16px;
+      margin-top: 16px;
+    }
+
+    .progress-row {
+      padding: 16px;
+      border-radius: 14px;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .progress-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: baseline;
+      margin-bottom: 8px;
+    }
+
+    .progress-header strong {
+      font-size: 17px;
+    }
+
+    .progress-meta {
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .bar-track {
+      width: 100%;
+      height: 10px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.08);
+      overflow: hidden;
+      margin: 10px 0 12px;
+    }
+
+    .bar-fill {
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--info), var(--good));
+    }
+
+    .bar-fill.warn {
+      background: linear-gradient(90deg, #f3a14e, var(--warn));
+    }
+
+    .bar-fill.bad {
+      background: linear-gradient(90deg, #ff8d8d, var(--bad));
+    }
+
+    ul {
+      margin: 0;
+      padding-left: 18px;
+      color: var(--muted);
+    }
+
+    li + li {
+      margin-top: 6px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 14px;
+      font-size: 14px;
+    }
+
+    th,
+    td {
+      text-align: left;
+      vertical-align: top;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 12px 10px;
+    }
+
+    th {
+      color: var(--text);
+      font-size: 13px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    td {
+      color: var(--muted);
+    }
+
+    .pill-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 14px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .pill.good {
+      background: rgba(62, 213, 152, 0.14);
+      color: #c7f7e5;
+    }
+
+    .pill.warn {
+      background: rgba(255, 191, 90, 0.14);
+      color: #ffe4ad;
+    }
+
+    .pill.bad {
+      background: rgba(255, 120, 120, 0.14);
+      color: #ffd0d0;
+    }
+
+    .pill.info {
+      background: rgba(124, 197, 255, 0.14);
+      color: #d6eeff;
+    }
+
+    .footnote {
+      margin-top: 20px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    @media (max-width: 920px) {
+      .panel-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="hero">
+      <article class="hero-card">
+        <div class="eyebrow">Shadow-Agent Briefing</div>
+        <h1>Third-Party donor-port status and removal readiness</h1>
+        <p>
+          This briefing answers the question directly: <code>third_party/</code> is temporary donor material, not product code.
+          It exists to lend patterns from <code>agent-flow</code> and <code>sidecar</code>, then disappear once those patterns are either
+          ported into <code>shadow-agent/</code> or intentionally dropped from the plan.
+        </p>
+
+        <div class="summary-grid">
+          <div class="metric-card">
+            <strong>35%</strong>
+            <span>Estimated overall completion on the current mainline codepath, measured against the published donor-port plans.</span>
+          </div>
+          <div class="metric-card">
+            <strong>55%</strong>
+            <span>Estimated completion if you also count the visible in-progress feature branches as partially built work.</span>
+          </div>
+          <div class="metric-card">
+            <strong>100%</strong>
+            <span>Runtime independence from <code>third_party/</code>. Product code does not import it at runtime.</span>
+          </div>
+          <div class="metric-card">
+            <strong>No</strong>
+            <span>Not ready to delete under the current plan, because the renderer, capture, and inference donor work is still incomplete.</span>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <section class="panel-grid">
+      <article class="panel">
+        <h2>Executive answer</h2>
+        <p>
+          If the question is "Is <code>third_party/</code> supposed to be permanent?", the answer is no.
+          The authoritative plan docs treat it as temporary donor/reference code.
+        </p>
+        <p>
+          If the question is "Can we delete it today without breaking the current app?", probably yes. The app is already self-contained at runtime.
+        </p>
+        <p>
+          If the question is "Can we delete it while still claiming we are following the current plan?", no. The current plans still assume unfinished donor-port work from
+          <code>agent-flow</code> and <code>sidecar</code>.
+        </p>
+        <div class="callout good">Runtime answer: safe to remove.</div>
+        <div class="callout warn">Plan answer: not safe to remove yet.</div>
+      </article>
+
+      <article class="panel">
+        <h2>Method</h2>
+        <ul>
+          <li>Reviewed the live plan docs under <code>docs/plans/</code>, especially the finish-line, GUI, capture, inference, and testing plans.</li>
+          <li>Compared those plans with the current source tree in <code>shadow-agent/src/</code>.</li>
+          <li>Checked branch inventory for the feature branches named in the plans.</li>
+          <li>Validated current repo health with <code>npm test</code>, <code>npm run build</code>, <code>npm run prompts:check</code>, and <code>npx tsc --noEmit</code>.</li>
+        </ul>
+        <div class="pill-row">
+          <span class="pill good">Tests pass</span>
+          <span class="pill good">Build passes</span>
+          <span class="pill good">Prompt check passes</span>
+          <span class="pill bad">Typecheck fails</span>
+        </div>
+      </article>
+    </section>
+
+    <section class="panel">
+      <h2>Completion by workstream</h2>
+      <p>
+        These are reasoned estimates, not tracked Jira-style metrics. A workstream is counted as complete only when the planned capability is actually present in first-party code and reflected in the current app path.
+      </p>
+
+      <div class="progress-list">
+        <div class="progress-row">
+          <div class="progress-header">
+            <strong>Phase 1 foundation and prototype shell</strong>
+            <span class="progress-meta">Estimated 80% complete on main</span>
+          </div>
+          <div class="bar-track"><div class="bar-fill" style="width: 80%"></div></div>
+          <p>
+            The fixture-driven prototype is real: schema, replay loading, transcript parsing, derive logic, persistence, Electron shell, a basic React dashboard, and a green test/build path all exist now.
+          </p>
+          <ul>
+            <li>Still not "done" because typecheck is red and the mainline app path is still the simple prototype, not the full planned product.</li>
+          </ul>
+        </div>
+
+        <div class="progress-row">
+          <div class="progress-header">
+            <strong>GUI donor port from agent-flow</strong>
+            <span class="progress-meta">Estimated 20% on main, 55% including branch work</span>
+          </div>
+          <div class="bar-track"><div class="bar-fill warn" style="width: 20%"></div></div>
+          <p>
+            Main still renders the graph with SVG in <code>src/renderer/App.tsx</code>. The full Canvas2D plus D3-Force renderer described in the GUI plan is not merged.
+          </p>
+          <ul>
+            <li><code>work/canvas-renderer-v2</code> exists and contains <code>CanvasRenderer.tsx</code>, glass-card components, and theme files.</li>
+            <li>Main is still missing the broader Canvas subsystem and the plan's full panel/layout overhaul.</li>
+          </ul>
+        </div>
+
+        <div class="progress-row">
+          <div class="progress-header">
+            <strong>Live capture donor port from sidecar-style runtime patterns</strong>
+            <span class="progress-meta">Estimated 10% on main, 70% including branch work</span>
+          </div>
+          <div class="bar-track"><div class="bar-fill bad" style="width: 10%"></div></div>
+          <p>
+            Main has only a tiny shared capture abstraction. It does not have the planned <code>src/capture/</code> pipeline or live session management.
+          </p>
+          <ul>
+            <li><code>work/event-capture</code> does include the planned capture files: discovery, watcher, parser, normalizer, buffer, IPC bridge, and session manager.</li>
+            <li>Main still boots from a fixture/open/export flow rather than a live transcript flow.</li>
+          </ul>
+        </div>
+
+        <div class="progress-row">
+          <div class="progress-header">
+            <strong>Inference donor port from sidecar</strong>
+            <span class="progress-meta">Estimated 35% complete on main</span>
+          </div>
+          <div class="bar-track"><div class="bar-fill warn" style="width: 35%"></div></div>
+          <p>
+            This area is partially absorbed. Main already has auth, context packing, prompt assembly, response parsing, trigger logic, inference orchestration, and MCP scaffolding.
+          </p>
+          <ul>
+            <li>The planned <code>opencode-client.ts</code> does not exist.</li>
+            <li>The planned SDK dependencies are not in <code>shadow-agent/package.json</code>.</li>
+            <li>Electron startup does not yet wire inference into a live event buffer.</li>
+            <li>The finish-line plan references <code>work/inference-engine</code>, but that branch is not present in the local or remote branch inventory reviewed here.</li>
+          </ul>
+        </div>
+
+        <div class="progress-row">
+          <div class="progress-header">
+            <strong>Observability and logging hardening</strong>
+            <span class="progress-meta">Estimated 30% on main, 60% including branch work</span>
+          </div>
+          <div class="bar-track"><div class="bar-fill warn" style="width: 30%"></div></div>
+          <p>
+            Main already has a shared logger and logger tests. The plan, though, expects fuller instrumentation and sampled logging coverage.
+          </p>
+          <ul>
+            <li><code>work/observability</code> exists and adds logger/instrumentation test surface.</li>
+            <li>The finish-line observability goals are not fully reflected on main yet.</li>
+          </ul>
+        </div>
+
+        <div class="progress-row">
+          <div class="progress-header">
+            <strong>Testing maturity for the planned product</strong>
+            <span class="progress-meta">Estimated 45% complete on main</span>
+          </div>
+          <div class="bar-track"><div class="bar-fill warn" style="width: 45%"></div></div>
+          <p>
+            The current suite is healthy for the Phase 1 prototype, but it does not yet cover the most important donor-derived Phase 2 lines.
+          </p>
+          <ul>
+            <li>No merged capture-pipeline integration coverage on main.</li>
+            <li>No merged Canvas2D command/visual regression coverage on main.</li>
+            <li>No green typecheck gate, even though tests/build now pass.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel-grid">
+      <article class="panel">
+        <h2>What is actually left to donor-port?</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Area</th>
+              <th>What still needs to land</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Renderer</td>
+              <td>Replace the SVG graph with the Canvas2D renderer stack, wire simulation and panel layout, and land the visual identity work promised by the GUI plan.</td>
+            </tr>
+            <tr>
+              <td>Capture</td>
+              <td>Merge the full <code>src/capture/</code> runtime, session recovery, live IPC bridge, and Electron startup wiring so the app stops being fixture-only.</td>
+            </tr>
+            <tr>
+              <td>Inference</td>
+              <td>Finish the OpenCode client path, add missing SDK dependencies, connect inference to live capture, and make the inference runtime path real rather than mostly scaffolded.</td>
+            </tr>
+            <tr>
+              <td>Observability</td>
+              <td>Land the logger hardening and instrumentation work promised by the finish-line and testing plans.</td>
+            </tr>
+            <tr>
+              <td>Tests</td>
+              <td>Create the still-missing capture tests and Canvas2D command/visual tests called out as separate finish-line workstreams.</td>
+            </tr>
+            <tr>
+              <td>Docs</td>
+              <td>Reconcile explanatory docs so they stop describing planned or branch-only capabilities as if they are already the mainline product.</td>
+            </tr>
+            <tr>
+              <td>Type safety</td>
+              <td>Fix the current <code>tsc --noEmit</code> failures around <code>privacy</code>, <code>saveReplayFile</code> call shape, and test typing mismatches.</td>
+            </tr>
+          </tbody>
+        </table>
+      </article>
+
+      <article class="panel">
+        <h2>Branch reality check</h2>
+        <p>The finish-line plan references a larger set of active PR branches than the reviewed branch inventory actually shows.</p>
+        <table>
+          <thead>
+            <tr>
+              <th>Branch</th>
+              <th>Seen in branch inventory?</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td><code>work/canvas-renderer-v2</code></td><td>Yes</td></tr>
+            <tr><td><code>work/event-capture</code></td><td>Yes</td></tr>
+            <tr><td><code>work/observability</code></td><td>Yes</td></tr>
+            <tr><td><code>docs/finish-line-plan</code></td><td>Yes</td></tr>
+            <tr><td><code>work/inference-engine</code></td><td>No</td></tr>
+            <tr><td><code>work/test-phase1</code></td><td>No</td></tr>
+            <tr><td><code>work/renderer-tests</code></td><td>No</td></tr>
+            <tr><td><code>work/inference-tests</code></td><td>No</td></tr>
+          </tbody>
+        </table>
+        <div class="callout warn">
+          The plans look more complete than the visible branch inventory. That does not mean the work is impossible, but it does mean the roadmap and the live branch state are out of sync.
+        </div>
+      </article>
+    </section>
+
+    <section class="panel-grid">
+      <article class="panel">
+        <h2>Current repo health snapshot</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Check</th>
+              <th>Current result</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td><code>npm test</code></td><td>Passes: 16 files, 145 tests green</td></tr>
+            <tr><td><code>npm run build</code></td><td>Passes</td></tr>
+            <tr><td><code>npm run prompts:check</code></td><td>Passes</td></tr>
+            <tr><td><code>npx tsc --noEmit</code></td><td>Fails</td></tr>
+          </tbody>
+        </table>
+        <p class="footnote">
+          The current repo is healthier than earlier, but it is still not fully clean because the TypeScript contract gate is red.
+        </p>
+      </article>
+
+      <article class="panel">
+        <h2>Decision options</h2>
+        <ul>
+          <li><strong>Keep <code>third_party/</code> for now</strong>: best option if the current plan docs remain authoritative.</li>
+          <li><strong>Remove it now and rewrite the plan downward</strong>: valid only if you are intentionally abandoning the unfinished donor-port scope.</li>
+          <li><strong>Middle path</strong>: keep only until the active branch work is either merged or formally rejected, then replace the raw checkouts with distilled research notes.</li>
+        </ul>
+        <div class="callout good">
+          Recommended: treat <code>third_party/</code> as temporary donor code exactly as intended, but do not delete it until the current plan is either finished or explicitly narrowed.
+        </div>
+      </article>
+    </section>
+
+    <section class="panel">
+      <h2>Bottom line</h2>
+      <p>
+        The confusion is not really about what <code>third_party/</code> is for. That part is straightforward: it is temporary donor code.
+        The real confusion is that the repo is split between a mostly healthy Phase 1 prototype on main, a set of partially built feature branches, and plan docs that still assume those donor ports are part of the official finish line.
+      </p>
+      <p>
+        So the honest answer is:
+      </p>
+      <ul>
+        <li><code>third_party/</code> has served its purpose for runtime independence already.</li>
+        <li><code>third_party/</code> has not yet served its purpose for plan completion.</li>
+        <li>If the plan stays the plan, keep it.</li>
+        <li>If the plan changes, delete it and update the docs so the repo stops pretending those donor ports are still mandatory.</li>
+      </ul>
+      <p class="footnote">Briefing generated from repo state reviewed on 2026-04-19.</p>
+    </section>
+  </main>
+</body>
+</html>

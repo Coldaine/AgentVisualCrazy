@@ -1,16 +1,17 @@
 # Domain: Event Capture
 
-> **Status: Implementation Reference** — This document describes the full capture
-> pipeline targeted by PR #27. Current main has `src/shared/transcript-adapter.ts` and
-> `src/persistence/file-replay-store.ts` only. The `src/capture/` directory is on the
-> feature branch.
+> **Status: Planned** — The full live capture pipeline described here is on PR #27
+> and has not yet merged. Current main has only `src/shared/transcript-adapter.ts`
+> and `src/persistence/file-replay-store.ts` (replay from disk). The live
+> `src/capture/` pipeline — watcher, incremental parser, normalizer, ring buffer,
+> IPC bridge — lands with PR #27.
 
 The event capture pipeline watches an observed agent's transcript files, parses events
 incrementally, normalizes them into a canonical schema, and streams them to the renderer.
 
-Agent-flow event patterns: `docs/research/visual-patterns-agent-flow.md` §4-5
-Sidecar session patterns: `docs/research/visual-patterns-sidecar.md` §5-6
-Implementation plan: `docs/plans/plan-event-capture.md`
+Agent-flow event patterns: [`docs/research/visual-patterns-agent-flow.md`](research/visual-patterns-agent-flow.md) — sections 4 (Event Model) and 5 (Architecture: Event Pipeline)
+Sidecar session patterns: [`docs/research/visual-patterns-sidecar.md`](research/visual-patterns-sidecar.md) — sections 5 (Session Management) and 6 (Context Building)
+Implementation plan: [`docs/plans/plan-event-capture.md`](plans/plan-event-capture.md)
 
 ## Transcript Watcher
 

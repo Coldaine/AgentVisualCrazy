@@ -211,3 +211,4 @@ Privacy mode: local-only | off-host-opted-in
 | 2026-04-01 | Initial version | Established prompt based on shadow-inference-architecture.md spec |
 | 2026-04-17 | Moved prompt to JSON source-of-truth with generated docs/runtime artifacts | Eliminated manual drift and enabled parity enforcement in CI and pre-commit |
 | 2026-04-17 | Documented local-only default and explicit transcript consent gates | Keep prompt-builder behavior aligned with the privacy policy |
+| 2026-04-19 | No prompt text change; regenerated derived artifacts (docs/prompts/shadow-system-prompt.md and shadow-agent/src/inference/prompts.ts) to re-establish parity after the inference-engine exports settled on main | PRs #34 and #35 moved ShadowContextPacket and buildUserMessage into prompt-builder.ts and added packContext to context-packager.ts; keep generated files in lockstep with the JSON source-of-truth so prompts:check stays green |

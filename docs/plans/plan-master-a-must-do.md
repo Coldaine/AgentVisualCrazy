@@ -1,8 +1,15 @@
 # Master Plan A — Must-Do Forward Items
 
-> Last updated: 2026-04-18
+> Last updated: 2026-04-19 (status refresh after PRs #29, #31, #32, #34, #35 merged)
 > Derived from: Architecture critique investigation + PR review audit + Documentation audit
 > Scope: Everything that MUST happen before the project can ship
+>
+> **Status snapshot:** PRs #29, #31, #32, #34, #35 are merged. Remaining open PRs are
+> #26 (Canvas2D renderer), #27 (live capture), #28 (inference engine — *note:*
+> inference scaffolding actually landed via PR #28 on 2026-04-12; see history log),
+> #30 (observability), and #33 (docs/finish-line). The RepoVis archival and domain
+> status-header work called out in [the Documentation Remediation section](#3-documentation-remediation-must-do)
+> below are **done** and kept here for historical traceability — do not re-execute.
 
 ---
 
@@ -100,17 +107,14 @@ For each PR: address comments → rebase on main → `npm test` + `npm run build
 
 ## 3) Documentation Remediation (must-do)
 
-### High Priority
-1. **Remove empty temp file**: `docs/plans/temp/restructure-plan.md`
-2. **Archive RepoVis docs** (wrong product in this repo):
-   - Create `docs/plans/archives/repovis/README.md`
-   - Move `docs/repovis-build-prompts.md` → `docs/plans/archives/repovis/`
-   - Move `docs/repovis-original-spec.md` → `docs/plans/archives/repovis/`
-   - Move `docs/design/repovis-creative-alternatives.md` → `docs/plans/archives/repovis/`
-3. **Add implementation status headers** to domain docs:
-   - `docs/domain-events.md` — "Status: Reference — PR #27 implements this"
-   - `docs/domain-gui.md` — "Status: Reference — PR #26 implements this"
-   - `docs/domain-inference.md` — "Status: Reference — PR #28 implements this"
+### High Priority — DONE 2026-04-18/19 (kept for audit trail)
+1. ~~Remove empty temp file `docs/plans/temp/restructure-plan.md`~~ — done, directory removed.
+2. ~~Archive RepoVis docs~~ — done. Files live at `docs/plans/archives/repovis/`
+   (`README.md`, `repovis-build-prompts.md`, `repovis-original-spec.md`,
+   `repovis-creative-alternatives.md`).
+3. ~~Add implementation status headers to domain docs~~ — done and subsequently
+   normalized to a unified schema (`Status: Planned` / `Status: Partial on main` /
+   `Status: Landed on main`) in the drift-remediation pass.
 
 ### Medium Priority
 4. **Update `docs/history/log.md`** with entries since 2026-04-01:
@@ -128,13 +132,14 @@ For each PR: address comments → rebase on main → `npm test` + `npm run build
 
 ---
 
-## 4) Pre-Commit / CI Fix
+## 4) Pre-Commit / CI — RESOLVED
 
-The `prompts:check` pre-commit hook exists (`.husky/pre-commit`) but is currently
-failing because `docs/prompts/shadow-system-prompt.md` is out of date.
-
-**Fix**: Run `cd shadow-agent && npm run prompts:generate` on main after PR #29 merges,
-then commit the regenerated files. This unblocks all future commits.
+Previously the `prompts:check` pre-commit hook at `.husky/pre-commit` was failing
+because `docs/prompts/shadow-system-prompt.md` was out of date. Resolved via
+PR #34 (regenerated prompt artifacts) and PR #35 (hook now also runs
+`npm test --prefix shadow-agent`). The active hook still lives at
+`.husky/pre-commit`; see [`AGENTS.md`](../../AGENTS.md) for the prompt-sync
+workflow. No further action required here.
 
 ---
 
@@ -150,11 +155,11 @@ After merge sequence completes:
 
 ## Definition of Done
 
-- [ ] All 8 PRs (#26-#33) have review comments addressed
-- [ ] All 8 PRs merged to main in dependency order
-- [ ] Issues #21 and #24 implemented via new PRs and merged
-- [ ] All 18 issues (#8-#25) closed
-- [ ] Documentation cleaned up (RepoVis archived, status headers added, history updated)
-- [ ] `npm test` and `npm run build` pass on main
-- [ ] `npm run prompts:check` passes (pre-commit hook unblocked)
-- [ ] `docs/todo.md` reconciled, `docs/history/log.md` current
+- [x] Documentation cleaned up (RepoVis archived, status headers added, history updated — drift-remediation pass)
+- [x] `npm test` and `npm run build` pass on main (PR #35)
+- [x] `npm run prompts:check` passes (pre-commit hook unblocked — PR #34/#35)
+- [x] `docs/todo.md` reconciled, `docs/history/log.md` current (drift-remediation pass)
+- [ ] Remaining open PRs (#26 canvas renderer, #27 live capture, #30 observability, #33 docs finish-line) have review comments addressed
+- [ ] #26 and #27 merged to main — these are the actual product features
+- [ ] Issues #21 and #24 implemented via new PRs and merged (blocked on #26/#27)
+- [ ] All 18 original issues (#8-#25) closed

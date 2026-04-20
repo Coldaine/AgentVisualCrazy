@@ -13,18 +13,27 @@ npm install
 
 ## Test
 
-We use [Vitest](https://vitest.dev/) for unit and integration testing.
+We use [Vitest](https://vitest.dev/) for unit and integration testing. Tests run
+from inside the `shadow-agent/` directory.
 
 ```bash
-# Run all tests
-npm test
-
-# Run tests with coverage
-npm run test:coverage
-
-# Run specific test file
-npx vitest tests/derive.test.ts
+cd shadow-agent
+npm test               # run all tests
+npm run test:coverage  # run with coverage report
+npx vitest tests/derive.test.ts   # run a single file
 ```
+
+All tests on `main` pass as of PR #35 (merged 2026-04-19). If you check out an
+older commit, `npm test` may fail because the inference test suite depended on
+exports that were only added in PR #35 — update to a newer main or skip that
+suite if you are bisecting older history.
+
+CI runs the prompt-parity check, tests, and build on every PR via the `CI`
+workflow (defined in `.github/workflows/prompt-parity.yml`). A Husky pre-commit
+hook at `.husky/pre-commit` runs `npm run prompts:check` and
+`npm test --prefix shadow-agent` locally before each commit. Run `npm test`
+yourself before opening a PR — the pre-commit hook will also run it, but
+catching failures earlier is cheaper.
 
 ## Run
 
