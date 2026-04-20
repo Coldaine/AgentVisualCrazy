@@ -1,5 +1,9 @@
 # Visual Patterns: Citadel
 
+> **Archived reference (2026-04-20):** Citadel informed optional background atmosphere ideas.
+> The main renderer shipped without a required Citadel-style layer, so this remains inspiration,
+> not an active plan item.
+
 > Source: https://sethgammon.github.io/Citadel/ (local files were extracted from this site)
 > License: MIT (SethGammon/Citadel)
 > Extraction date: 2026-04-03

@@ -1,5 +1,9 @@
 # Inference Engine Implementation Plan
 
+> **Historical plan note (2026-04-20):** Core inference runtime, direct Anthropic fallback,
+> and MCP exposure are now on main. Treat this file as the design record for shipped work plus
+> the remaining OpenCode client follow-up.
+
 > Recommended order across all plans: **GUI Rendering → Event Capture → Inference Engine**
 >
 > The inference engine is the last to implement because it needs live event data flowing
@@ -18,12 +22,12 @@ All patterns are ported from `third_party/sidecar/` as described in `docs/resear
 
 ## 1. Dependencies to Add
 
-Install in `shadow-agent/`:
+Install in `shadow-agent/` as needed:
 
 ```
-@opencode-ai/sdk@^1.1.36        # OpenCode server + client SDK
-@anthropic-ai/sdk@latest         # Direct Anthropic API fallback
-@modelcontextprotocol/sdk@^1.27.0   # MCP server for exposing shadow tools
+@opencode-ai/sdk@^1.1.36        # Planned OpenCode server + client SDK
+@anthropic-ai/sdk@latest        # Installed direct Anthropic API fallback
+@modelcontextprotocol/sdk@^1.27.0  # Optional MCP dependency, loaded dynamically
 ```
 
 ---
@@ -34,7 +38,7 @@ All new files live under `shadow-agent/src/inference/` and `shadow-agent/src/mcp
 
 | File | Purpose |
 |------|---------|
-| `src/inference/auth.ts` | Credential loader (env → .env → OpenCode auth.json) |
+| `src/inference/auth.ts` | Credential loader (env → encrypted store → consented legacy fallbacks) |
 | `src/inference/opencode-client.ts` | Start OpenCode server, create client, manage sessions |
 | `src/inference/context-packager.ts` | Build `ShadowContextPacket` from `DerivedState` + recent events |
 | `src/inference/prompt-builder.ts` | Assemble system prompt + user message from context packet |
@@ -52,10 +56,16 @@ All new files live under `shadow-agent/src/inference/` and `shadow-agent/src/mcp
 Port from sidecar's `src/utils/auth-json.js`. Priority chain:
 
 1. `process.env.ANTHROPIC_API_KEY` / `OPENAI_API_KEY` (already set — skip)
-2. `~/.shadow-agent/.env` (load with dotenv)
-3. `~/.local/share/opencode/auth.json` (parse JSON, map provider → env var)
+2. `~/.shadow-agent/credentials.enc.json` (Electron `safeStorage` encrypted local store)
+3. `~/.shadow-agent/.env` (legacy plaintext fallback, only with explicit consent)
+4. `~/.local/share/opencode/auth.json` (legacy OpenCode fallback, only with explicit consent)
 
 The auth loader runs once at app startup in `electron/main.ts`, before any inference code. It sets `process.env` values so downstream code can use them transparently.
+
+Legacy file-based fallbacks are disabled by default and require
+`SHADOW_ALLOW_FILE_CREDENTIAL_FALLBACK=1`. When enabled, supported provider keys are
+migrated into the encrypted store for future runs. On POSIX, keep `~/.shadow-agent/`
+at `0700` and `credentials.enc.json` at `0600`.
 
 Provider-to-env mapping: `anthropic` → `ANTHROPIC_API_KEY`, `openai` → `OPENAI_API_KEY`, `openrouter` → `OPENROUTER_API_KEY`, `google` → `GOOGLE_API_KEY`, `deepseek` → `DEEPSEEK_API_KEY`.
 
@@ -193,17 +203,17 @@ The inference engine integrates into `electron/main.ts`:
 
 ## 13. Implementation Order (Within This Group)
 
-1. Auth loader (`auth.ts`) — can be tested standalone
-2. Prompt file (`prompts.ts`) + prompt documentation sync
-3. Context packager (`context-packager.ts`) — testable with fixture `DerivedState`
-4. Prompt builder (`prompt-builder.ts`) — testable with fixture packets
-5. Response parser (`response-parser.ts`) — testable with sample JSON
-6. Direct API fallback (`direct-api.ts`) — simplest end-to-end path
-7. OpenCode client (`opencode-client.ts`) — requires OpenCode installed
-8. Inference trigger (`trigger.ts`)
-9. Shadow inference engine orchestrator (`shadow-inference-engine.ts`)
-10. MCP server (`shadow-mcp-server.ts`)
-11. Wire everything into `electron/main.ts`
+1. ~~Auth loader (`auth.ts`)~~ — shipped
+2. ~~Prompt file (`prompts.ts`) + prompt documentation sync~~ — shipped
+3. ~~Context packager (`context-packager.ts`)~~ — shipped
+4. ~~Prompt builder (`prompt-builder.ts`)~~ — shipped
+5. ~~Response parser (`response-parser.ts`)~~ — shipped
+6. ~~Direct API fallback (`direct-api.ts`)~~ — shipped
+7. **OpenCode client (`opencode-client.ts`)** — remaining follow-up, requires OpenCode installed
+8. ~~Inference trigger (`trigger.ts`)~~ — shipped
+9. ~~Shadow inference engine orchestrator (`shadow-inference-engine.ts`)~~ — shipped
+10. ~~MCP server (`shadow-mcp-server.ts`)~~ — shipped
+11. ~~Wire everything into `electron/main.ts`~~ — shipped, with continued fit-and-finish on top
 
 Steps 1–5 produce testable units with no external dependencies. Step 6 is the first live integration point. Steps 7–11 build on top.
 

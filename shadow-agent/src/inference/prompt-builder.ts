@@ -11,7 +11,11 @@ import { SHADOW_SYSTEM_PROMPT } from './prompts';
 export { SHADOW_SYSTEM_PROMPT } from './prompts';
 import type { InferenceRequest } from './inference-client';
 import type { CanonicalEvent } from '../shared/schema';
-import { DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS, sanitizeTranscriptText } from '../shared/privacy';
+import {
+  assertOffHostInferenceAllowed,
+  DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS,
+  sanitizeTranscriptText
+} from '../shared/privacy';
 import type { TranscriptPrivacySettings } from '../shared/schema';
 
 export interface ShadowContextPacket {
@@ -39,12 +43,19 @@ export function buildUserMessage(
   const delivery = options.delivery ?? 'local';
   const privacy = options.privacy ?? DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS;
 
-  if (delivery === 'off-host' && !privacy.allowOffHostInference) {
-    throw new Error('Off-host inference is disabled until the user explicitly opts in.');
+  if (delivery === 'off-host') {
+    assertOffHostInferenceAllowed(privacy, {
+      includeRawTranscript: options.includeRawTranscript
+    });
   }
 
+  const allowRawTranscript =
+    delivery === 'off-host' &&
+    options.includeRawTranscript === true &&
+    privacy.allowRawTranscriptStorage;
+
   const sanitize = (text: string): string => {
-    if (delivery === 'off-host' && privacy.allowOffHostInference && options.includeRawTranscript && privacy.allowRawTranscriptStorage) {
+    if (allowRawTranscript) {
       return text;
     }
     return sanitizeTranscriptText(text);
@@ -78,7 +89,7 @@ export function buildUserMessage(
     '',
     `--- File Attention ---`,
     ...packet.fileAttention.map((f) =>
-      `${f.filePath}: ${f.touches} touches`
+      `${sanitize(f.filePath)}: ${f.touches} touches`
     ),
     '',
     `--- Risk Signals (heuristic) ---`,
@@ -90,9 +101,12 @@ export function buildUserMessage(
   return lines.join('\n');
 }
 
-export function buildInferenceRequest(packet: ShadowContextPacket): InferenceRequest {
+export function buildInferenceRequest(
+  packet: ShadowContextPacket,
+  options: BuildUserMessageOptions = {}
+): InferenceRequest {
   return {
     systemPrompt: SHADOW_SYSTEM_PROMPT,
-    userMessage: buildUserMessage(packet),
+    userMessage: buildUserMessage(packet, options),
   };
 }

@@ -27,6 +27,7 @@ type ResponseFactory = (request: InferenceRequest) => InferenceResult | Promise<
  * Callers queue responses; the client returns them in order.
  */
 export class FakeInferenceClient implements InferenceClient {
+  readonly id = 'fake-inference-client';
   readonly provider = 'fake' as const;
   private queue: ResponseFactory[] = [];
   readonly calls: InferenceRequest[] = [];
@@ -155,14 +156,15 @@ describe('FakeInferenceClient', () => {
 
   it('factory receives the actual request', async () => {
     const client = new FakeInferenceClient();
-    let captured: InferenceRequest | null = null;
+    const capturedRequests: InferenceRequest[] = [];
     client.enqueueFactory((req) => {
-      captured = req;
+      capturedRequests.push(req);
       return { text: 'echo', model: 'f', latencyMs: 0 };
     });
 
     await client.infer({ systemPrompt: 'sys', userMessage: 'user-msg' });
-    expect(captured?.userMessage).toBe('user-msg');
+    expect(capturedRequests).toHaveLength(1);
+    expect(capturedRequests[0]?.userMessage).toBe('user-msg');
   });
 });
 

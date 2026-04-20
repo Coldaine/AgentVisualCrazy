@@ -4,12 +4,11 @@
 > Derived from: Architecture critique investigation + PR review audit + Documentation audit
 > Scope: Everything that MUST happen before the project can ship
 >
-> **Status snapshot:** PRs #29, #31, #32, #34, #35 are merged. Remaining open PRs are
-> #26 (Canvas2D renderer), #27 (live capture), #28 (inference engine — *note:*
-> inference scaffolding actually landed via PR #28 on 2026-04-12; see history log),
-> #30 (observability), and #33 (docs/finish-line). The RepoVis archival and domain
-> status-header work called out in [the Documentation Remediation section](#3-documentation-remediation-must-do)
-> below are **done** and kept here for historical traceability — do not re-execute.
+> **Status snapshot:** PRs #26, #27, #28, #29, #30, #31, #32, #33, #34, and #35 are
+> now merged. This document remains as historical traceability for the merge campaign.
+> The RepoVis archival and domain status-header work called out in
+> [the Documentation Remediation section](#3-documentation-remediation-must-do) below are
+> **done** and kept here for audit context — do not re-execute.
 
 ---
 
@@ -22,8 +21,9 @@ After investigating all 9 architectural critique claims against the actual codeb
   lives on PR #27 branch, watcher tests deferred to Phase 2)
 - **1 is VALID** (documentation describes Phase 2+ features as if they exist on main)
 
-The codebase is architecturally sound. The gap is between what exists on feature branches
-vs. what's merged to main, and between documentation aspirations vs. current state.
+The codebase is architecturally sound. The remaining gap is between shipped Phase 2
+foundations on main and the smaller follow-up work needed to polish the live experience,
+close optional provider integrations, and keep documentation honest.
 
 ---
 
@@ -83,8 +83,9 @@ These are the actionable review comments that MUST be addressed before merge.
 | Add `cd shadow-agent` to npm commands | `plan-finish-line.md` | Low — accuracy |
 | Fix markdown ordered-list numbering | `plan-finish-line.md:74` | Low — lint |
 
-### PRs #27, #28, #30 — No blocking inline comments found
-These have REVIEW_REQUIRED status. No actionable code fixes needed — just need review approval.
+### PRs #27, #28, #30 — Historical note
+These were the feature lines that completed the core Phase 2 merge campaign. Keep the
+audit notes below for traceability only.
 
 ### Stream B — Doc Coordination & PR #34
 
@@ -120,7 +121,7 @@ For each PR: address comments → rebase on main → `npm test` + `npm run build
    (`README.md`, `repovis-build-prompts.md`, `repovis-original-spec.md`,
    `repovis-creative-alternatives.md`).
 3. ~~Add implementation status headers to domain docs~~ — done and subsequently
-   normalized to a unified schema (`Status: Planned` / `Status: Partial on main` /
+   normalized to a unified schema (`Status: Planned` / `Status: Core runtime landed on main` /
    `Status: Landed on main`) in the drift-remediation pass.
 
 ### Medium Priority
@@ -141,11 +142,11 @@ For each PR: address comments → rebase on main → `npm test` + `npm run build
 
 ## 4) Pre-Commit / CI — RESOLVED
 
-Previously the `prompts:check` pre-commit hook at `.husky/pre-commit` was failing
+Previously the `prompts:check` pre-commit hook at `.githooks/pre-commit` was failing
 because `docs/prompts/shadow-system-prompt.md` was out of date. Resolved via
 PR #34 (regenerated prompt artifacts) and PR #35 (hook now also runs
 `npm test --prefix shadow-agent`). The active hook still lives at
-`.husky/pre-commit`; see [`AGENTS.md`](../../AGENTS.md) for the prompt-sync
+`.githooks/pre-commit`; see [`AGENTS.md`](../../AGENTS.md) for the prompt-sync
 workflow. No further action required here.
 
 ---
@@ -166,8 +167,8 @@ After merge sequence completes:
 - [x] `npm test` and `npm run build` pass on main (PR #35)
 - [x] `npm run prompts:check` passes (pre-commit hook unblocked — PR #34/#35)
 - [x] `docs/todo.md` reconciled, `docs/history/log.md` current (drift-remediation pass)
-- [ ] Remaining open PRs (#26 canvas renderer, #27 live capture, #30 observability, #33 docs finish-line) have review comments addressed
-- [ ] #26 and #27 merged to main — these are the actual product features
+- [x] Remaining open PRs (#26 canvas renderer, #27 live capture, #30 observability, #33 docs finish-line) were addressed and merged on 2026-04-20
+- [x] #26 and #27 merged to main — the core product feature lines are shipped
 - [ ] Issues #21 and #24 implemented via new PRs and merged (blocked on #26/#27)
 - [ ] All 18 original issues (#8-#25) closed
 

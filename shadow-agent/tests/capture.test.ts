@@ -2,13 +2,27 @@
  * Tests for the event capture pipeline.
  * Covers: incremental parser, event buffer, session discovery, and session manager roundtrip.
  */
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import { createIncrementalParser } from '../src/capture/incremental-parser';
 import { createEventBuffer } from '../src/capture/event-buffer';
+import { computeWatchDelay } from '../src/capture/transcript-watcher';
 import type { CanonicalEvent } from '../src/shared/schema';
 import { normalizeEntry } from '../src/capture/normalizer';
 import { discoverActiveSession } from '../src/capture/session-discovery';
-import * as fs from 'node:fs/promises';
+import { mkdtempSync, rmSync } from 'node:fs';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
+
+const tempRoots: string[] = [];
+
+afterEach(() => {
+  while (tempRoots.length > 0) {
+    const root = tempRoots.pop();
+    if (root) {
+      rmSync(root, { recursive: true, force: true });
+    }
+  }
+});
 
 // ── incremental parser ─────────────────────────────────────────────────────
 
@@ -119,73 +133,181 @@ describe('createEventBuffer', () => {
     timestamp: new Date().toISOString(),
     source: 'claude-transcript',
     sessionId: 'sess',
+    actor: 'assistant',
     payload: {},
   });
 
-  it('pushes events and returns them via getAll', () => {
-    const buf = createEventBuffer();
-    buf.push([makeEvent('a'), makeEvent('b')]);
-    expect(buf.getAll()).toHaveLength(2);
+  function makeTempRoot(): string {
+    const root = mkdtempSync(join(tmpdir(), 'shadow-agent-queue-'));
+    tempRoots.push(root);
+    return root;
+  }
+
+  it('pushes events and returns them via getAll', async () => {
+    const buf = createEventBuffer({ persistenceRoot: makeTempRoot() });
+    await buf.push([makeEvent('a'), makeEvent('b')]);
+    expect(await buf.getAll()).toHaveLength(2);
     expect(buf.size).toBe(2);
   });
 
-  it('evicts oldest events when capacity is exceeded', () => {
-    const buf = createEventBuffer(3);
-    buf.push([makeEvent('x'), makeEvent('y'), makeEvent('z')]);
-    buf.push([makeEvent('w')]);
-    const all = buf.getAll();
+  it('spills oldest events to disk when the in-memory window rolls over', async () => {
+    const buf = createEventBuffer({
+      memoryCapacity: 2,
+      totalCapacity: 5,
+      persistenceRoot: makeTempRoot()
+    });
+
+    await buf.push([makeEvent('x'), makeEvent('y'), makeEvent('z')]);
+
+    const all = await buf.getAll();
     expect(all).toHaveLength(3);
-    expect(all[0].id).toBe('y');
-    expect(all[2].id).toBe('w');
+    expect(all.map((event) => event.id)).toEqual(['x', 'y', 'z']);
+    expect(buf.getMetrics().memoryDepth).toBe(2);
+    expect(buf.getMetrics().spilledDepth).toBe(1);
   });
 
-  it('getRecent returns last n events', () => {
-    const buf = createEventBuffer();
-    buf.push([makeEvent('1'), makeEvent('2'), makeEvent('3')]);
-    const recent = buf.getRecent(2);
+  it('drops the oldest spilled events once the total queue capacity is exceeded', async () => {
+    const buf = createEventBuffer({
+      memoryCapacity: 2,
+      totalCapacity: 4,
+      persistenceRoot: makeTempRoot()
+    });
+
+    await buf.push([makeEvent('1'), makeEvent('2'), makeEvent('3'), makeEvent('4'), makeEvent('5')]);
+
+    const all = await buf.getAll();
+    expect(all.map((event) => event.id)).toEqual(['2', '3', '4', '5']);
+    expect(buf.getMetrics().totalDepth).toBe(4);
+  });
+
+  it('getRecent returns last n events across memory and spill storage', async () => {
+    const buf = createEventBuffer({
+      memoryCapacity: 2,
+      totalCapacity: 5,
+      persistenceRoot: makeTempRoot()
+    });
+    await buf.push([makeEvent('1'), makeEvent('2'), makeEvent('3')]);
+    const recent = await buf.getRecent(2);
     expect(recent).toHaveLength(2);
     expect(recent[0].id).toBe('2');
     expect(recent[1].id).toBe('3');
   });
 
-  it('getSince returns events after a given id', () => {
-    const buf = createEventBuffer();
-    buf.push([makeEvent('a'), makeEvent('b'), makeEvent('c')]);
-    expect(buf.getSince('b')).toHaveLength(1);
-    expect(buf.getSince('b')[0].id).toBe('c');
+  it('getSince returns events after a given id even when older items spilled to disk', async () => {
+    const buf = createEventBuffer({
+      memoryCapacity: 2,
+      totalCapacity: 5,
+      persistenceRoot: makeTempRoot()
+    });
+    await buf.push([makeEvent('a'), makeEvent('b'), makeEvent('c')]);
+    expect(await buf.getSince('b')).toHaveLength(1);
+    expect((await buf.getSince('b'))[0].id).toBe('c');
   });
 
-  it('getSince returns all events when id not found', () => {
-    const buf = createEventBuffer();
-    buf.push([makeEvent('a'), makeEvent('b')]);
-    expect(buf.getSince('missing')).toHaveLength(2);
+  it('getSince returns all events when id not found', async () => {
+    const buf = createEventBuffer({ persistenceRoot: makeTempRoot() });
+    await buf.push([makeEvent('a'), makeEvent('b')]);
+    expect(await buf.getSince('missing')).toHaveLength(2);
   });
 
-  it('subscribe is notified on push', () => {
-    const buf = createEventBuffer();
+  it('subscribe is notified on push', async () => {
+    const buf = createEventBuffer({ persistenceRoot: makeTempRoot() });
     const calls: CanonicalEvent[][] = [];
     buf.subscribe((evts) => calls.push(evts));
-    buf.push([makeEvent('e1')]);
+    await buf.push([makeEvent('e1')]);
     expect(calls).toHaveLength(1);
     expect(calls[0]).toHaveLength(1);
   });
 
-  it('unsubscribe stops notifications', () => {
-    const buf = createEventBuffer();
+  it('unsubscribe stops notifications', async () => {
+    const buf = createEventBuffer({ persistenceRoot: makeTempRoot() });
     const calls: number[] = [];
     const unsub = buf.subscribe(() => calls.push(1));
-    buf.push([makeEvent('e1')]);
+    await buf.push([makeEvent('e1')]);
     unsub();
-    buf.push([makeEvent('e2')]);
+    await buf.push([makeEvent('e2')]);
     expect(calls).toHaveLength(1);
   });
 
-  it('clear empties the buffer', () => {
-    const buf = createEventBuffer();
-    buf.push([makeEvent('a')]);
-    buf.clear();
+  it('tracks consumer checkpoints against spilled data', async () => {
+    const buf = createEventBuffer({
+      memoryCapacity: 2,
+      totalCapacity: 5,
+      persistenceRoot: makeTempRoot()
+    });
+    await buf.push([makeEvent('a'), makeEvent('b'), makeEvent('c')]);
+    await buf.registerConsumer('renderer', { startAt: 'earliest' });
+
+    const firstRead = await buf.readPending('renderer');
+    expect(firstRead.events.map((event) => event.id)).toEqual(['a', 'b', 'c']);
+    expect(firstRead.truncated).toBe(false);
+
+    await buf.commitCheckpoint('renderer', 'b');
+    await buf.push([makeEvent('d'), makeEvent('e')]);
+
+    const secondRead = await buf.readPending('renderer');
+    expect(secondRead.events.map((event) => event.id)).toEqual(['c', 'd', 'e']);
+    expect(buf.getMetrics().consumers[0]?.lag).toBe(3);
+  });
+
+  it('reports high backpressure as the queue fills', async () => {
+    const buf = createEventBuffer({
+      memoryCapacity: 2,
+      totalCapacity: 4,
+      persistenceRoot: makeTempRoot()
+    });
+    await buf.push([makeEvent('a'), makeEvent('b'), makeEvent('c')]);
+    expect(buf.getBackpressure().level).toBe('high');
+
+    await buf.push([makeEvent('d')]);
+    expect(buf.getBackpressure().level).toBe('critical');
+    expect(buf.getBackpressure().shouldThrottle).toBe(true);
+  });
+
+  it('clear empties the queue and resets stored checkpoints', async () => {
+    const buf = createEventBuffer({ persistenceRoot: makeTempRoot() });
+    await buf.push([makeEvent('a')]);
+    await buf.registerConsumer('renderer', { startAt: 'earliest' });
+    await buf.clear();
     expect(buf.size).toBe(0);
-    expect(buf.getAll()).toHaveLength(0);
+    expect(await buf.getAll()).toHaveLength(0);
+    expect(buf.getMetrics().consumers[0]?.lastOffset).toBe(-1);
+  });
+});
+
+// ── adapter backpressure ───────────────────────────────────────────────────
+
+describe('computeWatchDelay', () => {
+  it('keeps the base delay when pressure is normal or missing', () => {
+    expect(computeWatchDelay(100)).toBe(100);
+    expect(
+      computeWatchDelay(100, {
+        level: 'normal',
+        shouldThrottle: false,
+        totalRatio: 0.2,
+        pendingWrites: 0
+      })
+    ).toBe(100);
+  });
+
+  it('increases debounce as backpressure rises', () => {
+    expect(
+      computeWatchDelay(100, {
+        level: 'high',
+        shouldThrottle: true,
+        totalRatio: 0.8,
+        pendingWrites: 2
+      })
+    ).toBe(250);
+
+    expect(
+      computeWatchDelay(100, {
+        level: 'critical',
+        shouldThrottle: true,
+        totalRatio: 1,
+        pendingWrites: 4
+      })
+    ).toBe(500);
   });
 });
 

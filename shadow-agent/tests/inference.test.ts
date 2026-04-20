@@ -108,7 +108,7 @@ describe('buildContextPacket', () => {
     agentNodes: [],
     timeline: [],
     transcript: [
-      { id: 't1', actor: 'user', text: 'Do the thing', timestamp: '2024-01-01T00:00:00Z' },
+      { id: 't1', actor: 'user', text: 'Do the thing', timestamp: '2024-01-01T00:00:00Z', redacted: false },
     ],
     fileAttention: [{ filePath: 'src/foo.ts', touches: 3 }],
     riskSignals: ['Tool failed twice'],

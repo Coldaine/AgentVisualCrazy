@@ -1,5 +1,8 @@
 # Visual Inspiration Catalog: Portfolio & Open Source
 
+> **Archived reference (2026-04-20):** Patterns here informed the shipped Canvas2D renderer
+> and panel polish. Keep for future inspiration, not as an active implementation checklist.
+
 > Additional visual patterns mined from Coldaine's GitHub portfolio and open-source ecosystem.
 > These supplement the two primary references (agent-flow and sidecar).
 

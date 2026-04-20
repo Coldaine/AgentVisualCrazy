@@ -52,6 +52,40 @@ export interface SessionRecord {
   eventCount: number;
 }
 
+export type EventQueueBackpressureLevel = 'normal' | 'high' | 'critical';
+
+export interface EventQueueBackpressureState {
+  level: EventQueueBackpressureLevel;
+  shouldThrottle: boolean;
+  totalRatio: number;
+  pendingWrites: number;
+}
+
+export interface EventQueueCheckpoint {
+  consumerId: string;
+  lastOffset: number;
+  lastEventId?: string;
+  updatedAt: string;
+}
+
+export interface EventQueueConsumerLag extends EventQueueCheckpoint {
+  lag: number;
+}
+
+export interface EventQueueMetrics {
+  memoryDepth: number;
+  spilledDepth: number;
+  totalDepth: number;
+  memoryCapacity: number;
+  totalCapacity: number;
+  pendingWrites: number;
+  subscriberCount: number;
+  oldestOffset: number | null;
+  newestOffset: number | null;
+  consumers: EventQueueConsumerLag[];
+  backpressure: EventQueueBackpressureState;
+}
+
 export interface TranscriptPrivacySettings {
   allowRawTranscriptStorage: boolean;
   allowOffHostInference: boolean;
@@ -76,7 +110,9 @@ export interface RendererInput {
   privacy: PrivacyPolicy;
 }
 
-export interface SnapshotPayload extends RendererInput {}
+export interface SnapshotPayload extends RendererInput {
+  captureQueue?: EventQueueMetrics;
+}
 
 export interface ExportResult {
   canceled: boolean;
@@ -86,6 +122,8 @@ export interface ExportResult {
 
 export interface ShadowAgentBridge {
   bootstrap: () => Promise<SnapshotPayload>;
+  onLiveEvents: (callback: (events: CanonicalEvent[]) => void) => () => void;
+  getLiveSnapshot: () => Promise<SnapshotPayload | null>;
   openReplayFile: () => Promise<SnapshotPayload | null>;
   exportReplayJsonl: (
     events: CanonicalEvent[],

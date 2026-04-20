@@ -51,4 +51,26 @@ describe('prompt-builder privacy', () => {
     expect(message).toContain('Reach me at dev@example.com');
     expect(message).toContain('echo sk-abcdefghijklmnop');
   });
+
+  it('requires separate raw transcript opt-in before sending unsanitized content off-host', () => {
+    expect(() =>
+      buildUserMessage(packet, {
+        delivery: 'off-host',
+        includeRawTranscript: true,
+        privacy: {
+          allowRawTranscriptStorage: false,
+          allowOffHostInference: true
+        }
+      })
+    ).toThrow(/raw transcript opt-in/i);
+  });
+
+  it('sanitizes file-attention paths in prompt payloads by default', () => {
+    const message = buildUserMessage({
+      ...packet,
+      fileAttention: [{ filePath: 'D:\\_projects\\AgentVisualCrazy\\secret.txt', touches: 2 }]
+    });
+
+    expect(message).toContain('[redacted-path]: 2 touches');
+  });
 });

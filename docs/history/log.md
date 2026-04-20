@@ -72,3 +72,19 @@
 - PR #32 merged: `FakeInferenceClient` seam, deterministic context packager, prompt-builder character-equality checks, parser fallback tests (closes #23)
 - PR #34 merged: master-plan remediation landed `docs/getting-started.md`, architecture phase split, `docs/todo.md` sync, and history log update
 - PR #35 merged: fixed 14 failing tests on main by adding `packContext`, `buildUserMessage`, and `ShadowContextPacket` exports; added coverage tooling; re-aligned docs with current codebase
+
+## 2026-04-20 — Secure credential storage hardening
+
+- Reworked `src/inference/auth.ts` to prefer an Electron `safeStorage` encrypted local store at `~/.shadow-agent/credentials.enc.json`
+- Added explicit consent gating for legacy plaintext fallbacks via `SHADOW_ALLOW_FILE_CREDENTIAL_FALLBACK=1`
+- Added automatic migration of consented legacy provider keys into the encrypted store
+- Added auth-focused tests covering secure store loading, env precedence, fallback consent, migration, and POSIX permission enforcement
+- Updated active docs to describe the new auth chain and secure permission guidance
+
+## 2026-04-20 — Phase 2 feature lines merged
+
+- PR #26 merged: Canvas2D + D3-Force renderer landed on main for the live graph view
+- PR #27 merged: transcript watcher, bounded event queue, IPC bridge, and session manager landed on main
+- PR #30 merged: logger hardening and subsystem instrumentation landed on main
+- PR #33 merged: finish-line coordination plans and architecture assessment landed on main
+- Main now carries the full Phase 2 foundation; remaining work is provider depth, optional visual atmosphere, and follow-up polish

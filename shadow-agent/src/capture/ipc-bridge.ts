@@ -6,18 +6,21 @@
  */
 import { ipcMain } from 'electron';
 import type { WebContents } from 'electron';
-import type { CanonicalEvent, SnapshotPayload } from '../shared/schema';
+import { DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS, prepareEventsForStorage } from '../shared/privacy';
+import type { SnapshotPayload, TranscriptPrivacySettings } from '../shared/schema';
 import type { EventBuffer } from './event-buffer';
 import { createLogger } from '../shared/logger';
 
 const logger = createLogger({ minLevel: 'info' });
 
 const PUSH_DEBOUNCE_MS = 150;
+const RENDERER_CONSUMER_ID = 'renderer-ipc';
 
 export interface IpcBridgeOptions {
   buffer: EventBuffer;
   getWebContents: () => WebContents | null;
-  buildSnapshot: () => SnapshotPayload | null;
+  buildSnapshot: () => Promise<SnapshotPayload | null>;
+  privacy?: TranscriptPrivacySettings;
 }
 
 export interface IpcBridge {
@@ -26,41 +29,68 @@ export interface IpcBridge {
 
 export function createIpcBridge(opts: IpcBridgeOptions): IpcBridge {
   const { buffer, getWebContents, buildSnapshot } = opts;
+  const privacy = opts.privacy ?? DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS;
 
   return {
     start() {
       let debounceTimer: ReturnType<typeof setTimeout> | null = null;
-      const pendingBatch: CanonicalEvent[] = [];
+      let flushInFlight = false;
+      let flushRequested = false;
+      const consumerReady = buffer.registerConsumer(RENDERER_CONSUMER_ID, { startAt: 'latest' });
 
-      const flush = () => {
+      const flush = async () => {
+        if (flushInFlight) {
+          flushRequested = true;
+          return;
+        }
+
+        flushInFlight = true;
         debounceTimer = null;
-        const wc = getWebContents();
-        if (!wc || wc.isDestroyed()) return;
-        if (pendingBatch.length === 0) return;
+        try {
+          const wc = getWebContents();
+          if (!wc || wc.isDestroyed()) {
+            return;
+          }
 
-        const batch = [...pendingBatch];
-        pendingBatch.length = 0;
+          await consumerReady;
+          const pending = await buffer.readPending(RENDERER_CONSUMER_ID);
+          if (pending.events.length === 0) {
+            return;
+          }
 
-        logger.debug('ipc', 'snapshot.sent', { eventCount: batch.length });
-        wc.send('shadow:events', batch);
+          const rendererBatch = prepareEventsForStorage(pending.events, privacy);
+          logger.debug('ipc', 'snapshot.sent', {
+            eventCount: rendererBatch.length,
+            truncated: pending.truncated
+          });
+          wc.send('shadow:events', rendererBatch);
+          await buffer.commitCheckpoint(RENDERER_CONSUMER_ID, pending.events.at(-1)!.id);
+        } finally {
+          flushInFlight = false;
+          if (flushRequested) {
+            flushRequested = false;
+            void flush();
+          }
+        }
       };
 
-      const unsubscribe = buffer.subscribe((events) => {
-        pendingBatch.push(...events);
+      const unsubscribe = buffer.subscribe(() => {
         if (debounceTimer) clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(flush, PUSH_DEBOUNCE_MS);
+        debounceTimer = setTimeout(() => {
+          void flush();
+        }, PUSH_DEBOUNCE_MS);
       });
 
       ipcMain.removeHandler('shadow:snapshot');
-      ipcMain.handle('shadow:snapshot', () => {
+      ipcMain.handle('shadow:snapshot', async () => {
         logger.info('ipc', 'snapshot_requested');
-        return buildSnapshot();
+        return await buildSnapshot();
       });
 
       ipcMain.removeHandler('shadow:events-since');
-      ipcMain.handle('shadow:events-since', (_event, eventId: string) => {
+      ipcMain.handle('shadow:events-since', async (_event, eventId: string) => {
         logger.debug('ipc', 'events_since_requested', { eventId });
-        return buffer.getSince(eventId);
+        return await buffer.getSince(eventId);
       });
 
       return () => {

@@ -29,11 +29,12 @@ exports that were only added in PR #35 — update to a newer main or skip that
 suite if you are bisecting older history.
 
 CI runs the prompt-parity check, tests, and build on every PR via the `CI`
-workflow (defined in `.github/workflows/prompt-parity.yml`). A Husky pre-commit
-hook at `.husky/pre-commit` runs `npm run prompts:check` and
-`npm test --prefix shadow-agent` locally before each commit. Run `npm test`
-yourself before opening a PR — the pre-commit hook will also run it, but
-catching failures earlier is cheaper.
+workflow (defined in `.github/workflows/prompt-parity.yml`). The repo uses a
+Git hook in `.githooks/pre-commit`, and `npm install` from either the repo root
+or `shadow-agent/` configures `core.hooksPath` automatically so that
+`npm run prompts:check` and `npm test --prefix shadow-agent` run locally before
+each commit. Run `npm test` yourself before opening a PR — the pre-commit hook
+will also run it, but catching failures earlier is cheaper.
 
 ## Run
 
@@ -42,6 +43,26 @@ To start the Electron application in development mode with HMR (Hot Module Repla
 ```bash
 npm start
 ```
+
+## Credential Setup
+
+Inference credentials now prefer secure sources:
+
+- `process.env` always wins for local development or CI
+- `~/.shadow-agent/credentials.enc.json` is the default encrypted local store
+- legacy plaintext fallbacks (`~/.shadow-agent/.env` and OpenCode's `auth.json`) are ignored unless `SHADOW_ALLOW_FILE_CREDENTIAL_FALLBACK=1` is set
+
+If you are migrating from an older file-based setup, enable `SHADOW_ALLOW_FILE_CREDENTIAL_FALLBACK=1`
+for the migration run so shadow-agent can import supported provider keys into the encrypted store.
+After the encrypted store is populated, remove that flag and delete any temporary plaintext `.env`
+copy you created for migration.
+
+Permission guidance:
+
+- POSIX: keep `~/.shadow-agent/` at `0700`
+- POSIX: keep `~/.shadow-agent/credentials.enc.json` at `0600`
+- Windows: leave the store inside your user profile so standard per-user ACLs protect it
+- Do not place credential files in shared folders, synced team drives, or repo working trees
 
 ## Project Structure
 
@@ -61,6 +82,10 @@ Run these commands when updating the system prompt:
 npm run prompts:generate
 npm run prompts:check
 ```
+
+Prompt manifests live under `prompts/` and can be authored in `.json`, `.yaml`,
+or `.yml`. The generated Markdown docs and runtime TypeScript prompt mirrors
+must never be edited directly.
 
 ## Documentation
 

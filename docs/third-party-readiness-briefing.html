@@ -68,6 +68,15 @@
       margin-bottom: 24px;
     }
 
+    .historical-note {
+      padding: 16px 18px;
+      margin-bottom: 20px;
+      border-left: 4px solid var(--warn);
+      background: rgba(255, 191, 90, 0.1);
+      color: var(--text);
+      border-radius: 12px;
+    }
+
     .hero-card,
     .panel {
       background: linear-gradient(180deg, rgba(20, 36, 53, 0.96), rgba(12, 24, 36, 0.98));
@@ -293,6 +302,12 @@
 </head>
 <body>
   <main>
+    <div class="historical-note">
+      Historical briefing from the pre-merge readiness phase. Current implementation and
+      status now live in <code>docs/architecture.md</code>, the domain docs, and
+      <code>docs/history/log.md</code>.
+    </div>
+
     <section class="hero">
       <article class="hero-card">
         <div class="eyebrow">Shadow-Agent Briefing</div>

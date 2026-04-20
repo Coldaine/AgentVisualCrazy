@@ -5,6 +5,7 @@
 import { open, stat } from 'node:fs/promises';
 import type { FileHandle } from 'node:fs/promises';
 import fs from 'node:fs';
+import type { EventQueueBackpressureState } from '../shared/schema';
 import { createLogger } from '../shared/logger';
 
 const logger = createLogger({ minLevel: 'info' });
@@ -15,10 +16,34 @@ export interface TranscriptWatcher {
   stop(): void;
 }
 
+export interface TranscriptWatcherOptions {
+  getBackpressure?: () => EventQueueBackpressureState;
+}
+
 const DEBOUNCE_MS = 100;
 const READ_CHUNK = 65_536; // 64 KB
 
-export function watchTranscript(filePath: string, onChunk: ChunkCallback): TranscriptWatcher {
+export function computeWatchDelay(
+  baseDelayMs: number,
+  backpressure?: EventQueueBackpressureState
+): number {
+  if (!backpressure) {
+    return baseDelayMs;
+  }
+  if (backpressure.level === 'critical') {
+    return Math.max(baseDelayMs, 500);
+  }
+  if (backpressure.level === 'high') {
+    return Math.max(baseDelayMs, 250);
+  }
+  return baseDelayMs;
+}
+
+export function watchTranscript(
+  filePath: string,
+  onChunk: ChunkCallback,
+  options: TranscriptWatcherOptions = {}
+): TranscriptWatcher {
   let offset = 0;
   let handle: FileHandle | null = null;
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -67,9 +92,10 @@ export function watchTranscript(filePath: string, onChunk: ChunkCallback): Trans
   const scheduleRead = (delay = DEBOUNCE_MS) => {
     if (stopped) return;
     if (debounceTimer) clearTimeout(debounceTimer);
+    const nextDelay = computeWatchDelay(delay, options.getBackpressure?.());
     debounceTimer = setTimeout(() => {
       void readNew();
-    }, delay);
+    }, nextDelay);
   };
 
   const watcher = fs.watch(filePath, { persistent: false }, () => {

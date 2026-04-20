@@ -30,7 +30,8 @@ export interface Particle {
   speed: number;
   trailLength: number;
   color: string;
-  label?: string;
+  opacity: number;
+  size: number;
 }
 
 export interface ToolCard {

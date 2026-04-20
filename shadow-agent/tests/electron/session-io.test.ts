@@ -55,6 +55,7 @@ describe('session-io', () => {
     expect(snapshot.state.currentObjective).toBe('Ship capture pipeline');
     expect(snapshot.events).toHaveLength(3);
     expect(snapshot.state.fileAttention.some((file) => file.filePath === 'src/main.ts')).toBe(true);
+    expect(snapshot.privacy.processingMode).toBe('local-only');
 
     const fixture = buildFixtureSnapshot();
     expect(fixture.source.kind).toBe('fixture');

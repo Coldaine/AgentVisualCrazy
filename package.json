@@ -2,6 +2,8 @@
   "name": "agent-visual-crazy",
   "private": true,
   "scripts": {
+    "hooks:install": "node scripts/install-git-hooks.mjs",
+    "prepare": "npm run hooks:install",
     "prompts:generate": "npm --prefix shadow-agent run prompts:generate",
     "prompts:check": "npm --prefix shadow-agent run prompts:check"
   }

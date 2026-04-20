@@ -1,11 +1,11 @@
 # Domain: Inference Engine
 
-> **Status: Partial on main** — Auth loader (`auth.ts`), context packager
+> **Status: Core runtime landed on main** — Auth loader (`auth.ts`), context packager
 > (`context-packager.ts` with `packContext`), prompt builder (`prompt-builder.ts`
 > exporting `ShadowContextPacket` and `buildUserMessage`), response parser, inference
 > trigger, shadow inference engine orchestrator, direct Anthropic API fallback, and
-> MCP server have landed. The OpenCode client (`opencode-client.ts`) is not yet
-> implemented — direct Anthropic API is the current runtime path.
+> MCP server are implemented and covered by tests. The OpenCode client
+> (`opencode-client.ts`) remains planned work; direct Anthropic API is the current runtime path.
 
 The inference engine is shadow-agent's brain — it consumes the observed agent's event
 stream and produces structured interpretations (phase, risk, predictions, confidence).
@@ -17,11 +17,12 @@ Prompt source: `prompts/shadow-system-prompt.json`
 
 ## OpenCode Harness
 
-We use `@opencode-ai/sdk` as the primary inference harness, copied almost verbatim from
-sidecar's `opencode-client.js`. This gives us provider abstraction for free — the user
-authenticates once and can use Claude, GPT-4, Gemini, or any OpenRouter model as the
-interpretation engine. Shadow-agent starts an OpenCode server on port 4097 (avoiding
-sidecar's 4096), creates sessions, and sends structured prompts with context.
+The intended primary harness is `@opencode-ai/sdk`, copied almost verbatim from sidecar's
+`opencode-client.js`. That path is still planned work. Once implemented, it gives us
+provider abstraction for free — the user authenticates once and can use Claude, GPT-4,
+Gemini, or any OpenRouter model as the interpretation engine. The current shipped runtime
+path is the direct Anthropic client plus the provider-agnostic interfaces that keep the
+OpenCode slot ready.
 
 When OpenCode isn't installed, we fall back to `@anthropic-ai/sdk` directly. Simpler
 (no session management, no polling) but locks to Anthropic only.
@@ -35,12 +36,22 @@ transcript delivery requires a separate explicit opt-in.
 Credentials load in priority order:
 
 1. `process.env` (ANTHROPIC_API_KEY, OPENAI_API_KEY, etc.) — always wins
-2. `~/.shadow-agent/.env` — user's shadow-agent-specific config
-3. `~/.local/share/opencode/auth.json` — inherited from OpenCode automatically
+2. `~/.shadow-agent/credentials.enc.json` — encrypted local store using Electron `safeStorage`
+3. `~/.shadow-agent/.env` — legacy plaintext fallback, only when `SHADOW_ALLOW_FILE_CREDENTIAL_FALLBACK=1`
+4. `~/.local/share/opencode/auth.json` — legacy OpenCode fallback, only when `SHADOW_ALLOW_FILE_CREDENTIAL_FALLBACK=1`
 
-Pattern lifted from sidecar's `auth-json.js`. If the user already has OpenCode configured,
-shadow-agent just works with no additional setup. Providers supported: anthropic, openai,
-openrouter, google, deepseek.
+Pattern lifted from sidecar's auth inheritance and adapted for secure local storage.
+If the user already has OpenCode configured, shadow-agent can still inherit those secrets,
+but only after the user explicitly consents to the file-based fallback path. When that
+happens, supported provider keys are migrated into `credentials.enc.json` for subsequent runs.
+Providers supported: anthropic, openai, openrouter, google, deepseek.
+
+### Secure File Permissions
+
+- POSIX: `~/.shadow-agent/` should be `0700`
+- POSIX: `~/.shadow-agent/credentials.enc.json` should be `0600`
+- POSIX: if a temporary legacy `.env` is used for migration, keep it at `0600` and remove it after verification
+- Windows: keep secrets under the user's profile so inherited ACLs remain per-user; avoid shared directories
 
 ## Prompt Strategy
 
@@ -95,8 +106,9 @@ All tools are `readOnlyHint: true`. Pattern from sidecar's `mcp-server.js`.
 ## Key Dependencies
 
 ```
-@opencode-ai/sdk@^1.1.36, @anthropic-ai/sdk@latest,
-@modelcontextprotocol/sdk@^1.27.0
+@anthropic-ai/sdk (installed runtime dependency)
+@modelcontextprotocol/sdk (optional runtime dependency, loaded dynamically)
+@opencode-ai/sdk (planned dependency; not yet installed)
 ```
 
 ## File Map
@@ -107,7 +119,7 @@ src/inference/
   opencode-client.ts     — OpenCode server + client (not yet implemented)
   context-packager.ts    — Build ShadowContextPacket from DerivedState (implemented)
   prompt-builder.ts      — ShadowContextPacket type, buildUserMessage, buildInferenceRequest (implemented)
-  prompts.ts             — Generated prompt strings from prompts/*.json (implemented)
+  prompts.ts             — Generated prompt strings from prompts/*.{json,yaml,yml} (implemented)
   response-parser.ts     — JSON → ShadowInsight[] (implemented)
   trigger.ts             — When to invoke inference (implemented)
   shadow-inference-engine.ts  — Orchestrator (implemented)

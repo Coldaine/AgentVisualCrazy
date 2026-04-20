@@ -1,9 +1,12 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
 import path from 'node:path';
-import type { CanonicalEvent } from '../shared/schema';
+import { DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS, loadTranscriptPrivacySettings } from '../shared/privacy';
+import type { CanonicalEvent, TranscriptPrivacySettings } from '../shared/schema';
 import { createLogger } from '../shared/logger';
 import { buildFixtureSnapshot, loadSnapshotFromFile, pickOpenFile, saveReplayFile } from './session-io';
 import { createSessionManager } from '../capture/session-manager';
+import { createInferenceEngine, type InferenceEngine } from '../inference/shadow-inference-engine';
+import { deriveState } from '../shared/derive';
 
 const APP_TITLE = 'Shadow Agent';
 const logger = createLogger({ minLevel: 'info' });
@@ -47,11 +50,14 @@ function createWindow(): BrowserWindow {
   return win;
 }
 
-export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): void {
+export function registerIpcHandlers(
+  getMainWindow: () => BrowserWindow | null,
+  privacySettings: TranscriptPrivacySettings = DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS
+): void {
   ipcMain.removeHandler('shadow-agent:bootstrap');
   ipcMain.handle('shadow-agent:bootstrap', () => {
     logger.info('ipc', 'bootstrap_requested');
-    return buildFixtureSnapshot();
+    return buildFixtureSnapshot(privacySettings);
   });
 
   ipcMain.removeHandler('shadow-agent:open-replay-file');
@@ -65,7 +71,7 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
       }
 
       logger.info('ipc', 'open_replay_selected', { fileName: path.basename(filePath) });
-      return await loadSnapshotFromFile(filePath);
+      return await loadSnapshotFromFile(filePath, privacySettings);
     } catch (error) {
       logger.error('ipc', 'open_replay_failed', {
         fileName: filePath ? path.basename(filePath) : undefined,
@@ -85,7 +91,7 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
       options?: { storeRawTranscript?: boolean }
     ) => {
     try {
-      return await saveReplayFile(getMainWindow(), events, suggestedFileName, options);
+      return await saveReplayFile(getMainWindow(), events, suggestedFileName, options, privacySettings);
     } catch (error) {
       logger.error('ipc', 'export_replay_failed', {
         suggestedFileName: suggestedFileName ? path.basename(suggestedFileName) : undefined,
@@ -103,19 +109,37 @@ export function registerIpcHandlers(getMainWindow: () => BrowserWindow | null): 
 
 export function startMainProcess(): void {
   let mainWindow: BrowserWindow | null = null;
-  const sessionManager = createSessionManager(() => mainWindow?.webContents ?? null);
+  let sessionManager: ReturnType<typeof createSessionManager> | null = null;
+  let inferenceEngine: InferenceEngine | null = null;
 
   app
     .whenReady()
-    .then(() => {
-      registerIpcHandlers(() => mainWindow);
+    .then(async () => {
+      const privacySettings = await loadTranscriptPrivacySettings();
+      const currentSessionManager = createSessionManager(() => mainWindow?.webContents ?? null, {
+        privacy: privacySettings,
+        queuePersistenceRoot: path.join(app.getPath('userData'), 'capture-queue')
+      });
+      sessionManager = currentSessionManager;
+      registerIpcHandlers(() => mainWindow, privacySettings);
       try {
         mainWindow = createWindow();
         mainWindow.on('closed', () => {
           mainWindow = null;
         });
         // Start live transcript capture (non-blocking; falls back gracefully if no session found)
-        void sessionManager.start();
+        void currentSessionManager.start();
+        inferenceEngine = createInferenceEngine({
+          buffer: currentSessionManager.getBuffer(),
+          getState: () => {
+            const events = currentSessionManager.getBuffer().getAll();
+            return deriveState(events);
+          },
+          onInsights: (insights) => {
+            logger.info('inference', 'insights_received', { count: insights.length });
+          }
+        });
+        void inferenceEngine.start();
         logger.info('app', 'ready');
       } catch (error) {
         logger.error('app', 'window_create_failed_on_ready', { error });
@@ -145,7 +169,9 @@ export function startMainProcess(): void {
   app.on('window-all-closed', () => {
     if (process.platform !== 'darwin') {
       logger.info('app', 'quit_on_window_all_closed');
-      sessionManager.stop();
+      inferenceEngine?.stop();
+      inferenceEngine = null;
+      sessionManager?.stop();
       app.quit();
     }
   });

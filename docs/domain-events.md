@@ -1,10 +1,9 @@
 # Domain: Event Capture
 
-> **Status: Planned** — The full live capture pipeline described here is on PR #27
-> and has not yet merged. Current main has only `src/shared/transcript-adapter.ts`
-> and `src/persistence/file-replay-store.ts` (replay from disk). The live
-> `src/capture/` pipeline — watcher, incremental parser, normalizer, ring buffer,
-> IPC bridge — lands with PR #27.
+> **Status: Landed on main** — The live `src/capture/` pipeline — watcher,
+> incremental parser, normalizer, bounded queue, IPC bridge, and session manager —
+> is now the active capture path. Replay-from-disk remains the fallback path for
+> fixtures and exported sessions.
 
 The event capture pipeline watches an observed agent's transcript files, parses events
 incrementally, normalizes them into a canonical schema, and streams them to the renderer.
@@ -64,9 +63,11 @@ This handles starting shadow-agent after the observed agent has been working for
 
 ## Event Buffer
 
-An in-memory ring buffer (default capacity: 2000 events) in the Electron main process.
-Supports `push`, `getRecent(n)`, `getAll`, `subscribe(callback)`, and `getSince(eventId)`
-for catch-up. Both the renderer and the inference trigger consume from this buffer.
+A bounded event queue in the Electron main process with a hot in-memory window (default
+capacity: 2000 events), spill-to-disk persistence, per-consumer checkpoints, and
+backpressure signals. Supports `push`, `getRecent(n)`, `getAll`, `subscribe(callback)`,
+`getSince(eventId)`, `registerConsumer`, `readPending`, and `commitCheckpoint` for
+catch-up. Both the renderer and the inference trigger consume from this queue.
 
 ## IPC Bridge
 

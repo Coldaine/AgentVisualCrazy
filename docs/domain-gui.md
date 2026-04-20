@@ -1,8 +1,8 @@
 # Domain: GUI & Rendering
 
-> **Status: Planned** — The full Canvas2D + D3-Force renderer described here is on
-> PR #26 and has not yet merged. Current main ships simplified React + SVG panels as
-> a placeholder. Treat this doc as the contract the merged renderer must satisfy.
+> **Status: Landed on main** — The Canvas2D + D3-Force renderer, panel overlays, and
+> host abstraction described here are now the active rendering path. Treat this doc as
+> the contract the shipped renderer should continue to satisfy as we iterate.
 
 The rendering layer is shadow-agent's identity. Everything here is ported from or inspired
 by agent-flow (`third_party/agent-flow/`), adapted to shadow-agent's data model.
@@ -14,8 +14,9 @@ Implementation plan: `docs/plans/plan-gui-rendering.md`
 ## Rendering Stack
 
 Canvas2D for the main graph visualization. D3-Force (`d3-force@^3.0.0`) for physics-based
-layout. Three.js (`@react-three/fiber`) for a subtle particle field background. React 19 +
-Tailwind for the glass panel overlays. All bundled via Vite inside Electron.
+layout. React 19 + Tailwind for the glass panel overlays. A Three.js / worker-backed
+background remains optional atmosphere work rather than a required baseline. The renderer
+is bundled via Vite and can be hosted by Electron or other web surfaces.
 
 The draw loop runs per-frame via requestAnimationFrame:
 `drawAgents()` → `drawEdges()` → `drawParticles()` → `drawToolCalls()` → bloom post-processing.

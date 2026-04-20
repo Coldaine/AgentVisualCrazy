@@ -117,7 +117,8 @@ describe('replay-store', () => {
     expect(parsed.length).toBeGreaterThan(0);
     expect(parsed[0]?.sessionId).toBe('happy-path');
     const roundTripped = parseReplay(serializeEvents(parsed));
-    expect(roundTripped).toEqual(parsed);
+    expect(roundTripped[0]?.payload).toEqual({ cwd: '[redacted-path]' });
+    expect(roundTripped).not.toEqual(parsed);
   });
 
   it('parseReplay throws on corrupt-partial fixture (corrupt line)', () => {

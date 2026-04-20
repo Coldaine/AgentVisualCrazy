@@ -73,6 +73,7 @@ export async function createShadowMcpServer(
                 riskSignals: state.riskSignals,
                 nextMoves: state.nextMoves,
                 eventCount: opts.buffer.size,
+                queueMetrics: opts.buffer.getMetrics?.(),
                 agentNodes: state.agentNodes.map((n) => ({
                   id: n.id,
                   label: n.label,
@@ -101,7 +102,7 @@ export async function createShadowMcpServer(
     },
     async (args: { count?: number }) => {
       const n = Math.min(Math.max(1, args.count ?? 20), 200);
-      const events = opts.buffer.getRecent(n);
+      const events = await opts.buffer.getRecent(n);
       return {
         content: [
           {

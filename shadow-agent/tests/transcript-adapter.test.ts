@@ -2,12 +2,26 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import { parseClaudeTranscriptJsonl } from '../src/shared/transcript-adapter';
+import { getTranscriptCaptureAdapter } from '../src/shared/capture-adapters';
+import { claudeTranscriptCaptureAdapter, parseClaudeTranscriptJsonl } from '../src/shared/transcript-adapter';
 
 const FIXTURE_DIR = fileURLToPath(new URL('.', import.meta.url));
 const FIXTURES = join(FIXTURE_DIR, 'fixtures/transcripts');
 
 describe('parseClaudeTranscriptJsonl', () => {
+  it('exposes the Claude transcript adapter as the typed capture boundary', () => {
+    const adapter = getTranscriptCaptureAdapter();
+    const raw = JSON.stringify({
+      sessionId: 'adapter-session',
+      message: { role: 'assistant', content: 'hello from adapter' }
+    });
+
+    expect(adapter).toBe(claudeTranscriptCaptureAdapter);
+    expect(adapter.id).toBe('claude-transcript-jsonl');
+    expect(adapter.source).toBe('claude-transcript');
+    expect(adapter.parse(raw)).toEqual(parseClaudeTranscriptJsonl(raw));
+  });
+
   it('converts text, tool_use, and tool_result blocks into canonical events deterministically', () => {
     const raw = [
       JSON.stringify({
