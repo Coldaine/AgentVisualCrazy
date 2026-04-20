@@ -170,3 +170,4 @@ After merge sequence completes:
 - [ ] #26 and #27 merged to main — these are the actual product features
 - [ ] Issues #21 and #24 implemented via new PRs and merged (blocked on #26/#27)
 - [ ] All 18 original issues (#8-#25) closed
+
