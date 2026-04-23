@@ -100,7 +100,7 @@ export function createSessionManager(
         }
       });
       if (catchupEvents.length > 0) {
-        const result = await buffer.push(catchupEvents);
+        const pushOutcome = await buffer.push(catchupEvents);
         logger.info('capture', 'session_manager.catchup', {
           count: catchupEvents.length,
           backpressureLevel: result.backpressure.level

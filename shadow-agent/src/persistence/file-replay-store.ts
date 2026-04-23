@@ -153,9 +153,9 @@ export class FileReplayStore {
       })
     );
 
-    const result = sessions.filter((session): session is SessionRecord => Boolean(session)).sort(sortSessions);
-    logger.info('persistence', 'persistence.store.listed', { sessionCount: result.length });
-    return result;
+    const validSessions = sessions.filter((session): session is SessionRecord => Boolean(session)).sort(sortSessions);
+    logger.info('persistence', 'persistence.store.listed', { sessionCount: validSessions.length });
+    return validSessions;
   }
 
   private async loadRecord(sessionId: string, events: CanonicalEvent[]): Promise<SessionRecord> {

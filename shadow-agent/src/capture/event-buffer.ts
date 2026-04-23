@@ -319,10 +319,10 @@ export function createEventBuffer(capacityOrOptions: number | EventBufferOptions
 
   const enqueueMutation = async <T>(mutator: () => Promise<T>): Promise<T> => {
     pendingWrites += 1;
-    const result = operationChain.then(mutator, mutator);
-    operationChain = result.then(() => undefined, () => undefined);
+    const operationPromise = operationChain.then(mutator, mutator);
+    operationChain = operationPromise.then(() => undefined, () => undefined);
     try {
-      return await result;
+      return await operationPromise;
     } finally {
       pendingWrites -= 1;
     }

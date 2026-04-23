@@ -60,13 +60,13 @@ function TimelineView({ timeline }: { timeline: TimelineItem[] }) {
 
   return (
     <div className="stack stack--tight">
-      {timeline.map((item) => (
-        <article className="timeline-item" key={item.id}>
-          <div className="timeline-item__time">{formatClock(item.timestamp)}</div>
+      {timeline.map((timelineEvent) => (
+        <article className="timeline-item" key={timelineEvent.id}>
+          <div className="timeline-item__time">{formatClock(timelineEvent.timestamp)}</div>
           <div className="timeline-item__content">
             <div className="timeline-item__topline">
-              <span className="timeline-item__label">{item.label}</span>
-              <Badge tone="neutral">{toLabel(item.kind)}</Badge>
+              <span className="timeline-item__label">{timelineEvent.label}</span>
+              <Badge tone="neutral">{toLabel(timelineEvent.kind)}</Badge>
             </div>
           </div>
         </article>
@@ -161,14 +161,14 @@ export default function App({ host }: ShadowAgentAppProps) {
     const loadInitialSnapshot = async () => {
       dispatch({ type: 'BOOT_START' });
       try {
-        const data = await loadPreferredSnapshot();
+        const snapshotData = await loadPreferredSnapshot();
         if (!active) {
           return;
         }
-        if (data.source.kind === 'fixture' && currentSourceKindRef.current === 'transcript') {
+        if (snapshotData.source.kind === 'fixture' && currentSourceKindRef.current === 'transcript') {
           return;
         }
-        startTransition(() => dispatch({ type: 'BOOT_SUCCESS', snapshot: data }));
+        startTransition(() => dispatch({ type: 'BOOT_SUCCESS', snapshot: snapshotData }));
       } catch (err) {
         if (!active) {
           return;
@@ -246,9 +246,9 @@ export default function App({ host }: ShadowAgentAppProps) {
 
     dispatch({ type: 'LOAD_START' });
     try {
-      const data = await host.openReplayFile();
-      if (data) {
-        startTransition(() => dispatch({ type: 'LOAD_SUCCESS', snapshot: data }));
+      const snapshotData = await host.openReplayFile();
+      if (snapshotData) {
+        startTransition(() => dispatch({ type: 'LOAD_SUCCESS', snapshot: snapshotData }));
       } else {
         dispatch({ type: 'LOAD_CANCELLED' });
       }
@@ -260,11 +260,11 @@ export default function App({ host }: ShadowAgentAppProps) {
   const reloadInitialSnapshot = async () => {
     dispatch({ type: 'BOOT_START' });
     try {
-      const data = await loadPreferredSnapshot();
-      if (data.source.kind === 'fixture' && currentSourceKindRef.current === 'transcript') {
+      const snapshotData = await loadPreferredSnapshot();
+      if (snapshotData.source.kind === 'fixture' && currentSourceKindRef.current === 'transcript') {
         return;
       }
-      startTransition(() => dispatch({ type: 'BOOT_SUCCESS', snapshot: data }));
+      startTransition(() => dispatch({ type: 'BOOT_SUCCESS', snapshot: snapshotData }));
     } catch (err) {
       dispatch({
         type: 'BOOT_ERROR',
@@ -280,9 +280,9 @@ export default function App({ host }: ShadowAgentAppProps) {
 
     dispatch({ type: 'EXPORT_START' });
     try {
-      const result = await host.exportReplayJsonl(snapshot.events, exportName);
-      if (result.error) {
-        dispatch({ type: 'EXPORT_ERROR', message: result.error });
+      const exportOutcome = await host.exportReplayJsonl(snapshot.events, exportName);
+      if (exportOutcome.error) {
+        dispatch({ type: 'EXPORT_ERROR', message: exportOutcome.error });
       } else {
         dispatch({ type: 'EXPORT_SUCCESS' });
       }

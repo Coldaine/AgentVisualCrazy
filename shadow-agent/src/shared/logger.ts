@@ -131,7 +131,7 @@ function redactContext(context: Record<string, unknown> | undefined): Record<str
     seen.add(value as object);
 
     if (Array.isArray(value)) {
-      return value.map((item) => sanitize(item));
+      return value.map((element) => sanitize(element));
     }
 
     const output: Record<string, unknown> = {};

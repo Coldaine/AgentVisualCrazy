@@ -4,7 +4,7 @@ import type { ParticleWorkerInput, ParticleWorkerOutput } from './particle-worke
 let state: ParticleEngineState = createParticleEngineState([], 'high');
 
 self.onmessage = (event: MessageEvent<ParticleWorkerInput>) => {
-  const message = event.data;
+  const payload = event.data;
   if (message.type === 'scene') {
     state = syncParticleEngineState(state, message.edges, message.qualityTier);
   } else if (message.type === 'quality') {

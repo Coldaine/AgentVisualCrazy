@@ -72,11 +72,11 @@ export function createInferenceEngine(opts: InferenceEngineOptions): InferenceEn
       });
 
       logger.info('inference', 'engine.run_start', { eventCount: events.length });
-      const result = await client.infer(request);
-      const insights = parseModelResponse(result.text);
+      const inferenceResponse = await client.infer(request);
+      const insights = parseModelResponse(inferenceResponse.text);
 
       logger.info('inference', 'engine.run_done', {
-        latencyMs: result.latencyMs,
+        latencyMs: inferenceResponse.latencyMs,
         insights: insights.length,
       });
 
