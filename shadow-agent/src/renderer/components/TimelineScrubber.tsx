@@ -14,7 +14,7 @@ function formatTick(ts: string): string {
   return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 }
 
-function EventMarker({ item }: { item: TimelineItem }) {
+function EventMarker({ event: timelineEvent }: { event: TimelineItem }) {
   const accentMap: Record<string, string> = {
     tool_started:      '#ffbb44',
     tool_completed:    '#66ffaa',
@@ -26,11 +26,11 @@ function EventMarker({ item }: { item: TimelineItem }) {
     risk:             '#ff5566',
     default:          '#7be0ff',
   };
-  const color = accentMap[item.kind] ?? accentMap.default;
+  const color = accentMap[timelineEvent.kind] ?? accentMap.default;
   return (
     <div
       className="ts-marker"
-      title={`${item.kind}: ${item.label}`}
+      title={`${timelineEvent.kind}: ${timelineEvent.label}`}
       style={{ background: color, boxShadow: `0 0 6px ${color}` }}
     />
   );
@@ -77,8 +77,8 @@ export default function TimelineScrubber({ timeline }: TimelineScrubberProps) {
 
       {/* Event markers row */}
       <div className="timeline-scrubber__track" ref={trackRef} onClick={handleTrackClick}>
-        {timeline.map((item) => (
-          <EventMarker key={item.id} item={item} />
+        {timeline.map((timelineEvent) => (
+          <EventMarker key={timelineEvent.id} event={timelineEvent} />
         ))}
         {/* Playhead */}
         <AnimatedDiv

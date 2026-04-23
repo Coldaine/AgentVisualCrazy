@@ -157,7 +157,7 @@ export function buildFixtureSnapshot(
 }
 
 export async function pickOpenFile(mainWindow: BrowserWindow | null): Promise<string | undefined> {
-  const result = await dialog.showOpenDialog(mainWindow ?? null!, {
+  const openDialogResult = await dialog.showOpenDialog(mainWindow ?? null!, {
     title: 'Open transcript or replay file',
     properties: ['openFile'],
     filters: [
@@ -168,11 +168,11 @@ export async function pickOpenFile(mainWindow: BrowserWindow | null): Promise<st
     ]
   });
 
-  if (result.canceled || result.filePaths.length === 0) {
+  if (openDialogResult.canceled || openDialogResult.filePaths.length === 0) {
     return undefined;
   }
 
-  return result.filePaths[0];
+  return openDialogResult.filePaths[0];
 }
 
 export async function saveReplayFile(
@@ -183,13 +183,13 @@ export async function saveReplayFile(
   privacySettings: TranscriptPrivacySettings = DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS
 ): Promise<ExportResult> {
   try {
-    const result = await dialog.showSaveDialog(mainWindow ?? null!, {
+    const saveDialogResult = await dialog.showSaveDialog(mainWindow ?? null!, {
       title: 'Export replay JSONL',
       defaultPath: suggestedFileName.endsWith('.jsonl') ? suggestedFileName : `${suggestedFileName}.jsonl`,
       filters: [{ name: 'Replay files', extensions: ['jsonl'] }]
     });
 
-    if (result.canceled || !result.filePath) {
+    if (saveDialogResult.canceled || !saveDialogResult.filePath) {
       logger.info('ipc', 'ipc.export.cancelled');
       return { canceled: true };
     }

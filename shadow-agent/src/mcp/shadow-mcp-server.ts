@@ -149,9 +149,9 @@ export async function createShadowMcpServer(
       };
 
       try {
-        const result = await opts.inferenceClient.infer(request);
+        const inferenceResponse = await opts.inferenceClient.infer(request);
         return {
-          content: [{ type: 'text' as const, text: result.text }],
+          content: [{ type: 'text' as const, text: inferenceResponse.text }],
         };
       } catch (err) {
         const message = err instanceof Error ? err.message : String(err);
