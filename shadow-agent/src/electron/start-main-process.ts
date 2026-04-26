@@ -133,7 +133,7 @@ export function startMainProcess(): void {
           buffer: currentSessionManager.getBuffer(),
           getState: () => {
             const events = currentSessionManager.getBuffer().getAll();
-            return deriveState(events);
+            return events.then((evts: CanonicalEvent[]) => deriveState(evts));
           },
           onInsights: (insights) => {
             logger.info('inference', 'insights_received', { count: insights.length });
