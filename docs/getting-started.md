@@ -64,6 +64,17 @@ Permission guidance:
 - Windows: leave the store inside your user profile so standard per-user ACLs protect it
 - Do not place credential files in shared folders, synced team drives, or repo working trees
 
+## Privacy Controls
+
+Shadow-agent starts in local-only mode. The Electron app's Privacy panel lets you explicitly opt in to:
+
+- off-host shadow inference
+- raw transcript storage/export
+
+Those toggles persist to `~/.shadow-agent/privacy.json`. If you set
+`SHADOW_ALLOW_OFF_HOST_INFERENCE` or `SHADOW_ALLOW_RAW_TRANSCRIPT_STORAGE`, the environment
+variables override the saved file for that run.
+
 ## Project Structure
 
 - `shadow-agent/src/electron/`: Main process code, including IPC handling, session management, and file loading.

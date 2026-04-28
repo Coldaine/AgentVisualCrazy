@@ -29,7 +29,9 @@ When OpenCode isn't installed, we fall back to `@anthropic-ai/sdk` directly. Sim
 
 Inference delivery is local-only by default. Before any prompt is sent off-host, the user
 must explicitly opt in. Sanitized transcript content is the default payload, and raw
-transcript delivery requires a separate explicit opt-in.
+transcript delivery requires a separate explicit opt-in. The Electron shell persists those
+privacy toggles in `~/.shadow-agent/privacy.json`; environment variables still override the
+saved file when present.
 
 ## Auth Chain
 

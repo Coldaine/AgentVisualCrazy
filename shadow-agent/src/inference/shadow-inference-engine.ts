@@ -40,6 +40,18 @@ export interface InferenceEngine {
   stop(): void;
 }
 
+type CheckpointedEventBuffer = EventBufferLike & Required<
+  Pick<EventBufferLike, 'registerConsumer' | 'readPending' | 'commitCheckpoint'>
+>;
+
+function isCheckpointedEventBuffer(buffer: EventBufferLike): buffer is CheckpointedEventBuffer {
+  return (
+    typeof buffer.registerConsumer === 'function' &&
+    typeof buffer.readPending === 'function' &&
+    typeof buffer.commitCheckpoint === 'function'
+  );
+}
+
 export function createInferenceEngine(opts: InferenceEngineOptions): InferenceEngine {
   const { buffer, getState, onInsights } = opts;
   const privacy = opts.privacy ?? DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS;
@@ -49,10 +61,7 @@ export function createInferenceEngine(opts: InferenceEngineOptions): InferenceEn
   let unsubscribeBuffer: (() => void) | null = null;
   let drainingPending = false;
   let pendingDrain = false;
-  const supportsBufferedDrain =
-    typeof buffer.registerConsumer === 'function' &&
-    typeof buffer.readPending === 'function' &&
-    typeof buffer.commitCheckpoint === 'function';
+  const checkpointBuffer = isCheckpointedEventBuffer(buffer) ? buffer : null;
 
   const runInference = async () => {
     if (!client) return;
@@ -97,7 +106,7 @@ export function createInferenceEngine(opts: InferenceEngineOptions): InferenceEn
   const trigger = createInferenceTrigger(() => void runInference(), opts.triggerConfig);
 
   const drainPendingEvents = async () => {
-    if (!supportsBufferedDrain) {
+    if (!checkpointBuffer) {
       return;
     }
     if (drainingPending) {
@@ -109,13 +118,13 @@ export function createInferenceEngine(opts: InferenceEngineOptions): InferenceEn
     try {
       do {
         pendingDrain = false;
-        const pending = await buffer.readPending(INFERENCE_CONSUMER_ID);
+        const pending = await checkpointBuffer.readPending(INFERENCE_CONSUMER_ID);
         if (pending.events.length === 0) {
           continue;
         }
 
         trigger.onEvents(pending.events);
-        await buffer.commitCheckpoint(INFERENCE_CONSUMER_ID, pending.events.at(-1)!.id);
+        await checkpointBuffer.commitCheckpoint(INFERENCE_CONSUMER_ID, pending.events.at(-1)!.id);
       } while (pendingDrain);
     } finally {
       drainingPending = false;
@@ -144,12 +153,12 @@ export function createInferenceEngine(opts: InferenceEngineOptions): InferenceEn
 
       logger.info('inference', 'engine.started', { provider: client.provider });
 
-      if (supportsBufferedDrain) {
-        await buffer.registerConsumer(INFERENCE_CONSUMER_ID, { startAt: 'latest' });
+      if (checkpointBuffer) {
+        await checkpointBuffer.registerConsumer(INFERENCE_CONSUMER_ID, { startAt: 'latest' });
       }
 
       unsubscribeBuffer = buffer.subscribe((events) => {
-        if (supportsBufferedDrain) {
+        if (checkpointBuffer) {
           void drainPendingEvents();
           return;
         }
