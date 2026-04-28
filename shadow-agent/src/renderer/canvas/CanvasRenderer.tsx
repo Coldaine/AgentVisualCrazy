@@ -348,7 +348,7 @@ function syncCanvasToDisplaySize(canvas: HTMLCanvasElement, profile: QualityCont
   };
 }
 
-interface CanvasRendererProps {
+export interface CanvasRendererProps {
   agentNodes: AgentNode[];
   riskLevel?: RiskLevel;
   latestInsight?: ShadowInsight;

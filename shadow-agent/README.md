@@ -28,7 +28,8 @@ Shadow-agent runs in local-only mode by default.
 - Off-host inference stays disabled until the user explicitly opts in.
 - Raw transcript storage/export requires its own explicit opt-in.
 
-Opt in through process environment variables or `~/.shadow-agent/.env`:
+The Electron app exposes these consent gates in its Privacy panel and persists them locally in
+`~/.shadow-agent/privacy.json`. Environment variables still work and override the saved file:
 
 ```bash
 SHADOW_ALLOW_OFF_HOST_INFERENCE=true
