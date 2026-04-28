@@ -5,9 +5,6 @@
 
 ## Implementation
 
-- 2026-04-13: **Wire Three.js dot-grid background** — Optional Citadel-style canvas dot-grid OR @react-three/fiber ParticleField as Layer 0 behind the Canvas2D visualization. Subtle parallax, very low opacity. LOW PRIORITY — canvas looks fine without it.
-
-- 2026-04-01: **Implement OpenCode inference client** — Create `src/inference/opencode-client.ts`. Copy sidecar's `opencode-client.js`. Start server, create session, send prompt, poll completion. Not yet implemented — direct Anthropic API fallback exists as an interim path.
 
 ## Testing
 

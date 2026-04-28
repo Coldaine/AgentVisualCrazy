@@ -38,6 +38,17 @@ describe('canvas quality controller', () => {
     expect(state.resourceBudgetTier).toBe('high');
   });
 
+  it('caps ultra tier under very large scenes', () => {
+    const heavyMetrics = makeMetrics({
+      nodeCount: 80,
+      edgeCount: 120,
+      particleCount: 400,
+      pixelCount: 3840 * 2160,
+      deviceMemoryGb: 4
+    });
+    expect(tierFromResourcePressure(estimateResourcePressure(heavyMetrics), false)).not.toBe('ultra');
+  });
+
   it('recovers one tier at a time without exceeding the resource budget', () => {
     const constrainedMetrics = makeMetrics({
       nodeCount: 24,

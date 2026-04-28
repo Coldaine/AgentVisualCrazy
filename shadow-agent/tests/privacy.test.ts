@@ -3,8 +3,10 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
+  getTranscriptPrivacySettingsPath,
   loadTranscriptPrivacySettings,
   resolveTranscriptPrivacySettings,
+  saveTranscriptPrivacySettings,
   sanitizeTranscriptText
 } from '../src/shared/privacy';
 
@@ -74,6 +76,21 @@ describe('privacy sanitization', () => {
 
     await expect(loadTranscriptPrivacySettings({}, envPath, {})).resolves.toEqual({
       allowRawTranscriptStorage: false,
+      allowOffHostInference: false
+    });
+  });
+
+  it('loads persisted privacy settings when no env opt-in is present', async () => {
+    const tempDir = await mkdtemp(path.join(os.tmpdir(), 'shadow-privacy-store-'));
+    tempDirs.push(tempDir);
+    const settingsPath = getTranscriptPrivacySettingsPath(tempDir);
+    await saveTranscriptPrivacySettings({
+      allowRawTranscriptStorage: true,
+      allowOffHostInference: false
+    }, settingsPath);
+
+    await expect(loadTranscriptPrivacySettings({}, path.join(tempDir, '.env'), {}, settingsPath)).resolves.toEqual({
+      allowRawTranscriptStorage: true,
       allowOffHostInference: false
     });
   });

@@ -5,13 +5,13 @@
  * without React Testing Library or jsdom.  App.tsx should use
  * `useReducer(appReducer, initialAppState())` to consume this.
  */
-import type { SnapshotPayload } from '../shared/schema';
+import type { PrivacyPolicy, SnapshotPayload } from '../shared/schema';
 
 // ---------------------------------------------------------------------------
 // State
 // ---------------------------------------------------------------------------
 
-export type BusyKind = 'booting' | 'loading' | 'exporting';
+export type BusyKind = 'booting' | 'loading' | 'exporting' | 'privacy';
 
 export interface AppState {
   /** Non-null while an async operation is in flight. */
@@ -37,7 +37,10 @@ export type AppAction =
   | { type: 'LOAD_ERROR'; message: string }
   | { type: 'EXPORT_START' }
   | { type: 'EXPORT_SUCCESS' }
-  | { type: 'EXPORT_ERROR'; message: string };
+  | { type: 'EXPORT_ERROR'; message: string }
+  | { type: 'PRIVACY_UPDATE_START' }
+  | { type: 'PRIVACY_UPDATE_SUCCESS'; privacy: PrivacyPolicy }
+  | { type: 'PRIVACY_UPDATE_ERROR'; message: string };
 
 // ---------------------------------------------------------------------------
 // Reducer
@@ -80,6 +83,24 @@ export function appReducer(state: AppState, action: AppAction): AppState {
       return { ...state, busy: null, error: null };
 
     case 'EXPORT_ERROR':
+      return { ...state, busy: null, error: action.message };
+
+    case 'PRIVACY_UPDATE_START':
+      return { ...state, busy: 'privacy', error: null };
+
+    case 'PRIVACY_UPDATE_SUCCESS':
+      return {
+        busy: null,
+        error: null,
+        snapshot: state.snapshot
+          ? {
+              ...state.snapshot,
+              privacy: action.privacy
+            }
+          : state.snapshot
+      };
+
+    case 'PRIVACY_UPDATE_ERROR':
       return { ...state, busy: null, error: action.message };
 
     default: {

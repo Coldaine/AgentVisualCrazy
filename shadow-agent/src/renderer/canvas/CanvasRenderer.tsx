@@ -116,9 +116,16 @@ function getQuadraticPoint(sx: number, sy: number, cx: number, cy: number, tx: n
   };
 }
 
-function drawGrid(ctx: CanvasRenderingContext2D, width: number, height: number, gridStep: number) {
+function drawGrid(
+  ctx: CanvasRenderingContext2D,
+  width: number,
+  height: number,
+  gridStep: number,
+  time = 0
+) {
   ctx.save();
-  ctx.strokeStyle = 'rgba(13, 13, 31, 0.72)';
+  const pulse = 0.06 + 0.03 * Math.sin(time * 0.0012);
+  ctx.strokeStyle = `rgba(102, 204, 255, ${pulse})`;
   ctx.lineWidth = 0.5;
   for (let x = 0; x < width + gridStep; x += gridStep) {
     for (let y = 0; y < height + gridStep; y += gridStep * 0.866) {
@@ -348,7 +355,7 @@ function syncCanvasToDisplaySize(canvas: HTMLCanvasElement, profile: QualityCont
   };
 }
 
-interface CanvasRendererProps {
+export interface CanvasRendererProps {
   agentNodes: AgentNode[];
   riskLevel?: RiskLevel;
   latestInsight?: ShadowInsight;
@@ -460,7 +467,7 @@ export default function CanvasRenderer({ agentNodes, riskLevel, latestInsight }:
     ctx.fillRect(0, 0, viewport.width, viewport.height);
 
     if (profile.showGrid) {
-      drawGrid(ctx, viewport.width, viewport.height, profile.gridStep);
+      drawGrid(ctx, viewport.width, viewport.height, profile.gridStep, time);
     }
 
     const nodesById = new Map(nodesRef.current.map((node) => [node.id, node]));

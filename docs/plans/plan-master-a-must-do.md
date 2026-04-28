@@ -169,6 +169,6 @@ After merge sequence completes:
 - [x] `docs/todo.md` reconciled, `docs/history/log.md` current (drift-remediation pass)
 - [x] Remaining open PRs (#26 canvas renderer, #27 live capture, #30 observability, #33 docs finish-line) were addressed and merged on 2026-04-20
 - [x] #26 and #27 merged to main — the core product feature lines are shipped
-- [ ] Issues #21 and #24 implemented via new PRs and merged (blocked on #26/#27)
-- [ ] All 18 original issues (#8-#25) closed
+- [x] Issues #21 and #24 implemented and merged (2026-04-20, via PRs #26/#27 follow-up work)
+- [x] All 18 original issues (#8-#25) closed (2026-04-20)
 
