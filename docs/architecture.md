@@ -35,9 +35,8 @@ Shadow-agent runs its own AI model alongside the observed agent. We use **OpenCo
 (`third_party/sidecar/`) already solved this exact problem — its `opencode-client.js` is
 the complete pattern. OpenCode gives us provider abstraction for free: the user can use
 Claude, GPT-4, Gemini, or any OpenRouter model without shadow-agent caring. If the user
-already has OpenCode configured, shadow-agent can reuse those provider keys through the
-legacy auth files, but only after the user explicitly opts into that file-based fallback
-path for migration.
+already has OpenCode configured, shadow-agent inherits credentials automatically with zero
+additional auth setup.
 
 When OpenCode isn't available, we fall back to the Anthropic SDK directly. The auth chain
 loads credentials in priority order: `process.env` →
@@ -45,8 +44,7 @@ loads credentials in priority order: `process.env` →
 legacy file-based fallbacks when `SHADOW_ALLOW_FILE_CREDENTIAL_FALLBACK=1` is explicitly set.
 Those legacy fallbacks are `~/.shadow-agent/.env` and `~/.local/share/opencode/auth.json`.
 When consented legacy credentials are loaded, shadow-agent migrates supported provider keys
-into the encrypted store for future runs, so continued plaintext reads are not the steady
-state.
+into the encrypted store for future runs.
 
 On POSIX systems, `~/.shadow-agent/` should be owner-only (`0700`) and
 `credentials.enc.json` should be read/write for the owner only (`0600`). On Windows,
@@ -67,18 +65,17 @@ budget.
 
 ## Event Capture
 
-Event capture is now transport-pluggable. The default path still watches Claude Code JSONL
-files via a filesystem tailer, but the runtime can also ingest streaming HTTP, WebSocket,
-and raw socket feeds through the same parser → normalizer → queue → IPC pipeline.
+We watch Claude Code's JSONL transcript files via a filesystem watcher. This is the
+simplest reliable approach — Claude Code writes JSONL, we tail it. No need to configure
+hooks on the observed agent's side. Events are parsed incrementally, normalized into
+`CanonicalEvent` objects, and streamed to the renderer via IPC through a bounded event
+queue with a hot in-memory window, spill-to-disk persistence, and per-consumer checkpoints.
 
-The file-tail path remains the simplest zero-config option for Claude transcripts, and it
-now adds checksum-based rotation detection so replaced transcript files replay cleanly even
-when the filename stays the same. Network transports trade that convenience for lower-latency
-or externally pushed event delivery without changing the downstream consumers.
+An HTTP hook server may come later (Phase 3+) for lower latency, but the architecture
+is transport-agnostic — the buffer and IPC bridge don't care where events come from.
 
-We rejected direct process attachment (fragile, platform-specific). All supported transports
-feed the same bounded event queue with a hot in-memory window, spill-to-disk persistence,
-and per-consumer checkpoints.
+We rejected HTTP hook server for Phase 2 (more complex, requires observed agent
+configuration) and direct process attachment (fragile, platform-specific).
 
 → See [`docs/domain-events.md`](domain-events.md) for the event domain: transcript
 watcher, canonical schema, normalizer, session discovery, IPC bridge.

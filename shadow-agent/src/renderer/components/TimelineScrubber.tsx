@@ -4,7 +4,7 @@ import { animated, useSpring } from '@react-spring/web';
 
 const AnimatedDiv = animated.div as React.ElementType;
 
-export interface TimelineScrubberProps {
+interface TimelineScrubberProps {
   timeline: TimelineItem[];
 }
 

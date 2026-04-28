@@ -17,7 +17,6 @@ import type {
   EventQueueMetrics
 } from '../shared/schema';
 import { createLogger } from '../shared/logger';
-import { prepareEventsForStorage } from '../shared/privacy';
 
 const logger = createLogger({ minLevel: 'info' });
 
@@ -134,15 +133,7 @@ async function writeSpillFile(filePath: string, envelopes: EventEnvelope[]): Pro
   }
 
   await mkdir(path.dirname(filePath), { recursive: true });
-  const sanitizedEvents = prepareEventsForStorage(envelopes.map((envelope) => envelope.event));
-  const payload = `${envelopes
-    .map((envelope, index) =>
-      JSON.stringify({
-        ...envelope,
-        event: sanitizedEvents[index] ?? envelope.event
-      })
-    )
-    .join('\n')}\n`;
+  const payload = `${envelopes.map((envelope) => JSON.stringify(envelope)).join('\n')}\n`;
   await writeFile(filePath, payload, 'utf8');
 }
 

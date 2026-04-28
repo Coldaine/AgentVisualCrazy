@@ -1,16 +1,10 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
 import path from 'node:path';
-import {
-  DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS,
-  loadTranscriptPrivacySettings,
-  resolvePrivacyPolicy,
-  saveTranscriptPrivacySettings
-} from '../shared/privacy';
+import { DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS, loadTranscriptPrivacySettings } from '../shared/privacy';
 import type { CanonicalEvent, TranscriptPrivacySettings } from '../shared/schema';
 import { createLogger } from '../shared/logger';
 import { buildFixtureSnapshot, loadSnapshotFromFile, pickOpenFile, saveReplayFile } from './session-io';
 import { createSessionManager } from '../capture/session-manager';
-import { resolveCaptureTransportOptionsFromEnv } from '../capture/capture-transports';
 import { createInferenceEngine, type InferenceEngine } from '../inference/shadow-inference-engine';
 import { deriveState } from '../shared/derive';
 
@@ -58,19 +52,12 @@ function createWindow(): BrowserWindow {
 
 export function registerIpcHandlers(
   getMainWindow: () => BrowserWindow | null,
-  privacyAccess: {
-    getSettings: () => TranscriptPrivacySettings;
-    updateSettings?: (updates: Partial<TranscriptPrivacySettings>) => Promise<TranscriptPrivacySettings>;
-  } = {
-    getSettings: () => DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS
-  }
+  privacySettings: TranscriptPrivacySettings = DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS
 ): void {
-  const getPrivacySettings = privacyAccess.getSettings;
-
   ipcMain.removeHandler('shadow-agent:bootstrap');
   ipcMain.handle('shadow-agent:bootstrap', () => {
     logger.info('ipc', 'bootstrap_requested');
-    return buildFixtureSnapshot(getPrivacySettings());
+    return buildFixtureSnapshot(privacySettings);
   });
 
   ipcMain.removeHandler('shadow-agent:open-replay-file');
@@ -84,7 +71,7 @@ export function registerIpcHandlers(
       }
 
       logger.info('ipc', 'open_replay_selected', { fileName: path.basename(filePath) });
-      return await loadSnapshotFromFile(filePath, getPrivacySettings());
+      return await loadSnapshotFromFile(filePath, privacySettings);
     } catch (error) {
       logger.error('ipc', 'open_replay_failed', {
         fileName: filePath ? path.basename(filePath) : undefined,
@@ -104,7 +91,7 @@ export function registerIpcHandlers(
       options?: { storeRawTranscript?: boolean }
     ) => {
     try {
-      return await saveReplayFile(getMainWindow(), events, suggestedFileName, options, getPrivacySettings());
+      return await saveReplayFile(getMainWindow(), events, suggestedFileName, options, privacySettings);
     } catch (error) {
       logger.error('ipc', 'export_replay_failed', {
         suggestedFileName: suggestedFileName ? path.basename(suggestedFileName) : undefined,
@@ -118,19 +105,6 @@ export function registerIpcHandlers(
     }
     }
   );
-
-  ipcMain.removeHandler('shadow-agent:get-privacy-policy');
-  ipcMain.handle('shadow-agent:get-privacy-policy', () => resolvePrivacyPolicy(getPrivacySettings()));
-
-  ipcMain.removeHandler('shadow-agent:update-privacy-settings');
-  ipcMain.handle('shadow-agent:update-privacy-settings', async (_event, updates: Partial<TranscriptPrivacySettings> = {}) => {
-    if (!privacyAccess.updateSettings) {
-      return resolvePrivacyPolicy(getPrivacySettings());
-    }
-
-    const nextSettings = await privacyAccess.updateSettings(updates);
-    return resolvePrivacyPolicy(nextSettings);
-  });
 }
 
 export function startMainProcess(): void {
@@ -141,43 +115,13 @@ export function startMainProcess(): void {
   app
     .whenReady()
     .then(async () => {
-      let privacySettings = await loadTranscriptPrivacySettings();
-      const getPrivacySettings = () => privacySettings;
+      const privacySettings = await loadTranscriptPrivacySettings();
       const currentSessionManager = createSessionManager(() => mainWindow?.webContents ?? null, {
-        getPrivacy: getPrivacySettings,
-        queuePersistenceRoot: path.join(app.getPath('userData'), 'capture-queue'),
-        transport: resolveCaptureTransportOptionsFromEnv()
+        privacy: privacySettings,
+        queuePersistenceRoot: path.join(app.getPath('userData'), 'capture-queue')
       });
       sessionManager = currentSessionManager;
-      const createRuntimeInferenceEngine = () =>
-        createInferenceEngine({
-          buffer: currentSessionManager.getBuffer(),
-          getState: async () => {
-            const events = await currentSessionManager.getBuffer().getAll();
-            return deriveState(events);
-          },
-          privacy: getPrivacySettings(),
-          onInsights: (insights) => {
-            logger.info('inference', 'insights_received', { count: insights.length });
-          }
-        });
-      const refreshInferenceEngine = async () => {
-        inferenceEngine?.stop();
-        inferenceEngine = createRuntimeInferenceEngine();
-        await inferenceEngine.start();
-      };
-      const updatePrivacySettings = async (updates: Partial<TranscriptPrivacySettings>) => {
-        privacySettings = await saveTranscriptPrivacySettings({
-          ...privacySettings,
-          ...updates
-        });
-        await refreshInferenceEngine();
-        return privacySettings;
-      };
-      registerIpcHandlers(() => mainWindow, {
-        getSettings: getPrivacySettings,
-        updateSettings: updatePrivacySettings
-      });
+      registerIpcHandlers(() => mainWindow, privacySettings);
       try {
         mainWindow = createWindow();
         mainWindow.on('closed', () => {
@@ -185,7 +129,17 @@ export function startMainProcess(): void {
         });
         // Start live transcript capture (non-blocking; falls back gracefully if no session found)
         void currentSessionManager.start();
-        await refreshInferenceEngine();
+        inferenceEngine = createInferenceEngine({
+          buffer: currentSessionManager.getBuffer(),
+          getState: () => {
+            const events = currentSessionManager.getBuffer().getAll();
+            return deriveState(events);
+          },
+          onInsights: (insights) => {
+            logger.info('inference', 'insights_received', { count: insights.length });
+          }
+        });
+        void inferenceEngine.start();
         logger.info('app', 'ready');
       } catch (error) {
         logger.error('app', 'window_create_failed_on_ready', { error });

@@ -44,7 +44,6 @@ describe('renderer host helpers', () => {
     await expect(host.loadInitialSnapshot()).resolves.toBe(snapshot);
     expect(getHostCapabilities(host)).toEqual({
       canOpenReplayFile: false,
-      canManagePrivacy: false,
       canExportReplayJsonl: false
     });
   });

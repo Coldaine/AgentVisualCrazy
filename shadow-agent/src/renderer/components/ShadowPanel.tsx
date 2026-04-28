@@ -1,7 +1,7 @@
 import { animated, useSpring } from '@react-spring/web';
 import type { ShadowInsight } from '../../shared/schema';
 
-export interface ShadowPanelProps {
+interface ShadowPanelProps {
   phase: string;
   objective: string;
   riskSignals: string[];

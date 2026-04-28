@@ -1,28 +1,26 @@
 /**
  * Session manager orchestrates the full capture pipeline:
- * transport → incremental parser → normalizer → buffer → IPC bridge
+ * session discovery → watcher → incremental parser → normalizer → buffer → IPC bridge
  *
- * The transport decides where bytes come from (file tail, HTTP stream,
- * WebSocket, socket) and when sessions rotate or reconnect.
+ * Scans every 30 seconds for new sessions. Tears down the old pipeline when a
+ * new session is detected.
  */
 import type { WebContents } from 'electron';
 import { DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS } from '../shared/privacy';
 import type { SnapshotPayload, LoadedSource, TranscriptPrivacySettings } from '../shared/schema';
 import { buildRendererInput } from '../shared/renderer-input-adapter';
+import { discoverActiveSession, type DiscoveredSession } from './session-discovery';
+import { watchTranscript, type TranscriptWatcher } from './transcript-watcher';
 import { createIncrementalParser } from './incremental-parser';
 import { normalizeEntry } from './normalizer';
 import { createEventBuffer, type EventBuffer } from './event-buffer';
 import { createIpcBridge } from './ipc-bridge';
 import { createLogger } from '../shared/logger';
-import type {
-  CaptureSession,
-  CaptureTransport,
-  CaptureTransportOptions,
-  CaptureTransportSubscription
-} from './capture-transport';
-import { createCaptureTransport } from './capture-transports';
+import { readFile } from 'node:fs/promises';
 
 const logger = createLogger({ minLevel: 'info' });
+
+const REDISCOVERY_INTERVAL_MS = 30_000;
 
 export interface SessionManager {
   start(overridePath?: string): Promise<void>;
@@ -35,75 +33,118 @@ export function createSessionManager(
   getWebContents: () => WebContents | null,
   options: {
     privacy?: TranscriptPrivacySettings;
-    getPrivacy?: () => TranscriptPrivacySettings;
     queuePersistenceRoot?: string;
     queueMemoryCapacity?: number;
     queueTotalCapacity?: number;
-    transport?: CaptureTransport | CaptureTransportOptions;
   } = {}
 ): SessionManager {
-  const getPrivacy = options.getPrivacy ?? (() => options.privacy ?? DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS);
+  const privacy = options.privacy ?? DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS;
   const buffer = createEventBuffer({
     persistenceRoot: options.queuePersistenceRoot,
     memoryCapacity: options.queueMemoryCapacity,
     totalCapacity: options.queueTotalCapacity
   });
-  let activeSession: CaptureSession | null = null;
-  let activeParser = createIncrementalParser(() => undefined);
-  let transportSubscription: CaptureTransportSubscription | null = null;
+  let activeSession: DiscoveredSession | null = null;
+  let activeWatcher: TranscriptWatcher | null = null;
+  let rediscoveryTimer: ReturnType<typeof setInterval> | null = null;
   let bridgeCleanup: (() => void) | null = null;
   let sessionTitle = 'Live session';
-  const transport =
-    options.transport && 'start' in options.transport
-      ? options.transport
-      : createCaptureTransport(options.transport ?? { kind: 'file-tail' });
 
   const buildSnapshot = async (): Promise<SnapshotPayload | null> => {
     const events = await buffer.getAll();
     const source: LoadedSource = {
       kind: 'transcript',
       label: sessionTitle,
-      path: activeSession?.path
+      path: activeSession?.filePath
     };
 
     return {
       ...buildRendererInput(events, {
         source,
         fallbackTitle: sessionTitle,
-        privacySettings: getPrivacy()
+        privacySettings: privacy
       }),
       captureQueue: buffer.getMetrics()
     };
   };
 
   const teardown = () => {
-    void transportSubscription?.stop();
-    transportSubscription = null;
+    if (activeWatcher) {
+      activeWatcher.stop();
+      activeWatcher = null;
+    }
     activeSession = null;
   };
 
-  const startSession = async (session: CaptureSession) => {
+  const startSession = async (session: DiscoveredSession) => {
+    teardown();
     activeSession = session;
-    sessionTitle = session.label;
+    sessionTitle = `Live: ${session.sessionId.slice(0, 12)}`;
     await buffer.setSession(session.sessionId);
-    activeParser = createIncrementalParser((entry) => {
-      const events = normalizeEntry(entry, session.sessionId);
-      if (events.length === 0) {
-        return;
-      }
-      void buffer.push(events).catch((error) => {
-        logger.error('capture', 'session_manager.push_failed', {
-          sessionId: session.sessionId,
-          error
-        });
-      });
-    });
 
     logger.info('capture', 'session_manager.start_session', {
-      filePath: session.path,
+      filePath: session.filePath,
       sessionId: session.sessionId,
-      transportId: session.transportId
     });
+
+    // Catch-up: read the entire existing file first
+    try {
+      const raw = await readFile(session.filePath, 'utf8');
+      const lines = raw.split(/\r?\n/).filter((l) => l.trim());
+      const catchupEvents = lines.flatMap((line) => {
+        try {
+          const entry = JSON.parse(line) as Record<string, unknown>;
+          return normalizeEntry(entry, session.sessionId);
+        } catch {
+          return [];
+        }
+      });
+      if (catchupEvents.length > 0) {
+        const result = await buffer.push(catchupEvents);
+        logger.info('capture', 'session_manager.catchup', {
+          count: catchupEvents.length,
+          backpressureLevel: result.backpressure.level
+        });
+      }
+    } catch (err) {
+      logger.warn('capture', 'session_manager.catchup_failed', { error: err });
+    }
+
+    // Then watch for incremental updates
+    const parser = createIncrementalParser((entry) => {
+      const events = normalizeEntry(entry, session.sessionId);
+      if (events.length > 0) {
+        void buffer.push(events).catch((error) => {
+          logger.error('capture', 'session_manager.push_failed', {
+            sessionId: session.sessionId,
+            error
+          });
+        });
+      }
+    });
+
+    activeWatcher = watchTranscript(
+      session.filePath,
+      (chunk) => {
+        parser.push(chunk);
+      },
+      {
+        getBackpressure: () => buffer.getBackpressure()
+      }
+    );
+  };
+
+  const runRediscovery = async (overridePath?: string) => {
+    const found = await discoverActiveSession(overridePath);
+    if (!found) return;
+
+    const isNewSession = !activeSession || found.filePath !== activeSession.filePath;
+    if (isNewSession) {
+      logger.info('capture', 'session_manager.new_session_detected', {
+        filePath: found.filePath,
+      });
+      await startSession(found);
+    }
   };
 
   return {
@@ -113,53 +154,24 @@ export function createSessionManager(
         buffer,
         getWebContents,
         buildSnapshot,
-        getPrivacy,
+        privacy,
       });
       bridgeCleanup = bridge.start();
 
-      const effectiveTransport =
-        overridePath && transport.kind === 'file-tail'
-          ? createCaptureTransport({ kind: 'file-tail', overridePath })
-          : transport;
+      // Initial discovery
+      await runRediscovery(overridePath);
 
-      transportSubscription = await effectiveTransport.start({
-        getBackpressure: () => buffer.getBackpressure(),
-        onSessionStarted: async (session) => {
-          const isNewSession =
-            !activeSession ||
-            session.sessionId !== activeSession.sessionId ||
-            session.path !== activeSession.path;
-          if (!isNewSession) {
-            return;
-          }
-          logger.info('capture', 'session_manager.new_session_detected', {
-            sessionId: session.sessionId,
-            filePath: session.path,
-            transportId: session.transportId
-          });
-          await startSession(session);
-        },
-        onSessionReset: async (session, reason) => {
-          if (!activeSession || activeSession.sessionId !== session.sessionId) {
-            return;
-          }
-          activeParser.reset();
-          logger.info('capture', 'session_manager.session_reset', {
-            sessionId: session.sessionId,
-            reason,
-            filePath: session.path
-          });
-        },
-        onChunk: async ({ session, chunk }) => {
-          if (!activeSession || activeSession.sessionId !== session.sessionId) {
-            await startSession(session);
-          }
-          activeParser.push(chunk);
-        }
-      });
+      // Periodic re-discovery
+      rediscoveryTimer = setInterval(() => {
+        void runRediscovery(overridePath);
+      }, REDISCOVERY_INTERVAL_MS);
     },
 
     stop() {
+      if (rediscoveryTimer) {
+        clearInterval(rediscoveryTimer);
+        rediscoveryTimer = null;
+      }
       teardown();
       if (bridgeCleanup) {
         bridgeCleanup();

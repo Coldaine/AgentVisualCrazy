@@ -10,7 +10,6 @@ import type { CanonicalEvent } from '../src/shared/schema';
 import { normalizeEntry } from '../src/capture/normalizer';
 import { discoverActiveSession } from '../src/capture/session-discovery';
 import { mkdtempSync, rmSync } from 'node:fs';
-import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
@@ -165,29 +164,6 @@ describe('createEventBuffer', () => {
     expect(all.map((event) => event.id)).toEqual(['x', 'y', 'z']);
     expect(buf.getMetrics().memoryDepth).toBe(2);
     expect(buf.getMetrics().spilledDepth).toBe(1);
-  });
-
-  it('sanitizes transcript content before spilling events to disk', async () => {
-    const root = makeTempRoot();
-    const buf = createEventBuffer({
-      memoryCapacity: 1,
-      totalCapacity: 4,
-      persistenceRoot: root
-    });
-
-    await buf.push([
-      {
-        ...makeEvent('secret'),
-        payload: { text: 'Email dev@example.com from D:\\_projects\\AgentVisualCrazy\\secret.txt' }
-      },
-      makeEvent('next')
-    ]);
-
-    const spill = await readFile(join(root, 'default', 'spill.jsonl'), 'utf8');
-    expect(spill).toContain('[redacted-email]');
-    expect(spill).toContain('[redacted-path]');
-    expect(spill).not.toContain('dev@example.com');
-    expect(spill).not.toContain('D:\\_projects\\AgentVisualCrazy\\secret.txt');
   });
 
   it('drops the oldest spilled events once the total queue capacity is exceeded', async () => {

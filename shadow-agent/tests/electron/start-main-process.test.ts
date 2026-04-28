@@ -81,16 +81,7 @@ describe('registerIpcHandlers', () => {
     expect(removeHandlerMock).toHaveBeenCalledWith('shadow-agent:bootstrap');
     expect(removeHandlerMock).toHaveBeenCalledWith('shadow-agent:open-replay-file');
     expect(removeHandlerMock).toHaveBeenCalledWith('shadow-agent:export-replay-jsonl');
-    expect(removeHandlerMock).toHaveBeenCalledWith('shadow-agent:get-privacy-policy');
-    expect(removeHandlerMock).toHaveBeenCalledWith('shadow-agent:update-privacy-settings');
-    const handledChannels = handleMock.mock.calls.map(([channel]) => channel);
-    expect(handledChannels).toEqual(expect.arrayContaining([
-      'shadow-agent:bootstrap',
-      'shadow-agent:open-replay-file',
-      'shadow-agent:export-replay-jsonl',
-      'shadow-agent:get-privacy-policy',
-      'shadow-agent:update-privacy-settings'
-    ]));
+    expect(handleMock).toHaveBeenCalledTimes(3);
 
     const removeOrder = removeHandlerMock.mock.invocationCallOrder;
     const handleOrder = handleMock.mock.invocationCallOrder;
@@ -183,41 +174,6 @@ describe('registerIpcHandlers', () => {
     expect(result.error).toBe('disk full');
     expect(result.canceled).toBe(false);
   });
-
-  it('privacy handlers expose and update the current policy', async () => {
-    const { registerIpcHandlers } = await import('../../src/electron/start-main-process');
-    const updateSettings = vi.fn(async (updates: { allowOffHostInference?: boolean }) => ({
-      allowRawTranscriptStorage: true,
-      allowOffHostInference: updates.allowOffHostInference === true
-    }));
-
-    registerIpcHandlers(() => null, {
-      getSettings: () => ({
-        allowRawTranscriptStorage: false,
-        allowOffHostInference: false
-      }),
-      updateSettings
-    });
-
-    const getHandler = getHandlerFor('shadow-agent:get-privacy-policy');
-    const updateHandler = getHandlerFor('shadow-agent:update-privacy-settings');
-    const current = await getHandler() as SnapshotPayload['privacy'];
-    const next = await updateHandler(undefined, { allowOffHostInference: true }) as SnapshotPayload['privacy'];
-
-    expect(current).toEqual({
-      allowRawTranscriptStorage: false,
-      allowOffHostInference: false,
-      processingMode: 'local-only',
-      transcriptHandling: 'sanitized-by-default'
-    });
-    expect(updateSettings).toHaveBeenCalledWith({ allowOffHostInference: true });
-    expect(next).toEqual({
-      allowRawTranscriptStorage: true,
-      allowOffHostInference: true,
-      processingMode: 'off-host-opted-in',
-      transcriptHandling: 'sanitized-by-default'
-    });
-  });
 });
 
 // ---------------------------------------------------------------------------
@@ -233,8 +189,6 @@ describe('ShadowAgentBridge surface', () => {
       onLiveEvents: () => () => undefined,
       getLiveSnapshot: async () => null as SnapshotPayload | null,
       openReplayFile: async () => null as SnapshotPayload | null,
-      getPrivacyPolicy: async () => makeSnapshot().privacy,
-      updatePrivacySettings: async () => makeSnapshot().privacy,
       exportReplayJsonl: async (_events = [], _suggestedFileName?: string, _options?: { storeRawTranscript?: boolean }) => ({ canceled: true })
     };
     (globalThis as unknown as { window: { shadowAgent: typeof bridge } }).window = { shadowAgent: bridge };
@@ -249,10 +203,8 @@ describe('ShadowAgentBridge surface', () => {
       'bootstrap',
       'exportReplayJsonl',
       'getLiveSnapshot',
-      'getPrivacyPolicy',
       'onLiveEvents',
-      'openReplayFile',
-      'updatePrivacySettings'
+      'openReplayFile'
     ]);
 
     Reflect.deleteProperty(globalThis, 'window');

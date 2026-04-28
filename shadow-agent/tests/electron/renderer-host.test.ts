@@ -2,15 +2,6 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ShadowAgentBridge } from '../../src/shared/schema';
 import { createElectronHost, getShadowAgentBridge } from '../../src/electron/renderer-host';
 
-function makePrivacyPolicy() {
-  return {
-    allowRawTranscriptStorage: false,
-    allowOffHostInference: false,
-    processingMode: 'local-only' as const,
-    transcriptHandling: 'sanitized-by-default' as const
-  };
-}
-
 describe('electron renderer host', () => {
   afterEach(() => {
     Reflect.deleteProperty(globalThis, 'window');
@@ -22,8 +13,6 @@ describe('electron renderer host', () => {
       onLiveEvents: vi.fn(() => vi.fn()),
       getLiveSnapshot: vi.fn(async () => null),
       openReplayFile: vi.fn(),
-      getPrivacyPolicy: vi.fn(async () => makePrivacyPolicy()),
-      updatePrivacySettings: vi.fn(async () => makePrivacyPolicy()),
       exportReplayJsonl: vi.fn()
     };
 
@@ -48,8 +37,6 @@ describe('electron renderer host', () => {
       onLiveEvents: vi.fn(() => vi.fn()),
       getLiveSnapshot: vi.fn(async () => null),
       openReplayFile: vi.fn(async () => null),
-      getPrivacyPolicy: vi.fn(async () => makePrivacyPolicy()),
-      updatePrivacySettings: vi.fn(async () => makePrivacyPolicy()),
       exportReplayJsonl: vi.fn(async () => ({ canceled: true }))
     };
 

@@ -82,22 +82,17 @@ snapshot via `ipcMain.handle('shadow:snapshot')` or incremental catch-up via
 
 Canvas redraws are governed by requestAnimationFrame (max 60fps, natural throttle).
 
-## Capture Transports
+## Adapters (Future)
 
 The architecture is transport-agnostic. The buffer and IPC bridge don't care where events
-come from, and the live runtime now supports multiple capture transports:
+come from. Planned adapters beyond the JSONL watcher:
 
-- **File-tail**: Watches Claude Code JSONL files, tracks byte offsets, fingerprints the
-  head of the file, and resets cleanly on truncation or rotation.
-- **Streaming HTTP**: Connects to a long-lived HTTP response body and reads incremental
-  NDJSON chunks with reconnect handling.
-- **WebSocket**: Consumes framed messages, normalizes them into parser-friendly chunks,
-  and reconnects after disconnects.
-- **Socket**: Reads raw TCP streams, applies light backpressure-aware pausing, and
-  reconnects after disconnects.
+- **HTTP hook server** (Phase 3): Express/Hono on localhost:4098, accepts Claude Code
+  hook POSTs, normalizes through the same pipeline. Lower latency than file watching.
+- **Codex adapter**: Parse Codex CLI transcripts into CanonicalEvent.
+- **OpenCode adapter**: Parse OpenCode session files.
 
-Each transport feeds the same incremental parser and normalizer pipeline so the downstream
-event buffer, IPC bridge, renderer, and inference consumers stay unchanged.
+Each adapter implements the same normalizer interface and pushes into the shared buffer.
 
 ## File Map
 
