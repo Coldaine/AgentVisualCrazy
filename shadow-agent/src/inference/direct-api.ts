@@ -42,7 +42,6 @@ export interface DirectApiClientDependencies {
 }
 
 async function loadAnthropicSdk(): Promise<{ default: AnthropicSdkConstructor }> {
-  // @ts-expect-error — @anthropic-ai/sdk is an optional runtime dependency
   return import('@anthropic-ai/sdk') as Promise<{ default: AnthropicSdkConstructor }>;
 }
 
