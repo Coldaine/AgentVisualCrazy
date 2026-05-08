@@ -18,7 +18,7 @@
     "prompts:check": "node scripts/check-prompts.mjs"
   },
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.90.0",
+    "@anthropic-ai/sdk": "^0.91.1",
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-tooltip": "^1.2.8",
     "@react-spring/web": "^9.7.5",
