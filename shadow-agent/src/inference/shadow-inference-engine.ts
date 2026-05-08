@@ -109,13 +109,13 @@ export function createInferenceEngine(opts: InferenceEngineOptions): InferenceEn
     try {
       do {
         pendingDrain = false;
-        const pending = await buffer.readPending(INFERENCE_CONSUMER_ID);
+        const pending = await buffer.readPending!(INFERENCE_CONSUMER_ID);
         if (pending.events.length === 0) {
           continue;
         }
 
         trigger.onEvents(pending.events);
-        await buffer.commitCheckpoint(INFERENCE_CONSUMER_ID, pending.events.at(-1)!.id);
+        await buffer.commitCheckpoint!(INFERENCE_CONSUMER_ID, pending.events.at(-1)!.id);
       } while (pendingDrain);
     } finally {
       drainingPending = false;
@@ -145,7 +145,7 @@ export function createInferenceEngine(opts: InferenceEngineOptions): InferenceEn
       logger.info('inference', 'engine.started', { provider: client.provider });
 
       if (supportsBufferedDrain) {
-        await buffer.registerConsumer(INFERENCE_CONSUMER_ID, { startAt: 'latest' });
+        await buffer.registerConsumer!(INFERENCE_CONSUMER_ID, { startAt: 'latest' });
       }
 
       unsubscribeBuffer = buffer.subscribe((events) => {

@@ -12,7 +12,7 @@
     "build": "npm run build:web && npm run build:renderer && npm run build:electron",
     "prepare": "npm --prefix .. run hooks:install",
     "start": "electron dist-electron/main.cjs",
-    "test": "vitest run",
+    "test": "tsc --noEmit && vitest run",
     "test:coverage": "vitest run --coverage",
     "prompts:generate": "node scripts/generate-prompts.mjs",
     "prompts:check": "node scripts/check-prompts.mjs"
