@@ -20,7 +20,7 @@ import {
   type QualityTier,
   type ResourceMetrics
 } from './quality';
-import { sampleCanvasPulseBoost } from './canvas-pulse';
+import { sampleCanvasPulseBoost, tickCanvasPulses } from './canvas-pulse';
 import {
   COLLIDE_RADIUS,
   NODE_RADIUS,
@@ -453,6 +453,7 @@ export default function CanvasRenderer({ agentNodes, riskLevel, latestInsight }:
 
     const frameDelta = lastFrameRef.current === null ? 16.7 : Math.max(8, Math.min(50, time - lastFrameRef.current));
     lastFrameRef.current = time;
+    tickCanvasPulses(time);
 
     const particleEngine = particleEngineRef.current;
     particleEngine.step(frameDelta);

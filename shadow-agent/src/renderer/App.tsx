@@ -232,9 +232,11 @@ export default function App({ host }: ShadowAgentAppProps) {
       try {
         const snapshotData = await loadPreferredSnapshot();
         if (!active) {
+          dispatch({ type: 'BOOT_ABORT' });
           return;
         }
         if (snapshotData.source.kind === 'fixture' && currentSourceKindRef.current === 'transcript') {
+          dispatch({ type: 'BOOT_ABORT' });
           return;
         }
         startTransition(() => dispatch({ type: 'BOOT_SUCCESS', snapshot: snapshotData }));
@@ -337,6 +339,7 @@ export default function App({ host }: ShadowAgentAppProps) {
     try {
       const snapshotData = await loadPreferredSnapshot();
       if (snapshotData.source.kind === 'fixture' && currentSourceKindRef.current === 'transcript') {
+        dispatch({ type: 'BOOT_ABORT' });
         return;
       }
       startTransition(() => dispatch({ type: 'BOOT_SUCCESS', snapshot: snapshotData }));

@@ -23,7 +23,7 @@ npm run test:coverage  # run with coverage report
 npx vitest tests/derive.test.ts   # run a single file
 ```
 
-All tests on `main` pass as of the Phase 2 landing (250 tests, 2026-05-19). If you
+All tests on `main` pass as of the Phase 2 landing (258 tests, 2026-05-19). If you
 check out an older commit, `npm test` may fail — update to current `main` or skip
 failing suites when bisecting history.
 

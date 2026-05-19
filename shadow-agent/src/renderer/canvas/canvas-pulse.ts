@@ -12,6 +12,16 @@ interface ActivePulse {
 }
 
 const pulses: ActivePulse[] = [];
+const MAX_ACTIVE_PULSES = 32;
+
+function pruneExpiredCanvasPulses(now: number): void {
+  for (let i = pulses.length - 1; i >= 0; i -= 1) {
+    const pulse = pulses[i]!;
+    if (now - pulse.startedAt > pulse.durationMs) {
+      pulses.splice(i, 1);
+    }
+  }
+}
 
 export function triggerCanvasPulse(
   kind: CanvasPulseKind,
@@ -19,25 +29,33 @@ export function triggerCanvasPulse(
   y: number,
   options: { intensity?: number; durationMs?: number; atMs?: number } = {}
 ): void {
+  const now = options.atMs ?? performance.now();
+  pruneExpiredCanvasPulses(now);
+  if (pulses.length >= MAX_ACTIVE_PULSES) {
+    pulses.shift();
+  }
   pulses.push({
     kind,
     x,
     y,
-    startedAt: options.atMs ?? performance.now(),
+    startedAt: now,
     durationMs: options.durationMs ?? (kind === 'burst' ? 600 : 1200),
     intensity: options.intensity ?? 1
   });
 }
 
+/** Prune expired pulses even when the grid is not drawn (e.g. low quality tier). */
+export function tickCanvasPulses(now: number): void {
+  pruneExpiredCanvasPulses(now);
+}
+
 /** Returns 0–1 boost to grid opacity for the current frame. */
 export function sampleCanvasPulseBoost(time: number, width: number, height: number): number {
-  const now = time;
+  pruneExpiredCanvasPulses(time);
   let boost = 0;
-  for (let i = pulses.length - 1; i >= 0; i -= 1) {
-    const pulse = pulses[i]!;
-    const elapsed = now - pulse.startedAt;
+  for (const pulse of pulses) {
+    const elapsed = time - pulse.startedAt;
     if (elapsed > pulse.durationMs) {
-      pulses.splice(i, 1);
       continue;
     }
     const t = elapsed / pulse.durationMs;
