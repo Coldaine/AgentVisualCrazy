@@ -17,13 +17,13 @@ export function triggerCanvasPulse(
   kind: CanvasPulseKind,
   x: number,
   y: number,
-  options: { intensity?: number; durationMs?: number } = {}
+  options: { intensity?: number; durationMs?: number; atMs?: number } = {}
 ): void {
   pulses.push({
     kind,
     x,
     y,
-    startedAt: performance.now(),
+    startedAt: options.atMs ?? performance.now(),
     durationMs: options.durationMs ?? (kind === 'burst' ? 600 : 1200),
     intensity: options.intensity ?? 1
   });

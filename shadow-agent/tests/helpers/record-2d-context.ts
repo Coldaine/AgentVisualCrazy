@@ -1,3 +1,9 @@
+type DrawStyle = string | CanvasGradient | CanvasPattern;
+
+function styleToken(value: DrawStyle): string {
+  return typeof value === 'string' ? value : '[CanvasGradient|CanvasPattern]';
+}
+
 export type RecordedCommand =
   | { type: 'fillStyle'; value: string }
   | { type: 'strokeStyle'; value: string }
@@ -12,25 +18,32 @@ export interface Recorded2DContext {
   canvas: { width: number; height: number };
 }
 
+interface DrawState {
+  fillStyle: DrawStyle;
+  strokeStyle: DrawStyle;
+  lineWidth: number;
+}
+
 export function createRecorded2DContext(width = 800, height = 600): CanvasRenderingContext2D {
   const commands: RecordedCommand[] = [];
-  const state = { fillStyle: '#000', strokeStyle: '#000', lineWidth: 1 };
+  const state: DrawState = { fillStyle: '#000', strokeStyle: '#000', lineWidth: 1 };
+  const stack: DrawState[] = [];
 
   const recorder = {
     canvas: { width, height },
     get fillStyle() {
       return state.fillStyle;
     },
-    set fillStyle(value: string) {
+    set fillStyle(value: DrawStyle) {
       state.fillStyle = value;
-      commands.push({ type: 'fillStyle', value });
+      commands.push({ type: 'fillStyle', value: styleToken(value) });
     },
     get strokeStyle() {
       return state.strokeStyle;
     },
-    set strokeStyle(value: string) {
+    set strokeStyle(value: DrawStyle) {
       state.strokeStyle = value;
-      commands.push({ type: 'strokeStyle', value });
+      commands.push({ type: 'strokeStyle', value: styleToken(value) });
     },
     get lineWidth() {
       return state.lineWidth;
@@ -46,9 +59,16 @@ export function createRecorded2DContext(width = 800, height = 600): CanvasRender
       commands.push({ type: 'stroke', path: path ? 'path' : undefined });
     },
     save() {
+      stack.push({ fillStyle: state.fillStyle, strokeStyle: state.strokeStyle, lineWidth: state.lineWidth });
       commands.push({ type: 'save' });
     },
     restore() {
+      const previous = stack.pop();
+      if (previous) {
+        state.fillStyle = previous.fillStyle;
+        state.strokeStyle = previous.strokeStyle;
+        state.lineWidth = previous.lineWidth;
+      }
       commands.push({ type: 'restore' });
     },
     setTransform() {
