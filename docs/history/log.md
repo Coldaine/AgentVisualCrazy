@@ -81,6 +81,14 @@
 - Added auth-focused tests covering secure store loading, env precedence, fallback consent, migration, and POSIX permission enforcement
 - Updated active docs to describe the new auth chain and secure permission guidance
 
+## 2026-05-19 — Pluggable capture transport + OpenCode client (PR #44)
+
+- PR #44 merged: pluggable capture transports (file-tail, HTTP stream, WebSocket, TCP socket), privacy-aware queue spill, and session-manager refactor
+- OpenCode inference client (`opencode-client.ts`) plus `inference-client-factory.ts` (OpenCode first, Anthropic fallback); closes #38
+- Review fixes: session pinning in file-tail reads, override-path rediscovery, reconnect delay validation, per-connection TextDecoder, inference checkpoint drain hardening
+- Canvas dot-grid atmosphere pulse and heavy-scene quality-tier regression test; partial closeout for #39 and #40
+- 250 tests passing on main after merge
+
 ## 2026-04-20 — Phase 2 feature lines merged
 
 - PR #26 merged: Canvas2D + D3-Force renderer landed on main for the live graph view
