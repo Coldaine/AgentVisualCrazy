@@ -153,7 +153,7 @@ function sanitizeUnknown(value: unknown): unknown {
   }
 
   if (Array.isArray(value)) {
-    return value.map((item) => sanitizeUnknown(item));
+    return value.map((element) => sanitizeUnknown(element));
   }
 
   const output: Record<string, unknown> = {};
