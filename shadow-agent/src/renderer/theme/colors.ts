@@ -36,6 +36,16 @@ export const colors = {
   glassBorder: 'rgba(100, 200, 255, 0.15)',
   glassBlur:   '20px',
   glassGlow:   'rgba(100, 200, 255, 0.08)',
+
+  // Holo border opacities (mirror CSS --holo-border-* vars)
+  holoBorder06: 'rgba(100, 200, 255, 0.06)',
+  holoBorder08: 'rgba(100, 200, 255, 0.08)',
+  holoBorder10: 'rgba(100, 200, 255, 0.10)',
+  holoBorder12: 'rgba(100, 200, 255, 0.12)',
+
+  // Edge / particle accents
+  edgeDispatch: 'rgba(204, 136, 255, 1)',
+  edgeReturn:   'rgba(102, 255, 170, 1)',
 } as const;
 
 export type ColorKey = keyof typeof colors;
