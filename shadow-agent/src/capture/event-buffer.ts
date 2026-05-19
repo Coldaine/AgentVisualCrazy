@@ -17,11 +17,8 @@ import type {
   EventQueueMetrics
 } from '../shared/schema';
 import { createLogger } from '../shared/logger';
-import {
-  DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS,
-  prepareEventsForStorage,
-  type TranscriptPrivacySettings
-} from '../shared/privacy';
+import { DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS, prepareEventsForStorage } from '../shared/privacy';
+import type { TranscriptPrivacySettings } from '../shared/schema';
 
 const logger = createLogger({ minLevel: 'info' });
 

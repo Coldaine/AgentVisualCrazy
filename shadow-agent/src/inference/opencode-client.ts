@@ -26,7 +26,7 @@ export interface OpencodeClientDependencies {
 interface OpencodeSdkModule {
   createOpencodeServer(options: { port: number; cwd: string }): Promise<{
     url: string;
-    close?: () => Promise<void>;
+    close?: () => void | Promise<void>;
   }>;
   createOpencodeClient(options: { baseUrl: string }): OpencodeSdkClient;
 }
@@ -55,7 +55,7 @@ interface OpencodeMessagesResponse {
 }
 
 async function defaultLoadSdk(): Promise<OpencodeSdkModule> {
-  return import('@opencode-ai/sdk') as Promise<OpencodeSdkModule>;
+  return import('@opencode-ai/sdk') as unknown as Promise<OpencodeSdkModule>;
 }
 
 function extractAssistantText(response: OpencodeMessagesResponse): string {
@@ -118,7 +118,7 @@ export async function createOpencodeClient(
     return null;
   }
 
-  let server: { url: string; close?: () => Promise<void> } | null = null;
+  let server: { url: string; close?: () => void | Promise<void> } | null = null;
   let sdkClient: OpencodeSdkClient | null = null;
   let sessionId: string | null = null;
 
@@ -132,7 +132,7 @@ export async function createOpencodeClient(
     sessionId = session.id;
   } catch (error) {
     logger.warn('inference', 'opencode.start_failed', { error });
-    await server?.close?.();
+    await Promise.resolve(server?.close?.());
     return null;
   }
 

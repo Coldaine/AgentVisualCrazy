@@ -86,6 +86,10 @@ vi.mock('../../src/electron/session-io', () => ({
   saveReplayFile: vi.fn()
 }));
 
+vi.mock('../../src/capture/capture-transports', () => ({
+  resolveCaptureTransportOptionsFromEnv: vi.fn(() => ({ kind: 'file-tail' }))
+}));
+
 vi.mock('../../src/capture/session-manager', () => ({
   createSessionManager: createSessionManagerMock
 }));
@@ -95,8 +99,9 @@ vi.mock('../../src/inference/shadow-inference-engine', () => ({
 }));
 
 async function flushStartup(): Promise<void> {
-  await new Promise((resolve) => setTimeout(resolve, 0));
-  await new Promise((resolve) => setTimeout(resolve, 0));
+  await vi.waitFor(() => {
+    expect(createSessionManagerMock).toHaveBeenCalled();
+  });
 }
 
 describe('startMainProcess privacy wiring', () => {
@@ -120,7 +125,6 @@ describe('startMainProcess privacy wiring', () => {
     sessionManagerMock.stop.mockClear();
     sessionManagerMock.getBuffer.mockClear();
     bufferMock.getAll.mockClear();
-    vi.resetModules();
   });
 
   it('forwards loaded privacy settings into both capture and inference startup', async () => {
@@ -131,7 +135,7 @@ describe('startMainProcess privacy wiring', () => {
 
     expect(loadTranscriptPrivacySettingsMock).toHaveBeenCalledOnce();
     expect(createSessionManagerMock).toHaveBeenCalledOnce();
-    const [, sessionManagerOptions] = createSessionManagerMock.mock.calls[0] as [
+    const [, sessionManagerOptions] = createSessionManagerMock.mock.calls[0] as unknown as [
       () => unknown,
       {
         getPrivacy: () => typeof OPTED_IN_PRIVACY_SETTINGS;

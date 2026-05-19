@@ -337,24 +337,23 @@ export function watchTranscript(
   subscriptionPromise = createFileTailCaptureTransport({
     kind: 'file-tail',
     overridePath: filePath
-  })
-    .start({
-      getBackpressure: () =>
-        options.getBackpressure?.() ?? {
-          level: 'normal',
-          shouldThrottle: false,
-          totalRatio: 0,
-          pendingWrites: 0
-        },
-      onSessionStarted: () => undefined,
-      onSessionReset: () => undefined,
-      onChunk: ({ chunk }) => {
-        onChunk(chunk);
-      }
-    })
-    .catch((error) => {
-      logger.error('capture', 'watcher.legacy_start_failed', { filePath, error });
-    });
+  }).start({
+    getBackpressure: () =>
+      options.getBackpressure?.() ?? {
+        level: 'normal',
+        shouldThrottle: false,
+        totalRatio: 0,
+        pendingWrites: 0
+      },
+    onSessionStarted: () => undefined,
+    onSessionReset: () => undefined,
+    onChunk: ({ chunk }) => {
+      onChunk(chunk);
+    }
+  });
+  void subscriptionPromise.catch((error) => {
+    logger.error('capture', 'watcher.legacy_start_failed', { filePath, error });
+  });
 
   return {
     stop() {
