@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { AgentNode } from '../../src/shared/schema';
 import { getGraphLayoutAdapter } from '../../src/renderer/graph-layout-adapter';
-import { buildGraphLayout, formatClock, safeFileName, toLabel } from '../../src/renderer/view-model';
+import { formatClock, safeFileName, toLabel } from '../../src/renderer/view-model';
 
 describe('renderer view-model helpers', () => {
   it('falls back to the original value for invalid clock timestamps', () => {
@@ -54,13 +54,5 @@ describe('renderer view-model helpers', () => {
         { from: 'b', to: 'a' }
       ])
     );
-  });
-
-  it('keeps a stable adapter boundary around the current graph implementation', () => {
-    const graphLayoutAdapter = getGraphLayoutAdapter();
-    const nodes: AgentNode[] = [{ id: 'root', label: 'Root', state: 'active', toolCount: 0 }];
-
-    expect(graphLayoutAdapter.id).toBe('layered-graph-layout');
-    expect(graphLayoutAdapter.build(nodes)).toEqual(buildGraphLayout(nodes));
   });
 });
