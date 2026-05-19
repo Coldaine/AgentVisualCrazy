@@ -21,6 +21,7 @@ export interface IpcBridgeOptions {
   getWebContents: () => WebContents | null;
   buildSnapshot: () => Promise<SnapshotPayload | null>;
   privacy?: TranscriptPrivacySettings;
+  getPrivacy?: () => TranscriptPrivacySettings;
 }
 
 export interface IpcBridge {
@@ -29,7 +30,7 @@ export interface IpcBridge {
 
 export function createIpcBridge(opts: IpcBridgeOptions): IpcBridge {
   const { buffer, getWebContents, buildSnapshot } = opts;
-  const privacy = opts.privacy ?? DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS;
+  const getPrivacy = opts.getPrivacy ?? (() => opts.privacy ?? DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS);
 
   return {
     start() {
@@ -58,7 +59,7 @@ export function createIpcBridge(opts: IpcBridgeOptions): IpcBridge {
             return;
           }
 
-          const rendererBatch = prepareEventsForStorage(pending.events, privacy);
+          const rendererBatch = prepareEventsForStorage(pending.events, getPrivacy());
           logger.debug('ipc', 'snapshot.sent', {
             eventCount: rendererBatch.length,
             truncated: pending.truncated

@@ -125,6 +125,8 @@ export interface ShadowAgentBridge {
   onLiveEvents: (callback: (events: CanonicalEvent[]) => void) => () => void;
   getLiveSnapshot: () => Promise<SnapshotPayload | null>;
   openReplayFile: () => Promise<SnapshotPayload | null>;
+  getPrivacyPolicy: () => Promise<PrivacyPolicy>;
+  updatePrivacySettings: (updates: Partial<TranscriptPrivacySettings>) => Promise<PrivacyPolicy>;
   exportReplayJsonl: (
     events: CanonicalEvent[],
     suggestedFileName?: string,

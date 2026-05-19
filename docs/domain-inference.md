@@ -1,11 +1,10 @@
 # Domain: Inference Engine
 
-> **Status: Core runtime landed on main** — Auth loader (`auth.ts`), context packager
-> (`context-packager.ts` with `packContext`), prompt builder (`prompt-builder.ts`
-> exporting `ShadowContextPacket` and `buildUserMessage`), response parser, inference
-> trigger, shadow inference engine orchestrator, direct Anthropic API fallback, and
-> MCP server are implemented and covered by tests. The OpenCode client
-> (`opencode-client.ts`) remains planned work; direct Anthropic API is the current runtime path.
+> **Status: Landed on main** — Auth loader, context packager, prompt builder, response
+> parser, inference trigger, orchestrator, OpenCode client (`opencode-client.ts`),
+> provider selection (`inference-client-factory.ts`), direct Anthropic fallback, and
+> MCP server are on main. Runtime order: OpenCode when the SDK starts, otherwise
+> direct Anthropic (`SHADOW_INFERENCE_PROVIDER` can force either path).
 
 The inference engine is shadow-agent's brain — it consumes the observed agent's event
 stream and produces structured interpretations (phase, risk, predictions, confidence).
@@ -17,19 +16,20 @@ Prompt source: `prompts/shadow-system-prompt.json`
 
 ## OpenCode Harness
 
-The intended primary harness is `@opencode-ai/sdk`, copied almost verbatim from sidecar's
-`opencode-client.js`. That path is still planned work. Once implemented, it gives us
-provider abstraction for free — the user authenticates once and can use Claude, GPT-4,
-Gemini, or any OpenRouter model as the interpretation engine. The current shipped runtime
-path is the direct Anthropic client plus the provider-agnostic interfaces that keep the
-OpenCode slot ready.
+The primary harness is `@opencode-ai/sdk` via `src/inference/opencode-client.ts`, which
+starts a local OpenCode server on port 4097, creates a session, sends structured prompts,
+and polls for completion. `createInferenceClient()` in `inference-client-factory.ts` tries
+OpenCode first unless `SHADOW_INFERENCE_PROVIDER=anthropic` or `direct` is set.
 
-When OpenCode isn't installed, we fall back to `@anthropic-ai/sdk` directly. Simpler
-(no session management, no polling) but locks to Anthropic only.
+When the SDK is unavailable or the server fails to start, we fall back to
+`@anthropic-ai/sdk` through `src/inference/direct-api.ts` (Anthropic-only, no session
+management).
 
 Inference delivery is local-only by default. Before any prompt is sent off-host, the user
 must explicitly opt in. Sanitized transcript content is the default payload, and raw
-transcript delivery requires a separate explicit opt-in.
+transcript delivery requires a separate explicit opt-in. The Electron shell persists those
+privacy toggles in `~/.shadow-agent/privacy.json`; environment variables still override the
+saved file when present.
 
 ## Auth Chain
 

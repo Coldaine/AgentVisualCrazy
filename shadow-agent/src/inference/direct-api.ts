@@ -42,7 +42,6 @@ export interface DirectApiClientDependencies {
 }
 
 async function loadAnthropicSdk(): Promise<{ default: AnthropicSdkConstructor }> {
-  // @ts-ignore
   return import('@anthropic-ai/sdk') as Promise<{ default: AnthropicSdkConstructor }>;
 }
 

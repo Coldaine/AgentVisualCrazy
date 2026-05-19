@@ -17,6 +17,8 @@ import type {
   EventQueueMetrics
 } from '../shared/schema';
 import { createLogger } from '../shared/logger';
+import { DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS, prepareEventsForStorage } from '../shared/privacy';
+import type { TranscriptPrivacySettings } from '../shared/schema';
 
 const logger = createLogger({ minLevel: 'info' });
 
@@ -45,6 +47,7 @@ export interface EventBufferOptions {
   highWatermark?: number;
   criticalWatermark?: number;
   sessionId?: string;
+  getPrivacy?: () => TranscriptPrivacySettings;
 }
 
 export type EventSubscriber = (events: CanonicalEvent[], metrics: EventQueueMetrics) => void;
@@ -126,14 +129,30 @@ async function readSpillFile(filePath: string): Promise<EventEnvelope[]> {
   }
 }
 
-async function writeSpillFile(filePath: string, envelopes: EventEnvelope[]): Promise<void> {
+async function writeSpillFile(
+  filePath: string,
+  envelopes: EventEnvelope[],
+  privacy: TranscriptPrivacySettings
+): Promise<void> {
   if (envelopes.length === 0) {
     await rm(filePath, { force: true });
     return;
   }
 
   await mkdir(path.dirname(filePath), { recursive: true });
-  const payload = `${envelopes.map((envelope) => JSON.stringify(envelope)).join('\n')}\n`;
+  const sanitizedEvents = prepareEventsForStorage(
+    envelopes.map((envelope) => envelope.event),
+    privacy,
+    { storeRawTranscript: privacy.allowRawTranscriptStorage }
+  );
+  const payload = `${envelopes
+    .map((envelope, index) =>
+      JSON.stringify({
+        ...envelope,
+        event: sanitizedEvents[index] ?? envelope.event
+      })
+    )
+    .join('\n')}\n`;
   await writeFile(filePath, payload, 'utf8');
 }
 
@@ -170,6 +189,7 @@ export function createEventBuffer(capacityOrOptions: number | EventBufferOptions
   const persistenceRoot = options.persistenceRoot ?? DEFAULT_PERSISTENCE_ROOT;
   const highWatermark = clampRatio(options.highWatermark ?? DEFAULT_HIGH_WATERMARK);
   const criticalWatermark = Math.max(highWatermark, clampRatio(options.criticalWatermark ?? DEFAULT_CRITICAL_WATERMARK));
+  const getPrivacy = options.getPrivacy ?? (() => DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS);
   const subscribers = new Set<EventSubscriber>();
   const consumerDefaults = new Map<string, { startAt: 'latest' | 'earliest' }>();
   const checkpoints = new Map<string, EventQueueCheckpoint>();
@@ -404,7 +424,7 @@ export function createEventBuffer(capacityOrOptions: number | EventBufferOptions
         }
 
         if (spilledCount > 0 || droppedCount > 0 || spilledDepth > 0) {
-          await writeSpillFile(spillPath(), spilled);
+          await writeSpillFile(spillPath(), spilled, getPrivacy());
         }
 
         updateOffsets(spilled);
