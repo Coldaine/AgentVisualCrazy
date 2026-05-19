@@ -5,9 +5,9 @@
 
 ## Implementation
 
-- 2026-05-19: **Citadel motion layer (scoped)** — CSS `@keyframes` for panel/card breathe; canvas pulse hook for agent events. See `docs/plans/plan-gui-rendering.md` and Phase 2 landing report.
+- 2026-05-19: **Wire canvas pulse to EventKind** — Call `triggerCanvasPulse` from capture/inference milestones (tool_started, subagent_dispatched, etc.).
 
 ## Testing
 
-- 2026-05-19: **Canvas command-record tests** — `record-2d-context` helper + semantic draw assertions per `docs/plans/plan-testing-observability.md`. Target: 250+ tests green on `main`.
-- 2026-04-01: **Manual visual/performance acceptance** — Glow quality, panel composition, motion timing, sustained replay perf. Deferred until after command-record suite lands.
+- 2026-04-01: **Manual visual/performance acceptance** — Glow quality, panel composition, motion timing, sustained replay perf. See `docs/reports/phase2-landing-status.md`.
+- 2026-05-19: **Pixel snapshot regression (deferred)** — 4–6 canonical scenes per `plan-testing-observability.md`; command-record suite landed (258 tests on `main`).

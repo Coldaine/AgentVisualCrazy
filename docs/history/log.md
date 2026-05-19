@@ -81,6 +81,13 @@
 - Added auth-focused tests covering secure store loading, env precedence, fallback consent, migration, and POSIX permission enforcement
 - Updated active docs to describe the new auth chain and secure permission guidance
 
+## 2026-05-19 — Phase 2 visual landing
+
+- Closed superseded PRs #41 and #42; ported selective renderer ideas onto current `main`
+- Theme helpers (`withAlpha`, `getStateColor`, `TIMING`), animated `GlassCard`, Citadel CSS keyframes subset, `triggerCanvasPulse` API
+- Canvas command-record tests (`record-2d-context`, 258 tests passing)
+- Status report: `docs/reports/phase2-landing-status.md`
+
 ## 2026-05-19 — Pluggable capture transport + OpenCode client (PR #44)
 
 - PR #44 merged: pluggable capture transports (file-tail, HTTP stream, WebSocket, TCP socket), privacy-aware queue spill, and session-manager refactor
