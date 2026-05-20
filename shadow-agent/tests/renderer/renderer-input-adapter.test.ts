@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildRendererInput, canonicalEventRendererInputAdapter, inferRendererInputTitle } from '../../src/shared/renderer-input-adapter';
+import { buildRendererInput, inferRendererInputTitle } from '../../src/shared/renderer-input-adapter';
 import type { CanonicalEvent } from '../../src/shared/schema';
 
 function event(overrides: Partial<CanonicalEvent> = {}): CanonicalEvent {
@@ -16,10 +16,6 @@ function event(overrides: Partial<CanonicalEvent> = {}): CanonicalEvent {
 }
 
 describe('canonicalEventRendererInputAdapter', () => {
-  it('exposes a stable adapter identity', () => {
-    expect(canonicalEventRendererInputAdapter.id).toBe('canonical-event-renderer-input');
-  });
-
   it('prefers session labels and user objectives when inferring the renderer title', () => {
     expect(
       inferRendererInputTitle(
