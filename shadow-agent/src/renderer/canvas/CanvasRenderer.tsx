@@ -20,6 +20,7 @@ import {
   type QualityTier,
   type ResourceMetrics
 } from './quality';
+import { sampleCanvasPulseBoost, tickCanvasPulses } from './canvas-pulse';
 import {
   COLLIDE_RADIUS,
   NODE_RADIUS,
@@ -30,6 +31,9 @@ import {
   type SimulationEdge,
   type SimulationNode
 } from './types';
+
+export { triggerCanvasPulse, clearCanvasPulses } from './canvas-pulse';
+export type { CanvasPulseKind } from './canvas-pulse';
 
 // Map schema AgentNode state -> canvas AgentState.
 function mapState(state: AgentNode['state']): SimulationNode['state'] {
@@ -124,7 +128,9 @@ function drawGrid(
   time = 0
 ) {
   ctx.save();
-  const pulse = 0.06 + 0.03 * Math.sin(time * 0.0012);
+  const ambient = 0.06 + 0.03 * Math.sin(time * 0.0012);
+  const eventBoost = sampleCanvasPulseBoost(time, width, height);
+  const pulse = Math.min(0.35, ambient + eventBoost);
   ctx.strokeStyle = `rgba(102, 204, 255, ${pulse})`;
   ctx.lineWidth = 0.5;
   for (let x = 0; x < width + gridStep; x += gridStep) {
@@ -447,6 +453,7 @@ export default function CanvasRenderer({ agentNodes, riskLevel, latestInsight }:
 
     const frameDelta = lastFrameRef.current === null ? 16.7 : Math.max(8, Math.min(50, time - lastFrameRef.current));
     lastFrameRef.current = time;
+    tickCanvasPulses(time);
 
     const particleEngine = particleEngineRef.current;
     particleEngine.step(frameDelta);

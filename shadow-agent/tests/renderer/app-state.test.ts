@@ -82,6 +82,14 @@ describe('appReducer — boot flow', () => {
     expect(next.error).toBeNull();
   });
 
+  it('BOOT_ABORT clears busy without changing snapshot', () => {
+    const snapshot = makeSnapshot();
+    const prior: AppState = { busy: 'booting', error: null, snapshot };
+    const next = appReducer(prior, { type: 'BOOT_ABORT' });
+    expect(next.busy).toBeNull();
+    expect(next.snapshot).toBe(snapshot);
+  });
+
   it('BOOT_ERROR clears busy and sets error message', () => {
     const prior: AppState = { busy: 'booting', error: null, snapshot: null };
     const next = appReducer(prior, { type: 'BOOT_ERROR', message: 'fixture failed' });

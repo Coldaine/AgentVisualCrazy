@@ -4,13 +4,13 @@ import type { ParticleWorkerInput, ParticleWorkerOutput } from './particle-worke
 let state: ParticleEngineState = createParticleEngineState([], 'high');
 
 self.onmessage = (event: MessageEvent<ParticleWorkerInput>) => {
-  const message = event.data;
-  if (message.type === 'scene') {
-    state = syncParticleEngineState(state, message.edges, message.qualityTier);
-  } else if (message.type === 'quality') {
-    state = syncParticleEngineState(state, state.edges, message.qualityTier);
-  } else if (message.type === 'tick') {
-    state = advanceParticleEngineState(state, message.dtMs);
+  const payload = event.data;
+  if (payload.type === 'scene') {
+    state = syncParticleEngineState(state, payload.edges, payload.qualityTier);
+  } else if (payload.type === 'quality') {
+    state = syncParticleEngineState(state, state.edges, payload.qualityTier);
+  } else if (payload.type === 'tick') {
+    state = advanceParticleEngineState(state, payload.dtMs);
   }
 
   const response: ParticleWorkerOutput = {

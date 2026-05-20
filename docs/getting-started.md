@@ -23,10 +23,9 @@ npm run test:coverage  # run with coverage report
 npx vitest tests/derive.test.ts   # run a single file
 ```
 
-All tests on `main` pass as of PR #35 (merged 2026-04-19). If you check out an
-older commit, `npm test` may fail because the inference test suite depended on
-exports that were only added in PR #35 — update to a newer main or skip that
-suite if you are bisecting older history.
+All tests on `main` pass as of the Phase 2 landing (258 tests, 2026-05-19). If you
+check out an older commit, `npm test` may fail — update to current `main` or skip
+failing suites when bisecting history.
 
 CI runs the prompt-parity check, tests, and build on every PR via the `CI`
 workflow (defined in `.github/workflows/prompt-parity.yml`). The repo uses a
@@ -38,11 +37,16 @@ will also run it, but catching failures earlier is cheaper.
 
 ## Run
 
-To start the Electron application in development mode with HMR (Hot Module Replacement):
+Build the web, renderer, and Electron bundles, then launch the desktop app:
 
 ```bash
+cd shadow-agent
+npm run build
 npm start
 ```
+
+There is no separate Vite dev-server script; `npm start` runs the built Electron
+entry (`dist-electron/main.cjs`).
 
 ## Credential Setup
 
@@ -78,9 +82,10 @@ variables override the saved file for that run.
 ## Project Structure
 
 - `shadow-agent/src/electron/`: Main process code, including IPC handling, session management, and file loading.
-- `shadow-agent/src/renderer/`: React-based UI code. The full Canvas2D + D3-Force visualization engine is on a feature branch (PR #26); current main uses simplified React panels.
+- `shadow-agent/src/renderer/`: React shell plus Canvas2D + D3-Force graph (`src/renderer/canvas/`), glass panels, and timeline UI.
 - `shadow-agent/src/shared/`: Code shared between the main and renderer processes (types, utilities, logging, privacy, transcript parsing, replay store).
-- `shadow-agent/src/inference/`: Shadow inference engine — auth, context packaging, prompt building, response parsing, trigger logic, and Anthropic API fallback. OpenCode client is not yet implemented.
+- `shadow-agent/src/inference/`: Shadow inference engine — OpenCode-first client with Anthropic fallback, auth, context packaging, prompt building, and trigger logic.
+- `shadow-agent/src/capture/`: Pluggable capture transports (file tail, HTTP stream, WebSocket, socket).
 - `shadow-agent/src/mcp/`: MCP server exposing shadow tools to other agents.
 - `docs/`: Technical documentation, architecture decisions, and project plans.
 
