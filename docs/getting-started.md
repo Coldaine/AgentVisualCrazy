@@ -27,6 +27,16 @@ All tests on `main` pass as of the Phase 2 landing (258 tests, 2026-05-19). If y
 check out an older commit, `npm test` may fail — update to current `main` or skip
 failing suites when bisecting history.
 
+### Test Logging Policy
+
+The test suite runs with `silent: true` in `vitest.config.ts` to suppress
+intentional log output from `StructuredLogger` (app, capture, ipc, etc.) during
+automated runs. Unit tests should not produce unexpected `console.log` / `console.error`
+output beyond what the logger produces; if a test intentionally asserts on log output,
+use `vi.spyOn` on the logger instance rather than relying on raw `console.*` noise.
+When adding new test files, verify they do not introduce unregulated console output
+by running `vitest run` and confirming the output contains only reporter summary lines.
+
 CI runs the prompt-parity check, tests, and build on every PR via the `CI`
 workflow (defined in `.github/workflows/prompt-parity.yml`). The repo uses a
 Git hook in `.githooks/pre-commit`, and `npm install` from either the repo root

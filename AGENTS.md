@@ -72,3 +72,9 @@ Manual edits to generated prompt docs/runtime files cause drift and will fail pr
 
 Use conventional commits (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `prompt:`, `chore:`).
 Always include `Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>`.
+
+## Git Workflow
+
+- Integrate via **feature branch + PR** only; remote `main` is branch-protected.
+- Do not treat local `main` commits as the shipping path.
+- Do not call open PRs "stale" without rebasing onto current `main` and re-evaluating whether their ideas are still worth porting.

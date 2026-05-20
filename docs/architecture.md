@@ -167,6 +167,16 @@ Shadow-agent never writes files or calls tools on behalf of the observed agent. 
 hard constraint for v1. It keeps the product boundary clear and makes shadow-agent safe to
 trust. Phase 5 may relax this for suggestions, but that's explicitly future work.
 
+### User-Initiated Replay Export (`saveReplayFile`)
+
+The `saveReplayFile` function in `src/electron/session-io.ts` opens a native save dialog
+to let the user explicitly export a replay JSONL file to disk. This is a **user-initiated
+action**, not shadow-agent writing on behalf of the observed agent. The read-only constraint
+applies to the *shadow* agent's autonomous behavior; the application can still respond to
+deliberate user gestures such as clicking "Export sanitized replay" or "Export raw replay"
+in the UI. Replay export is treated as intentional product surface, not a violation of the
+passive observer principle.
+
 ## Documentation Layout
 
 ```
