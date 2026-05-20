@@ -5,9 +5,7 @@
 
 ## Implementation
 
-- 2026-05-19: **Wire canvas pulse to EventKind** — Call `triggerCanvasPulse` from capture/inference milestones (tool_started, subagent_dispatched, etc.).
-
 ## Testing
 
-- 2026-04-01: **Manual visual/performance acceptance** — Glow quality, panel composition, motion timing, sustained replay perf. See `docs/reports/phase2-landing-status.md`.
-- 2026-05-19: **Pixel snapshot regression (deferred)** — 4–6 canonical scenes per `plan-testing-observability.md`; command-record suite landed (258 tests on `main`).
+- 2026-04-01: **Manual visual/performance acceptance** - Glow quality, panel composition, motion timing, sustained replay perf. See `docs/reports/phase2-landing-status.md`.
+- 2026-05-19: **Pixel snapshot regression (deferred)** - 4-6 canonical scenes per `plan-testing-observability.md`; command-record suite landed (258 tests on `main`).

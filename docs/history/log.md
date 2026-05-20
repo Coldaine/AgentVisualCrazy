@@ -103,3 +103,11 @@
 - PR #30 merged: logger hardening and subsystem instrumentation landed on main
 - PR #33 merged: finish-line coordination plans and architecture assessment landed on main
 - Main now carries the full Phase 2 foundation; remaining work is provider depth, optional visual atmosphere, and follow-up polish
+
+## 2026-05-20 — Wire canvas pulse to EventKind milestones
+
+- Added `triggerPulseForEventKind` and `triggerPulsesForEvents` to `canvas-pulse.ts` mapping canonical EventKind values (tool_started, tool_completed, tool_failed, subagent_dispatched, subagent_returned, agent_spawned, agent_completed, session_started, permission_requested) to burst/ripple pulse types with per-kind debounce (100ms)
+- Wired pulses into the renderer event path: live events (`App.tsx` `onLiveEvents` callback), snapshot loads (`useEffect` on snapshot changes), and CanvasRenderer draw frame (`tickCanvasPulses` + `sampleCanvasPulseBoost` in grid opacity)
+- Pulse origin uses node position when available, falls back to canvas center (0.5, 0.5)
+- Pulse mapping documented inline in `canvas-pulse.ts` with rationale table
+- 285 tests passing
