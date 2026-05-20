@@ -1,3 +1,4 @@
+import { waitFor } from './helpers/wait-for';
 import { describe, expect, it, afterEach } from 'vitest';
 import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import os from 'node:os';
@@ -220,16 +221,10 @@ describe('structured logger — file rotation', () => {
     logger.info('app', 'after_rotation');
 
     // Wait for the async write to complete
-    for (let i = 0; i < 50; i++) {
-      const recent = logger.getWriteFailureCount() + logger.getDroppedWriteCount();
-      if (recent === 0) {
-        try {
-          const contents = await readFile(logFile, 'utf8');
-          if (contents.includes('after_rotation')) break;
-        } catch { /* not written yet */ }
-      }
-      await new Promise((r) => setTimeout(r, 10));
-    }
+    await waitFor(async () => {
+      const contents = await readFile(logFile, 'utf8');
+      return contents.includes('after_rotation');
+    }, { timeout: 2_000, interval: 10 });
 
     // The rotated file should still contain the pre-fill data
     const rotated = await readFile(`${logFile}.1`, 'utf8');

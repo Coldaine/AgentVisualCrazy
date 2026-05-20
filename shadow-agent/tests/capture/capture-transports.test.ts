@@ -1,3 +1,4 @@
+import { waitFor } from '../helpers/wait-for';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import http from 'node:http';
 import net from 'node:net';
@@ -19,16 +20,6 @@ const tempDirs: string[] = [];
 const subscriptions: CaptureTransportSubscription[] = [];
 const servers: Array<{ close: () => Promise<void> }> = [];
 
-async function waitFor(assertion: () => boolean | Promise<boolean>, timeoutMs = 4_000): Promise<void> {
-  const start = Date.now();
-  while (Date.now() - start < timeoutMs) {
-    if (await assertion()) {
-      return;
-    }
-    await new Promise((resolve) => setTimeout(resolve, 20));
-  }
-  throw new Error(`Timed out after ${timeoutMs}ms`);
-}
 
 function createContext() {
   const sessions: CaptureSession[] = [];

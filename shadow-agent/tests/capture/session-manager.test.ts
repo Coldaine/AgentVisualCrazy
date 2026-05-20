@@ -1,3 +1,4 @@
+import { waitFor } from '../helpers/wait-for';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { mkdtemp, rm } from 'node:fs/promises';
 import path from 'node:path';
@@ -25,16 +26,6 @@ import { createSessionManager } from '../../src/capture/session-manager';
 
 const tempDirs: string[] = [];
 
-async function waitFor(assertion: () => boolean | Promise<boolean>, timeoutMs = 4_000): Promise<void> {
-  const start = Date.now();
-  while (Date.now() - start < timeoutMs) {
-    if (await assertion()) {
-      return;
-    }
-    await new Promise((resolve) => setTimeout(resolve, 20));
-  }
-  throw new Error(`Timed out after ${timeoutMs}ms`);
-}
 
 afterEach(async () => {
   handleMock.mockReset();

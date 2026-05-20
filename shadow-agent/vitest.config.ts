@@ -3,6 +3,7 @@ import viteConfig from './vite.config';
 
 export default mergeConfig(viteConfig, defineConfig({
   test: {
+    setupFiles: ['tests/setup.ts'],
     silent: true,
     reporters: [['default', { summary: true }]],
   },
