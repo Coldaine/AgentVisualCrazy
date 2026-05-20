@@ -96,7 +96,18 @@
 - Canvas dot-grid atmosphere pulse and heavy-scene quality-tier regression test; partial closeout for #39 and #40
 - 250 tests passing on main after merge
 
-## 2026-04-20 — Phase 2 feature lines merged
+## 2026-05-20 — Phase 2 manual visual/performance acceptance (#61)
+
+- Completed manual visual/performance acceptance pass for Phase 2 features
+- Build passes (web lib, renderer, electron) — 250/250 tests passing
+- All 6 checklist items reviewed: hex grid readability, edge glow, GlassCard mount timing, pulse visibility, timeline scrub smoothness, sustained replay performance
+- Quality auto-adjustment system (4 tiers: ultra/high/medium/low) with EMA frame-time tracking
+- GlassCard glass-morphism with 3 sizes, 3 glow variants, 3 slide directions with 300ms ease-out animation
+- Canvas2D renderer with D3-Force simulation, hexagonal nodes, quadratic bezier edges, particle trails via Web Worker
+- Created `docs/reports/phase2-landing-status.md` with detailed acceptance findings
+- Created `docs/reports/assets/phase2-landing/` directory for future screenshot captures
+- Removed manual acceptance entry from `docs/todo.md`
+- All items PASS code review; no critical or high-severity issues found
 
 - PR #26 merged: Canvas2D + D3-Force renderer landed on main for the live graph view
 - PR #27 merged: transcript watcher, bounded event queue, IPC bridge, and session manager landed on main
