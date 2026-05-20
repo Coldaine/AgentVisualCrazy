@@ -370,6 +370,12 @@ Minimum gate for a normal feature PR:
 - any newly relevant integration tests
 - updated regression fixture or targeted test for the behavior that changed
 
+Test logging policy: the test config (`vitest.config.ts`) sets `silent: true` so
+intentional `StructuredLogger` output does not flood CI logs. New tests should not
+produce unregulated `console.log` / `console.error` output; use `vi.spyOn` on logger
+instances when log assertions are needed. A documented manual check (`npm run test:logcheck`
+or equivalent) can be added to `package.json` to fail on unexpected console noise.
+
 Additional gate for renderer-heavy PRs:
 - canvas command tests
 - selective visual regression checks

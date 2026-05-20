@@ -1,3 +1,4 @@
+import { glassCVA } from './components/GlassCard';
 import { startTransition, useEffect, useMemo, useReducer, useRef } from 'react';
 import type {
   CanonicalEvent,
@@ -43,7 +44,7 @@ function Panel({
   children: React.ReactNode;
 }) {
   return (
-    <section className={`panel ${className}`.trim()}>
+    <section className={`${glassCVA({ size: 'md', glow: 'subtle' })} panel ${className}`.trim()}>
       <header className="panel__header">
         <div>
           {eyebrow ? <p className="eyebrow">{eyebrow}</p> : null}
