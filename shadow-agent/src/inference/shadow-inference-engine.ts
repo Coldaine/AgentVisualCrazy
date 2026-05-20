@@ -33,6 +33,7 @@ export interface InferenceEngineOptions {
   onInsights: InsightCallback;
   triggerConfig?: Partial<TriggerConfig>;
   privacy?: TranscriptPrivacySettings;
+  client?: InferenceClient;
 }
 
 export interface InferenceEngine {
@@ -153,7 +154,7 @@ export function createInferenceEngine(opts: InferenceEngineOptions): InferenceEn
         return;
       }
 
-      client = await createInferenceClient();
+      client = opts.client ?? await createInferenceClient();
 
       if (!client) {
         logger.warn('inference', 'engine.no_client', {
