@@ -9,6 +9,7 @@ import type {
   TranscriptPrivacySettings
 } from '../shared/schema';
 import { appReducer, initialAppState } from './app-state';
+import { triggerPulsesForEvents } from './canvas/canvas-pulse';
 import { getHostCapabilities, type ShadowAgentHost } from './host';
 import { getRendererSurfaceAdapter } from './renderer-surface-adapter';
 import { formatClock, safeFileName, toLabel } from './view-model';
@@ -285,6 +286,8 @@ export default function App({ host }: ShadowAgentAppProps) {
         return;
       }
 
+      triggerPulsesForEvents(events);
+
       if (debounceTimer) {
         clearTimeout(debounceTimer);
       }
@@ -302,6 +305,15 @@ export default function App({ host }: ShadowAgentAppProps) {
       }
     };
   }, []);
+
+  // Pulse on snapshot loads (replay, fixture, or initial boot).
+  useEffect(() => {
+    if (!snapshot) return;
+    const recent = snapshot.events.slice(-10);
+    if (recent.length === 0) return;
+    const now = performance.now();
+    triggerPulsesForEvents(recent, undefined, undefined, now);
+  }, [snapshot?.source.kind, snapshot?.events.length]);
 
   const exportName = useMemo(() => {
     if (!snapshot) {
