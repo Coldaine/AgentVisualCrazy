@@ -12,6 +12,7 @@ import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import type { InferenceClient, InferenceRequest, InferenceResult } from '../../src/inference/inference-client';
+import { FakeInferenceClient } from '../helpers/fake-inference-client';
 import { SHADOW_SYSTEM_PROMPT, buildUserMessage, type ShadowContextPacket } from '../../src/inference/prompt-builder';
 import { packContext } from '../../src/inference/context-packager';
 import type { CanonicalEvent, DerivedState } from '../../src/shared/schema';
@@ -19,51 +20,6 @@ import type { CanonicalEvent, DerivedState } from '../../src/shared/schema';
 // ---------------------------------------------------------------------------
 // FakeInferenceClient
 // ---------------------------------------------------------------------------
-
-type ResponseFactory = (request: InferenceRequest) => InferenceResult | Promise<InferenceResult>;
-
-/**
- * Scriptable fake inference client for unit and integration tests.
- * Callers queue responses; the client returns them in order.
- */
-export class FakeInferenceClient implements InferenceClient {
-  readonly id = 'fake-inference-client';
-  readonly provider = 'fake' as const;
-  private queue: ResponseFactory[] = [];
-  readonly calls: InferenceRequest[] = [];
-
-  /** Queue a fixed result to be returned on the next infer() call. */
-  enqueue(result: InferenceResult): this {
-    this.queue.push(() => result);
-    return this;
-  }
-
-  /** Queue an error to be thrown on the next infer() call. */
-  enqueueError(error: Error): this {
-    this.queue.push(() => { throw error; });
-    return this;
-  }
-
-  /** Queue a factory that receives the request and returns a result. */
-  enqueueFactory(factory: ResponseFactory): this {
-    this.queue.push(factory);
-    return this;
-  }
-
-  async infer(request: InferenceRequest): Promise<InferenceResult> {
-    this.calls.push(request);
-    const factory = this.queue.shift();
-    if (!factory) {
-      throw new Error('FakeInferenceClient: no more queued responses');
-    }
-    return factory(request);
-  }
-
-  /** How many unconsumed responses are still queued. */
-  get pendingCount(): number {
-    return this.queue.length;
-  }
-}
 
 // ---------------------------------------------------------------------------
 // Helpers
