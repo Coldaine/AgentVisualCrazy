@@ -40,15 +40,13 @@ SHADOW_ALLOW_RAW_TRANSCRIPT_STORAGE=true
 
 ```bash
 npm install
-npm run prompts:generate
-npm run prompts:check
 npm test
 npm run build:web
 npm run build
 ```
 
-`npm install` also bootstraps the repo's `.githooks/` pre-commit checks so
-prompt parity and the test suite run before each commit.
+`npm install` also bootstraps the repo's `.githooks/` so the test suite
+runs once on `git push`.
 
 `npm run build:web` emits the reusable renderer bundle in `dist-web/`.
 

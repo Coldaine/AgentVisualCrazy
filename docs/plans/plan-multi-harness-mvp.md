@@ -143,7 +143,7 @@ Each PR: conventional commit prefix; `Co-authored-by: Copilot` trailer; branch o
 - **IPC contract stability.** `ShadowAgentBridge` in `schema.ts:123-135` accepts `CanonicalEvent[]`. Adding optional fields is contract-compatible. Method signatures must NOT change in this refactor.
 - **Spill-to-disk cross-version.** JSON spill format is robust to new optional fields. Capability dispatch in `derive.ts` must tolerate `harnessId === undefined`. Explicit test.
 - **Hardcoded `source: 'claude-hook'` in HTTP/socket/WS transports.** Must be removed in PR 3 or non-Claude harnesses over HTTP get mis-stamped.
-- **Prompt-sync workflow.** [`AGENTS.md`](../../AGENTS.md) lines 51-69 — `npm run prompts:check` enforces drift on `prompts/shadow-system-prompt.json` ↔ `inference/prompts.ts`. This refactor does not touch prompts; harness-awareness in the system prompt is **out of scope for MVP**, flagged for follow-up.
+- **Prompt-sync workflow.** Previously [`AGENTS.md`](../../AGENTS.md) enforced sync between `prompts/shadow-system-prompt.json`, `docs/prompts/shadow-system-prompt.md`, and `shadow-agent/src/inference/prompts.ts` via `npm run prompts:check`. That pipeline was removed (May 2026) in favor of a single-file source of truth at `shadow-agent/src/inference/prompts.ts`. See `docs/tooling-philosophy.md` for the principle. This refactor does not touch prompts; harness-awareness in the system prompt is **out of scope for MVP**, flagged as a follow-up — when added, the doc comment in `prompts.ts` should grow a "Per-harness considerations" section in the same edit.
 - **Inference packager assumptions.** Verify `inference/context-packager.ts` + `prompt-builder.ts` make no implicit assumptions about `source` strings before merging PR 2.
 - **Branch-protected `main`.** Each PR via feature branch + draft PR.
 
@@ -170,6 +170,72 @@ Each PR: conventional commit prefix; `Co-authored-by: Copilot` trailer; branch o
 ## Follow-ups (out of scope for MVP)
 
 - Promote `harnessId` to required after one release cycle + a fixture migration script.
-- Make the inference system prompt harness-aware (e.g., the shadow's interpretation prompt should know whether it's reading Claude vs. Cursor events). Will exercise the prompt-sync workflow in [`AGENTS.md`](../../AGENTS.md) lines 51-69.
+- Make the inference system prompt harness-aware (e.g., the shadow's interpretation prompt should know whether it's reading Claude vs. Cursor events). Will need a "Per-harness considerations" section added to the doc comment in `shadow-agent/src/inference/prompts.ts`.
 - OTLP receiver transport (covers VS Code Copilot + Gemini CLI; matrix's second pillar).
 - PTY transport (Aider; the one harness uncovered by the JSONL/hooks/OTLP trio).
+
+## Rejected Alternatives
+
+Documented here so future-me (or a future contributor) doesn't re-litigate decisions
+that were already considered and discarded. See `docs/tooling-philosophy.md` Principle 2.
+
+### Why not Codex CLI as the second harness in PR 6?
+
+Codex's ingestion path (JSONL transcript tail under `~/.codex/sessions/YYYY/MM/DD/`)
+is structurally the same as the Claude Code path. Wiring Codex as the second driver
+would exercise the registry but not the new layers we actually need — same transport
+(file-tail), same framer (line), broadly similar normalizer shape. The abstraction
+would land but remain unproven where it matters most (different transport, different
+format, different session-discovery convention).
+
+Cursor was chosen instead because it forces a genuinely new transport
+(hook receiver) that pays for itself across four harnesses (Cursor, Codex command
+hooks, Claude HTTP hooks, Gemini hooks). Cost: ~1.5x the PR 6 size; benefit:
+the abstraction is stress-tested by a categorically different ingestion path.
+
+### Why not Gemini CLI / OTLP receiver as the second harness?
+
+Strongest strategic value (OTLP is the long-term unifying surface for next-gen
+harnesses per `docs/research/harness-ingestion-matrix.md` Implications section).
+Rejected for PR 6 because the OTLP transport + framer is materially more code
+than a hook receiver: protobuf decoding, gRPC server option, span/log/metric
+shape mapping. PR 6 would balloon. Deferred to a follow-up PR once the
+abstraction has shaken out on a smaller surface (Cursor).
+
+### Why not PTY / Aider in MVP scope?
+
+PTY is the only path for Aider per the matrix, but Aider is also the most
+poorly-instrumented harness on the list (no hooks, no API, no OTel, no native
+MCP). PTY transport requires `node-pty` and ANSI-stream parsing, both of which
+are substantial undertakings. The abstraction must *admit* a future PTY transport
+(do not bake design choices that exclude it), but building it now would consume
+disproportionate effort relative to the user benefit (single harness, the
+lowest-fidelity ingestion path).
+
+### Why not promote `harnessId` to required immediately in PR 2?
+
+Optional preserves backward compatibility with the existing replay JSONL
+fixtures (`tests/fixtures/replays/*.replay.jsonl`) without a migration step.
+Adding an optional field is a zero-risk schema change; flipping it to required
+is a separate, deliberate decision with its own migration script and PR. The
+plan keeps these phased so neither change can break the other.
+
+### Why not a generated EventSource enum auto-derived from the registry?
+
+Tempting (eliminates a manual constant), but generated code reintroduces the
+exact drift-pipeline pattern just removed for prompts (see
+`docs/tooling-philosophy.md`). The widened `string` type plus a runtime
+`KnownEventSources` constant is honest about what the union actually is — open,
+extensible at runtime, validated where it matters (drivers register themselves).
+No generator, no parity check, no third file.
+
+### Why not a managed observability platform for shadow-agent's own inference?
+
+Shadow-agent itself is the harness-around-other-agents product, and there's a
+meta-temptation to eat the dogfood and route the shadow's own inference calls
+through a real observability platform (LangFuse, Braintrust). Rejected for
+MVP because there's no user complaining about shadow inference quality yet —
+adding observability infrastructure before there's a signal to act on is
+exactly the "ritual without consumers" anti-pattern in
+`docs/tooling-philosophy.md`. Re-evaluate when the first regression complaint
+or cost-attribution question lands.
