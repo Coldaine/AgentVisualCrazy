@@ -20,7 +20,7 @@ Blend agent-flow's cyberpunk holographic canvas with sidecar's warm, minimal con
 ### Canvas Layer (Cold)
 - Background: `#050510` void black with subtle hex grid pattern
 - Nodes and edges: cyan/amber/green holographic palette from agent-flow
-- Particle trails, glow effects, bloom post-processing
+- Particle trails, glow effects, bloom post-processing (extracted to `bloom.ts` as a separate draw pass — see Bloom Tradeoff Note below)
 - This is the "stage" — cold, precise, alien
 
 ### Control Layer (Warm)
@@ -299,3 +299,43 @@ When shadow-agent predicts the next action, render a **ghost trail** on the grap
 3. **Information density**: Pack information into visual encoding (color, size, position, opacity, animation speed) rather than text
 4. **Progressive disclosure**: Overview first (graph + particles), details on demand (panels, drawers)
 5. **The shadow is visible**: Shadow-agent's own interpretations should be visually distinct (ghost/transparent) from the observed agent's actual state
+
+---
+
+## 11. Bloom Tradeoff Note
+
+A luminance-keyed bloom post-processing pass was implemented in `shadow-agent/src/renderer/canvas/bloom.ts`
+(extracted as a separate module alongside `draw-background.ts`, `draw-edges.ts`, and `draw-nodes.ts`).
+
+**Implementation**: The bloom pass runs after all scene draw calls. It reads back the rendered canvas,
+isolates bright pixels above a configurable luminance threshold, then composites them back
+using `screen` blend mode with a gaussian blur. An offscreen canvas is used so the operation
+respects the `filter` property.
+
+**Tier integration**:
+| Tier | Bloom | Strength | Note |
+|------|-------|----------|------|
+| Ultra | Enabled | 1.4× | Full effect, 6px blur radius |
+| High  | Enabled | 1.0× | Standard effect, 4px blur |
+| Medium | Enabled | 0.6× | Subtle, 3px blur |
+| Low   | Disabled | — | Skipped entirely |
+
+**Tradeoffs**:
+- `getImageData`/`putImageData` round-trip is a synchronous pixel readback that can stall the GPU pipeline.
+  At 2× DPR on a 4K display, this processes ~16.6M pixels per frame. The low tier disables bloom
+  entirely to guarantee frame budget.
+- The offscreen canvas allocation is pooled by the browser but adds memory pressure. Ultra tier
+  should remain behind the quality controller's adaptive tier switch so bloom auto-disables on
+  constrained hardware.
+- For a future optimization, consider WebGL-based bloom via a second framebuffer (ping-pong
+  blur chain) to avoid CPU readback entirely. The current Canvas2D approach is correct but not
+  the fastest path.
+
+**Draw module extraction**: The former monolithic `CanvasRenderer.tsx` draw functions were split into:
+- `draw-utils.ts` — shared helpers (`hexagonPath`, `toRgba`, `getQuadraticControlPoint`, `getQuadraticPoint`)
+- `draw-background.ts` — `drawGrid`, `drawRiskVignette`
+- `draw-edges.ts` — `drawEdge`, `drawParticles`
+- `draw-nodes.ts` — `drawAgentNode`, `drawShadowNode`, `drawPredictionTrail`
+- `bloom.ts` — `applyBloom`, `BloomConfig`, `BLOOM_CONFIGS`
+
+The import graph is a clean DAG: `draw-utils` → `draw-background`/`draw-edges`/`draw-nodes`/`bloom` → `CanvasRenderer`.
