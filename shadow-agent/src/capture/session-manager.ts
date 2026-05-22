@@ -10,7 +10,7 @@ import { DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS } from '../shared/privacy';
 import type { SnapshotPayload, LoadedSource, TranscriptPrivacySettings } from '../shared/schema';
 import { buildRendererInput } from '../shared/renderer-input-adapter';
 import { createIncrementalParser } from './incremental-parser';
-import { normalizeEntry } from './normalizer';
+import { driverRegistry } from './drivers';
 import { createEventBuffer, type EventBuffer } from './event-buffer';
 import { createIpcBridge } from './ipc-bridge';
 import { createLogger } from '../shared/logger';
@@ -87,8 +87,9 @@ export function createSessionManager(
     sessionTitle = session.label;
     await buffer.setSession(session.sessionId);
     activeSession = session;
+    const driver = driverRegistry.getForSource(session.source) ?? driverRegistry.getDefault();
     activeParser = createIncrementalParser((entry) => {
-      const events = normalizeEntry(entry, session.sessionId);
+      const events = driver.normalizeEntry(entry, session.sessionId);
       if (events.length === 0) {
         return;
       }
