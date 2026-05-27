@@ -45,8 +45,9 @@ npm run build:web
 npm run build
 ```
 
-`npm install` also bootstraps the repo's `.githooks/` so the test suite
-runs once on `git push`.
+`npm install` at the repo root installs the shared `.githooks/` (via the
+root `prepare` script). The `npm install` inside `shadow-agent/` no longer
+runs that hook installer — run it once at the repo root.
 
 `npm run build:web` emits the reusable renderer bundle in `dist-web/`.
 

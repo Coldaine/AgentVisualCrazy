@@ -14,6 +14,7 @@ import type { InferenceClient, InferenceRequest, InferenceResult } from '../../s
 import { FakeInferenceClient } from '../helpers/fake-inference-client';
 import { buildUserMessage, type ShadowContextPacket } from '../../src/inference/prompt-builder';
 import { packContext } from '../../src/inference/context-packager';
+import { SHADOW_SYSTEM_PROMPT } from '../../src/inference/prompts';
 import type { CanonicalEvent, DerivedState } from '../../src/shared/schema';
 
 // ---------------------------------------------------------------------------
@@ -192,6 +193,41 @@ describe('context packager', () => {
     const events = Array.from({ length: 10 }, (_, i) => makeEvent({ id: `ev-${i}` }));
     const { approximateTokens } = packContext(state, events, { tokenBudget: 10_000 });
     expect(approximateTokens).toBeLessThanOrEqual(10_000);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Prompt safety invariants (replaces the deleted parity check).
+//
+// The shadow's north-star posture is READ-ONLY observation. These invariants
+// catch regressions where someone weakens the language without realising it.
+// They check semantic intent, not exact wording — the prompt can be reworded
+// freely as long as the read-only posture and observer framing remain.
+// ---------------------------------------------------------------------------
+
+describe('SHADOW_SYSTEM_PROMPT safety invariants', () => {
+  const lower = SHADOW_SYSTEM_PROMPT.toLowerCase();
+
+  it('declares the read-only constraint', () => {
+    expect(lower).toMatch(/read.only/);
+  });
+
+  it('frames the role as observer, not actor', () => {
+    expect(lower).toMatch(/observer|observ(e|ing)/);
+  });
+
+  it('asserts the shadow cannot affect the observed agent', () => {
+    expect(lower).toMatch(/cannot affect|do(es)? not (affect|instruct|write|edit)|must not (affect|instruct|write|edit)/);
+  });
+
+  it('preserves the confidence-calibration instruction', () => {
+    expect(lower).toMatch(/confidence/);
+    expect(lower).toMatch(/0\.9|honest|not every/);
+  });
+
+  it('requires JSON-only output (no prose, no markdown)', () => {
+    expect(lower).toMatch(/json/);
+    expect(lower).toMatch(/no prose|no markdown|valid json only|pure json/);
   });
 });
 
