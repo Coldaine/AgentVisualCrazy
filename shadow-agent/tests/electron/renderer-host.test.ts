@@ -41,11 +41,12 @@ describe('electron renderer host', () => {
   });
 
   it('adapts the preload bridge into the platform-agnostic renderer host', async () => {
+    const unsubscribe = vi.fn();
     const bridge: ShadowAgentBridge = {
       bootstrap: vi.fn(async () => {
         throw new Error('not used');
       }),
-      onLiveEvents: vi.fn(() => vi.fn()),
+      onLiveEvents: vi.fn(() => unsubscribe),
       getLiveSnapshot: vi.fn(async () => null),
       openReplayFile: vi.fn(async () => null),
       getPrivacyPolicy: vi.fn(async () => makePrivacyPolicy()),
@@ -56,9 +57,14 @@ describe('electron renderer host', () => {
     const host = createElectronHost(bridge);
 
     expect(host.loadInitialSnapshot).not.toBe(bridge.bootstrap);
+    await host.loadLiveSnapshot?.();
+    const unsubscribeFromHost = host.subscribeLiveEvents?.(vi.fn());
     await host.openReplayFile?.();
     await host.exportReplayJsonl?.([], 'session.jsonl');
 
+    expect(bridge.getLiveSnapshot).toHaveBeenCalledTimes(1);
+    expect(bridge.onLiveEvents).toHaveBeenCalledTimes(1);
+    expect(unsubscribeFromHost).toBe(unsubscribe);
     expect(bridge.openReplayFile).toHaveBeenCalledTimes(1);
     expect(bridge.exportReplayJsonl).toHaveBeenCalledWith([], 'session.jsonl');
   });

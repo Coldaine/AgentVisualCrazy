@@ -2,13 +2,17 @@ import type {
   CanonicalEvent,
   ExportResult,
   PrivacyPolicy,
-  ShadowAgentBridge,
   SnapshotPayload,
   TranscriptPrivacySettings
 } from '../shared/schema';
 
+export type LiveEventSubscriber = (events: CanonicalEvent[]) => void;
+export type UnsubscribeLiveEvents = () => void;
+
 export interface ShadowAgentHost {
   loadInitialSnapshot(): Promise<SnapshotPayload>;
+  loadLiveSnapshot?: () => Promise<SnapshotPayload | null>;
+  subscribeLiveEvents?: (callback: LiveEventSubscriber) => UnsubscribeLiveEvents;
   openReplayFile?: () => Promise<SnapshotPayload | null>;
   getPrivacyPolicy?: () => Promise<PrivacyPolicy>;
   updatePrivacySettings?: (updates: Partial<TranscriptPrivacySettings>) => Promise<PrivacyPolicy>;
@@ -20,6 +24,8 @@ export interface ShadowAgentHost {
 }
 
 export interface ShadowAgentHostCapabilities {
+  canStreamLiveEvents: boolean;
+  canLoadLiveSnapshot: boolean;
   canOpenReplayFile: boolean;
   canManagePrivacy: boolean;
   canExportReplayJsonl: boolean;
@@ -27,6 +33,8 @@ export interface ShadowAgentHostCapabilities {
 
 export function getHostCapabilities(host: ShadowAgentHost): ShadowAgentHostCapabilities {
   return {
+    canStreamLiveEvents: typeof host.subscribeLiveEvents === 'function',
+    canLoadLiveSnapshot: typeof host.loadLiveSnapshot === 'function',
     canOpenReplayFile: typeof host.openReplayFile === 'function',
     canManagePrivacy:
       typeof host.getPrivacyPolicy === 'function' &&
@@ -38,15 +46,5 @@ export function getHostCapabilities(host: ShadowAgentHost): ShadowAgentHostCapab
 export function createStaticHost(snapshot: SnapshotPayload): ShadowAgentHost {
   return {
     loadInitialSnapshot: async () => snapshot
-  };
-}
-
-export function createBridgeHost(bridge: ShadowAgentBridge): ShadowAgentHost {
-  return {
-    loadInitialSnapshot: () => bridge.bootstrap(),
-    openReplayFile: bridge.openReplayFile,
-    getPrivacyPolicy: bridge.getPrivacyPolicy,
-    updatePrivacySettings: bridge.updatePrivacySettings,
-    exportReplayJsonl: bridge.exportReplayJsonl
   };
 }

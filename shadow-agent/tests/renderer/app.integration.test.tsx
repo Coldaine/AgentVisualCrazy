@@ -1,9 +1,9 @@
 // @vitest-environment jsdom
 
-import { render, screen, waitFor } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { cleanup, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createStaticHost, type ShadowAgentHost } from '../../src/renderer/host';
-import type { SnapshotPayload } from '../../src/shared/schema';
+import type { ShadowAgentBridge, SnapshotPayload } from '../../src/shared/schema';
 import App from '../../src/renderer/App';
 
 // Mock canvas/spring-heavy subcomponents to isolate App wiring tests
@@ -52,6 +52,11 @@ function makeSnapshot(overrides: Partial<SnapshotPayload> = {}): SnapshotPayload
 }
 
 describe('App integration', () => {
+  afterEach(() => {
+    cleanup();
+    Reflect.deleteProperty(window, 'shadowAgent');
+  });
+
   it('shows loading state on initial render', () => {
     const host: ShadowAgentHost = {
       loadInitialSnapshot: () => new Promise(() => {})
@@ -128,5 +133,67 @@ describe('App integration', () => {
     expect(screen.getByText('No timeline events yet.')).toBeInTheDocument();
     expect(screen.getByText('No transcript content is available yet.')).toBeInTheDocument();
     expect(screen.getByText('No file attention has been inferred yet.')).toBeInTheDocument();
+  });
+
+  it('prefers live snapshots supplied by the injected host', async () => {
+    const fixtureSnapshot = makeSnapshot({
+      record: { ...makeSnapshot().record, title: 'Fixture Snapshot' }
+    });
+    const liveSnapshot = makeSnapshot({
+      source: { kind: 'transcript', label: 'live-host' },
+      record: { ...makeSnapshot().record, title: 'Live Host Snapshot' },
+      state: {
+        ...makeSnapshot().state,
+        currentObjective: 'Live host objective'
+      }
+    });
+    const host: ShadowAgentHost = {
+      loadInitialSnapshot: vi.fn(async () => fixtureSnapshot),
+      loadLiveSnapshot: vi.fn(async () => liveSnapshot)
+    };
+
+    render(<App host={host} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Live Host Snapshot')).toBeInTheDocument();
+    });
+
+    expect(screen.getByText('LIVE')).toBeInTheDocument();
+    expect(screen.getByText('Live host objective')).toBeInTheDocument();
+    expect(host.loadInitialSnapshot).not.toHaveBeenCalled();
+  });
+
+  it('does not read an ambient Electron bridge when a web host is supplied', async () => {
+    const hostSnapshot = makeSnapshot({
+      record: { ...makeSnapshot().record, title: 'Injected Web Host' }
+    });
+    const ambientSnapshot = makeSnapshot({
+      source: { kind: 'transcript', label: 'ambient-electron' },
+      record: { ...makeSnapshot().record, title: 'Ambient Electron Bridge' }
+    });
+    const bridge: ShadowAgentBridge = {
+      bootstrap: vi.fn(async () => ambientSnapshot),
+      onLiveEvents: vi.fn(() => vi.fn()),
+      getLiveSnapshot: vi.fn(async () => ambientSnapshot),
+      openReplayFile: vi.fn(async () => null),
+      getPrivacyPolicy: vi.fn(async () => ambientSnapshot.privacy),
+      updatePrivacySettings: vi.fn(async () => ambientSnapshot.privacy),
+      exportReplayJsonl: vi.fn(async () => ({ canceled: true }))
+    };
+
+    Object.defineProperty(window, 'shadowAgent', {
+      configurable: true,
+      value: bridge
+    });
+
+    render(<App host={createStaticHost(hostSnapshot)} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Injected Web Host')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText('Ambient Electron Bridge')).not.toBeInTheDocument();
+    expect(bridge.getLiveSnapshot).not.toHaveBeenCalled();
+    expect(bridge.onLiveEvents).not.toHaveBeenCalled();
   });
 });

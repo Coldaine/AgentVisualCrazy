@@ -43,6 +43,27 @@ describe('renderer host helpers', () => {
 
     await expect(host.loadInitialSnapshot()).resolves.toBe(snapshot);
     expect(getHostCapabilities(host)).toEqual({
+      canStreamLiveEvents: false,
+      canLoadLiveSnapshot: false,
+      canOpenReplayFile: false,
+      canManagePrivacy: false,
+      canExportReplayJsonl: false
+    });
+  });
+
+  it('reports live capture hooks without requiring Electron file operations', async () => {
+    const snapshot = makeSnapshot();
+    const unsubscribe = () => {};
+    const host = {
+      loadInitialSnapshot: async () => snapshot,
+      loadLiveSnapshot: async () => snapshot,
+      subscribeLiveEvents: () => unsubscribe
+    };
+
+    await expect(host.loadLiveSnapshot()).resolves.toBe(snapshot);
+    expect(getHostCapabilities(host)).toEqual({
+      canStreamLiveEvents: true,
+      canLoadLiveSnapshot: true,
       canOpenReplayFile: false,
       canManagePrivacy: false,
       canExportReplayJsonl: false

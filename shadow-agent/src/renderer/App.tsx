@@ -4,7 +4,6 @@ import type {
   CanonicalEvent,
   DerivedState,
   PrivacyPolicy,
-  ShadowAgentBridge,
   SnapshotPayload,
   TimelineItem,
   TranscriptPrivacySettings
@@ -16,19 +15,6 @@ import { getRendererSurfaceAdapter } from './renderer-surface-adapter';
 import { formatClock, safeFileName, toLabel } from './view-model';
 
 const LIVE_REFRESH_DEBOUNCE_MS = 300;
-
-function getLiveBridge(): Pick<ShadowAgentBridge, 'onLiveEvents' | 'getLiveSnapshot'> | null {
-  if (typeof window === 'undefined' || !window.shadowAgent) {
-    return null;
-  }
-
-  const { onLiveEvents, getLiveSnapshot } = window.shadowAgent;
-  if (typeof onLiveEvents !== 'function' || typeof getLiveSnapshot !== 'function') {
-    return null;
-  }
-
-  return { onLiveEvents, getLiveSnapshot };
-}
 
 function Panel({
   title,
@@ -210,11 +196,9 @@ export default function App({ host }: ShadowAgentAppProps) {
   }, [snapshot]);
 
   const loadPreferredSnapshot = async (): Promise<SnapshotPayload> => {
-    const liveBridge = getLiveBridge();
-
-    if (liveBridge) {
+    if (host.loadLiveSnapshot) {
       try {
-        const liveSnapshot = await liveBridge.getLiveSnapshot();
+        const liveSnapshot = await host.loadLiveSnapshot();
         if (liveSnapshot) {
           return liveSnapshot;
         }
@@ -261,8 +245,7 @@ export default function App({ host }: ShadowAgentAppProps) {
   }, [host]);
 
   useEffect(() => {
-    const liveBridge = getLiveBridge();
-    if (!liveBridge) {
+    if (!host.subscribeLiveEvents || !host.loadLiveSnapshot) {
       return;
     }
 
@@ -271,7 +254,7 @@ export default function App({ host }: ShadowAgentAppProps) {
 
     const refreshLiveSnapshot = async () => {
       try {
-        const liveSnapshot = await liveBridge.getLiveSnapshot();
+        const liveSnapshot = await host.loadLiveSnapshot?.();
         if (!active || !liveSnapshot || currentSourceKindRef.current === 'replay') {
           return;
         }
@@ -282,7 +265,7 @@ export default function App({ host }: ShadowAgentAppProps) {
       }
     };
 
-    const unsubscribe = liveBridge.onLiveEvents((events: CanonicalEvent[]) => {
+    const unsubscribe = host.subscribeLiveEvents((events: CanonicalEvent[]) => {
       if (events.length === 0) {
         return;
       }
@@ -305,7 +288,7 @@ export default function App({ host }: ShadowAgentAppProps) {
         clearTimeout(debounceTimer);
       }
     };
-  }, []);
+  }, [host]);
 
   // Pulse on snapshot loads (replay, fixture, or initial boot).
   useEffect(() => {

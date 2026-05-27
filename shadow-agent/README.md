@@ -51,6 +51,35 @@ runs that hook installer — run it once at the repo root.
 
 `npm run build:web` emits the reusable renderer bundle in `dist-web/`.
 
+## Renderer Library Contract
+
+The reusable renderer is the default product surface. It accepts a plain browser host contract and
+does not read Electron preload globals:
+
+```ts
+import {
+  renderShadowAgent,
+  registerShadowAgentElement,
+  type ShadowAgentHost
+} from './dist-web/shadow-agent-renderer.js';
+
+const host: ShadowAgentHost = {
+  loadInitialSnapshot: async () => snapshot,
+  loadLiveSnapshot: async () => liveSnapshotOrNull,
+  subscribeLiveEvents: (callback) => {
+    const unsubscribe = eventBus.subscribe(callback);
+    return unsubscribe;
+  }
+};
+
+renderShadowAgent(document.querySelector('#root')!, host);
+registerShadowAgentElement();
+```
+
+Electron lives in `src/electron/` as an optional host shell. Its renderer entry creates an
+Electron-backed `ShadowAgentHost` from the preload bridge, while web embeds can provide their own
+host object or assign one to the custom element's `host` property.
+
 After `npm run build`, launch the Electron shell with:
 
 ```bash

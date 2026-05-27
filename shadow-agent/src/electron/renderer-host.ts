@@ -1,5 +1,5 @@
 import type { ShadowAgentBridge } from '../shared/schema';
-import { createBridgeHost, type ShadowAgentHost } from '../renderer/host';
+import type { ShadowAgentHost } from '../renderer/host';
 
 export function getShadowAgentBridge(target: Window = window): ShadowAgentBridge {
   if (!target.shadowAgent) {
@@ -10,5 +10,16 @@ export function getShadowAgentBridge(target: Window = window): ShadowAgentBridge
 }
 
 export function createElectronHost(bridge: ShadowAgentBridge = getShadowAgentBridge()): ShadowAgentHost {
-  return createBridgeHost(bridge);
+  return {
+    loadInitialSnapshot: () => bridge.bootstrap(),
+    loadLiveSnapshot: () => bridge.getLiveSnapshot(),
+    subscribeLiveEvents: (callback) => bridge.onLiveEvents(callback),
+    openReplayFile: () => bridge.openReplayFile(),
+    getPrivacyPolicy: () => bridge.getPrivacyPolicy(),
+    updatePrivacySettings: (updates) => bridge.updatePrivacySettings(updates),
+    exportReplayJsonl: (events, suggestedFileName, options) =>
+      options === undefined
+        ? bridge.exportReplayJsonl(events, suggestedFileName)
+        : bridge.exportReplayJsonl(events, suggestedFileName, options)
+  };
 }
