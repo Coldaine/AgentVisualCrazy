@@ -1,22 +1,68 @@
 import { CanonicalEvent, DerivedState, ShadowInsight } from './schema';
 import { sanitizeTranscriptText } from './privacy';
+import { driverRegistry } from '../capture/drivers';
+import type { HarnessCapabilities } from '../capture/drivers/harness-driver';
 
 const TOOL_FILE_KEYS = ['filePath', 'file_path', 'path'];
 
-function extractFilePath(payload: Record<string, unknown>): string | null {
-  for (const key of TOOL_FILE_KEYS) {
-    const value = payload[key];
-    if (typeof value === 'string' && value.length > 0) {
-      return value;
-    }
+/**
+ * Capabilities used when an event has no harnessId and the registry default
+ * is not yet available (e.g. very early bootstrap or tests with hand-rolled
+ * events). The registry's default driver covers the normal case.
+ */
+const FALLBACK_CAPABILITIES: HarnessCapabilities = {
+  emitsSubagentEvents: false,
+  fileAttention: 'tool-args',
+  riskHeuristics: ['tool_failures', 'shell_churn', 'exploration_volume'],
+};
+
+function getCapabilitiesForEvent(event: CanonicalEvent): HarnessCapabilities {
+  if (event.harnessId) {
+    const byId = driverRegistry.get(event.harnessId);
+    if (byId) return byId.capabilities;
   }
+  const bySource = driverRegistry.getForSource(event.source);
+  if (bySource) return bySource.capabilities;
+  try {
+    return driverRegistry.getDefault().capabilities;
+  } catch {
+    return FALLBACK_CAPABILITIES;
+  }
+}
+
+function normalizeToolName(rawName: string, capabilities: HarnessCapabilities): string {
+  const lowered = rawName.toLowerCase();
+  if (!capabilities.toolNameMap) return lowered;
+  return capabilities.toolNameMap(lowered).toLowerCase();
+}
+
+function extractFilePath(
+  event: CanonicalEvent,
+  capabilities: HarnessCapabilities
+): string | null {
+  if (capabilities.fileAttention === 'tool-args') {
+    for (const key of TOOL_FILE_KEYS) {
+      const value = event.payload[key];
+      if (typeof value === 'string' && value.length > 0) {
+        return value;
+      }
+    }
+    return null;
+  }
+  // 'explicit-event' and 'inferred-from-text' have no in-tree implementation
+  // yet — drivers that declare them must wire their own extraction or accept
+  // empty file attention until the work is done. Falling through silently is
+  // intentional: the capability is declarative, derive.ts is non-blocking.
   return null;
 }
 
 function detectPhase(events: CanonicalEvent[]): string {
   const toolNames = events
     .filter((event) => event.kind === 'tool_started' || event.kind === 'tool_completed' || event.kind === 'tool_failed')
-    .map((event) => String(event.payload.toolName ?? '').toLowerCase());
+    .map((event) => {
+      const caps = getCapabilitiesForEvent(event);
+      return normalizeToolName(String(event.payload.toolName ?? ''), caps);
+    });
 
   if (toolNames.some((name) => name.includes('write') || name.includes('edit'))) {
     return 'implementation';
@@ -33,31 +79,63 @@ function detectPhase(events: CanonicalEvent[]): string {
   return 'observation';
 }
 
+/**
+ * Each entry is a capability-gated risk check. Derive runs a check only when
+ * the corresponding ID appears in the event's driver's `riskHeuristics`. New
+ * harnesses opt in to checks by listing their IDs; they opt out of irrelevant
+ * checks by omitting them.
+ */
+const RISK_CHECKS: Record<string, (events: CanonicalEvent[]) => string | null> = {
+  tool_failures: (events) => {
+    const failedTools = events.filter((event) => event.kind === 'tool_failed');
+    if (failedTools.length === 0) return null;
+    return `${failedTools.length} failed tool call${failedTools.length === 1 ? '' : 's'} detected`;
+  },
+  shell_churn: (events) => {
+    const bashTools = events.filter((event) => {
+      if (event.kind !== 'tool_started' && event.kind !== 'tool_completed' && event.kind !== 'tool_failed') {
+        return false;
+      }
+      const caps = getCapabilitiesForEvent(event);
+      const name = normalizeToolName(String(event.payload.toolName ?? ''), caps);
+      return name.includes('bash');
+    });
+    if (bashTools.length < 4) return null;
+    return 'Heavy shell/tool churn suggests validation or recovery thrash';
+  },
+  exploration_volume: (events) => {
+    const repeatedReads = events.filter((event) => {
+      if (event.kind !== 'tool_started') return false;
+      const caps = getCapabilitiesForEvent(event);
+      const name = normalizeToolName(String(event.payload.toolName ?? ''), caps);
+      return name === 'read' || name === 'grep' || name === 'glob';
+    });
+    if (repeatedReads.length < 6) return null;
+    return 'Large exploration volume may indicate uncertainty or missing plan convergence';
+  },
+};
+
 function collectRiskSignals(events: CanonicalEvent[]): string[] {
+  // Union the heuristic IDs declared by every driver represented in this event
+  // batch. Single-harness sessions get exactly one driver's set; multi-harness
+  // sessions get the union, so a check supported by any participating driver
+  // runs over the full event list. A driver that explicitly declares an empty
+  // riskHeuristics list contributes nothing — derive must respect that, not
+  // override it with a fallback set.
+  const enabledIds = new Set<string>();
+  for (const event of events) {
+    for (const id of getCapabilitiesForEvent(event).riskHeuristics) {
+      enabledIds.add(id);
+    }
+  }
+
   const risks: string[] = [];
-  const failedTools = events.filter((event) => event.kind === 'tool_failed');
-  if (failedTools.length > 0) {
-    risks.push(`${failedTools.length} failed tool call${failedTools.length === 1 ? '' : 's'} detected`);
+  for (const id of enabledIds) {
+    const check = RISK_CHECKS[id];
+    if (!check) continue;
+    const signal = check(events);
+    if (signal) risks.push(signal);
   }
-
-  const bashTools = events.filter(
-    (event) =>
-      (event.kind === 'tool_started' || event.kind === 'tool_completed' || event.kind === 'tool_failed') &&
-      String(event.payload.toolName ?? '').toLowerCase().includes('bash')
-  );
-  if (bashTools.length >= 4) {
-    risks.push('Heavy shell/tool churn suggests validation or recovery thrash');
-  }
-
-  const repeatedReads = events.filter(
-    (event) =>
-      event.kind === 'tool_started' &&
-      ['read', 'grep', 'glob'].includes(String(event.payload.toolName ?? '').toLowerCase())
-  );
-  if (repeatedReads.length >= 6) {
-    risks.push('Large exploration volume may indicate uncertainty or missing plan convergence');
-  }
-
   return risks;
 }
 
@@ -152,10 +230,13 @@ export function deriveState(events: CanonicalEvent[], title = 'Observed session'
     }
 
     if (event.kind === 'agent_spawned' || event.kind === 'agent_idle' || event.kind === 'agent_completed') {
+      // emitsSubagentEvents is informational — if a driver never emits these
+      // event kinds, this branch never executes. No explicit gate needed.
       const existing = agentMap.get(event.actor) ?? {
         id: event.actor,
         label: String(event.payload.label ?? event.actor),
         parentId: typeof event.payload.parentId === 'string' ? event.payload.parentId : undefined,
+        harnessId: event.harnessId,
         state: 'active' as const,
         toolCount: 0
       };
@@ -170,13 +251,14 @@ export function deriveState(events: CanonicalEvent[], title = 'Observed session'
       const existing = agentMap.get(event.actor) ?? {
         id: event.actor,
         label: event.actor,
+        harnessId: event.harnessId,
         state: 'active' as const,
         toolCount: 0
       };
       existing.toolCount += 1;
       agentMap.set(event.actor, existing);
 
-      const filePath = extractFilePath(event.payload);
+      const filePath = extractFilePath(event, getCapabilitiesForEvent(event));
       if (filePath) {
         fileAttention.set(filePath, (fileAttention.get(filePath) ?? 0) + 1);
       }
