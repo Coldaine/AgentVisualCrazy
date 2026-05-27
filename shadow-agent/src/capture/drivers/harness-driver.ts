@@ -19,6 +19,39 @@ import type { ParsedEntry } from '../incremental-parser';
  */
 export type RiskHeuristic = string;
 
+/**
+ * One discovered session candidate from a harness driver's session discovery.
+ *
+ * `source` is the EventSource the discovered session will be ingested as. A
+ * driver may own multiple sources (Claude: 'claude-transcript' for tail,
+ * 'claude-hook' for hook receiver); its DiscoveryStrategy stamps the source
+ * matching the surface it discovered the session on. session-manager later
+ * uses this source to look up the right driver via the registry.
+ *
+ * Without `source`, a non-Claude JSONL discovery (e.g. a hypothetical Codex
+ * driver scanning ~/.codex/sessions/) would lose attribution when its session
+ * won the "most recent" race and be silently normalized by the Claude driver.
+ */
+export interface DriverDiscoveredSession {
+  filePath: string;
+  sessionId: string;
+  lastModified: number;
+  source: EventSource;
+}
+
+/**
+ * Pluggable session-discovery strategy. A driver implements this to locate
+ * its harness's active session(s) (e.g. Claude's `~/.claude/projects/`,
+ * Cursor's `.cursor/hooks.json`, etc.).
+ *
+ * Discovery is read-only and side-effect-free beyond filesystem stats.
+ * The generic dispatcher in session-discovery.ts collects sessions from every
+ * registered driver and picks the most recently modified.
+ */
+export interface DiscoveryStrategy {
+  discoverSessions(): Promise<DriverDiscoveredSession[]>;
+}
+
 export interface HarnessCapabilities {
   /** Whether this agent emits agent_spawned / agent_completed events. */
   emitsSubagentEvents: boolean;
@@ -54,6 +87,11 @@ export interface HarnessDriver {
    * tests that call normalizeEntry directly without a session.
    */
   normalizeEntry(entry: ParsedEntry, sessionId: string, source?: EventSource): CanonicalEvent[];
+  /**
+   * Optional. When present, the generic session-discovery dispatcher
+   * consults this strategy to find active sessions for this harness.
+   */
+  readonly discovery?: DiscoveryStrategy;
 }
 
 export class HarnessDriverRegistry {
