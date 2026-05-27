@@ -5,6 +5,7 @@ import {
   resolvePrivacyPolicy
 } from './privacy';
 import { buildSessionRecord } from './replay-store';
+import type { AdapterContract } from './adapter-contracts';
 import type {
   CanonicalEvent,
   LoadedSource,
@@ -22,8 +23,7 @@ export interface RendererInputBuildOptions {
  * Concrete renderer-input adapters must ship with focused unit tests that
  * exercise title resolution, privacy defaults, and derived-state assembly.
  */
-export interface RendererInputAdapter<TInput = CanonicalEvent[]> {
-  readonly id: string;
+export interface RendererInputAdapter<TInput = CanonicalEvent[]> extends AdapterContract {
   build(input: TInput, options: RendererInputBuildOptions): RendererInput;
 }
 
@@ -57,6 +57,10 @@ export function inferRendererInputTitle(
 
 export const canonicalEventRendererInputAdapter: RendererInputAdapter<CanonicalEvent[]> = {
   id: 'canonical-event-renderer-input',
+  unitTests: {
+    testFile: 'tests/renderer/renderer-input-adapter.test.ts',
+    covers: ['title resolution', 'privacy defaults', 'derived-state assembly']
+  },
   build(events, options) {
     const title = inferRendererInputTitle(events, options.fallbackTitle ?? options.source.label);
     const record = buildSessionRecord(events, title);

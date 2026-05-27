@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { buildRendererInput, inferRendererInputTitle } from '../../src/shared/renderer-input-adapter';
+import {
+  buildRendererInput,
+  canonicalEventRendererInputAdapter,
+  inferRendererInputTitle
+} from '../../src/shared/renderer-input-adapter';
 import type { CanonicalEvent } from '../../src/shared/schema';
 
 function event(overrides: Partial<CanonicalEvent> = {}): CanonicalEvent {
@@ -16,6 +20,13 @@ function event(overrides: Partial<CanonicalEvent> = {}): CanonicalEvent {
 }
 
 describe('canonicalEventRendererInputAdapter', () => {
+  it('declares the unit tests that cover the renderer input contract', () => {
+    expect(canonicalEventRendererInputAdapter.unitTests).toEqual({
+      testFile: 'tests/renderer/renderer-input-adapter.test.ts',
+      covers: ['title resolution', 'privacy defaults', 'derived-state assembly']
+    });
+  });
+
   it('prefers session labels and user objectives when inferring the renderer title', () => {
     expect(
       inferRendererInputTitle(

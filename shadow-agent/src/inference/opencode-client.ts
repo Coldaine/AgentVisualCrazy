@@ -145,6 +145,10 @@ export async function createOpencodeClient(
   return {
     id: 'opencode-harness',
     provider: 'opencode' as const,
+    unitTests: {
+      testFile: 'tests/inference/opencode-client.test.ts',
+      covers: ['provider identity', 'request forwarding', 'response normalization']
+    },
 
     async infer(request: InferenceRequest): Promise<InferenceResult> {
       const start = now();

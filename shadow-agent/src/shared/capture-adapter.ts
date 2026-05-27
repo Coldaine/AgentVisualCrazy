@@ -1,4 +1,5 @@
 import type { CanonicalEvent, EventSource } from './schema';
+import type { AdapterContract } from './adapter-contracts';
 
 /**
  * Concrete capture adapters must ship with focused unit tests that exercise
@@ -6,8 +7,7 @@ import type { CanonicalEvent, EventSource } from './schema';
  * with a sibling `*.test.ts` that proves the adapter boundary, not just the
  * parsing helpers behind it.
  */
-export interface CaptureAdapter<TInput = string> {
-  readonly id: string;
+export interface CaptureAdapter<TInput = string> extends AdapterContract {
   readonly source: EventSource;
   parse(input: TInput): CanonicalEvent[];
 }

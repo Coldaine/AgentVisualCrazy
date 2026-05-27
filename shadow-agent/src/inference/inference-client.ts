@@ -3,6 +3,7 @@ import type {
   EventQueueCheckpoint,
   EventQueueMetrics
 } from '../shared/schema';
+import type { AdapterContract } from '../shared/adapter-contracts';
 
 export interface InferenceRequest {
   systemPrompt: string;
@@ -21,8 +22,7 @@ export type Provider = 'opencode' | 'anthropic' | 'fake';
  * Concrete inference adapters must ship with focused unit tests that exercise
  * provider identity, request forwarding, and response normalization.
  */
-export interface InferenceAdapter {
-  readonly id: string;
+export interface InferenceAdapter extends AdapterContract {
   readonly provider: Provider;
   infer(request: InferenceRequest): Promise<InferenceResult>;
 }

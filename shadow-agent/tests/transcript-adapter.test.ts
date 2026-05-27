@@ -19,6 +19,10 @@ describe('parseClaudeTranscriptJsonl', () => {
     expect(adapter).toBe(claudeTranscriptCaptureAdapter);
     expect(adapter.id).toBe('claude-transcript-jsonl');
     expect(adapter.source).toBe('claude-transcript');
+    expect(adapter.unitTests).toEqual({
+      testFile: 'tests/transcript-adapter.test.ts',
+      covers: ['source metadata', 'normalization behavior', 'malformed input handling']
+    });
     expect(adapter.parse(raw)).toEqual(parseClaudeTranscriptJsonl(raw));
   });
 

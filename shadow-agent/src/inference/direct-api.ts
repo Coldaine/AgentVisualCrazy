@@ -73,6 +73,10 @@ export async function createDirectApiClient(
   return {
     id: 'anthropic-direct-api',
     provider: 'anthropic' as const,
+    unitTests: {
+      testFile: 'tests/inference/direct-api.test.ts',
+      covers: ['provider identity', 'request forwarding', 'response normalization']
+    },
 
     async infer(request: InferenceRequest): Promise<InferenceResult> {
       const start = now();

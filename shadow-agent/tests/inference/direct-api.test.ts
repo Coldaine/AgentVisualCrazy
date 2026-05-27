@@ -59,6 +59,10 @@ describe('createDirectApiClient', () => {
     expect(client).not.toBeNull();
     expect(client?.id).toBe('anthropic-direct-api');
     expect(client?.provider).toBe('anthropic');
+    expect(client?.unitTests).toEqual({
+      testFile: 'tests/inference/direct-api.test.ts',
+      covers: ['provider identity', 'request forwarding', 'response normalization']
+    });
 
     const result = await client!.infer({
       systemPrompt: 'system prompt',

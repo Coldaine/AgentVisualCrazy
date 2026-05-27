@@ -65,6 +65,15 @@ function makeEvent(overrides: Partial<CanonicalEvent> = {}): CanonicalEvent {
 // ---------------------------------------------------------------------------
 
 describe('FakeInferenceClient', () => {
+  it('declares the unit tests that cover the fake inference adapter contract', () => {
+    const client = new FakeInferenceClient();
+
+    expect(client.unitTests).toEqual({
+      testFile: 'tests/inference/inference-contract.test.ts',
+      covers: ['provider identity', 'request forwarding', 'response normalization']
+    });
+  });
+
   it('returns queued results in order', async () => {
     const client = new FakeInferenceClient();
     client.enqueue({ text: 'response A', model: 'fake/1', latencyMs: 1 });

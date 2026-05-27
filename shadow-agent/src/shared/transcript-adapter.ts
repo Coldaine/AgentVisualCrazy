@@ -148,6 +148,10 @@ function parseTranscript(raw: string): CanonicalEvent[] {
 export const claudeTranscriptCaptureAdapter: CaptureAdapter<string> = {
   id: 'claude-transcript-jsonl',
   source: 'claude-transcript',
+  unitTests: {
+    testFile: 'tests/transcript-adapter.test.ts',
+    covers: ['source metadata', 'normalization behavior', 'malformed input handling']
+  },
   parse: parseTranscript
 };
 

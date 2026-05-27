@@ -66,7 +66,12 @@ describe('createOpencodeClient', () => {
     });
 
     expect(client).not.toBeNull();
+    expect(client?.id).toBe('opencode-harness');
     expect(client?.provider).toBe('opencode');
+    expect(client?.unitTests).toEqual({
+      testFile: 'tests/inference/opencode-client.test.ts',
+      covers: ['provider identity', 'request forwarding', 'response normalization']
+    });
 
     const result = await client!.infer({
       systemPrompt: 'shadow system',

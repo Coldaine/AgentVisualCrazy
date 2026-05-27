@@ -5,6 +5,10 @@ type ResponseFactory = (request: InferenceRequest) => InferenceResult | Promise<
 export class FakeInferenceClient implements InferenceClient {
   readonly id = 'fake-inference-client';
   readonly provider = 'fake' as const;
+  readonly unitTests = {
+    testFile: 'tests/inference/inference-contract.test.ts',
+    covers: ['provider identity', 'request forwarding', 'response normalization']
+  };
   private queue: ResponseFactory[] = [];
   readonly calls: InferenceRequest[] = [];
 
