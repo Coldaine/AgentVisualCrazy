@@ -18,9 +18,9 @@ The `third_party` repos are disposable local references.
 - Once a pattern has been absorbed or we no longer need the reference checkout, removing it is fine.
 - They are intentionally not part of the main repo history.
 
-Prompt workflow:
-- `prompts/*.{json,yaml,yml}` are the single source of truth
-- `docs/prompts/*.md` and runtime prompt files are generated artifacts
-- repo-root Git hooks are sourced from `.githooks/` and auto-installed during `npm install`
-- run `npm run prompts:generate` after prompt edits
-- run `npm run prompts:check` to verify parity locally and in CI
+Repo-root Git hooks are sourced from `.githooks/` and auto-installed during `npm install`.
+Pre-push runs the shadow-agent test suite once before push.
+
+The shadow system prompt lives in `shadow-agent/src/inference/prompts.ts` as a single
+source of truth (both runtime template literal and rationale doc comment). No generation
+pipeline. See `docs/tooling-philosophy.md` for why.

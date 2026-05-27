@@ -37,13 +37,13 @@ use `vi.spyOn` on the logger instance rather than relying on raw `console.*` noi
 When adding new test files, verify they do not introduce unregulated console output
 by running `vitest run` and confirming the output contains only reporter summary lines.
 
-CI runs the prompt-parity check, tests, and build on every PR via the `CI`
-workflow (defined in `.github/workflows/prompt-parity.yml`). The repo uses a
-Git hook in `.githooks/pre-commit`, and `npm install` from either the repo root
-or `shadow-agent/` configures `core.hooksPath` automatically so that
-`npm run prompts:check` and `npm test --prefix shadow-agent` run locally before
-each commit. Run `npm test` yourself before opening a PR — the pre-commit hook
-will also run it, but catching failures earlier is cheaper.
+CI runs the test suite and the build on every PR via the `CI`
+workflow (`.github/workflows/ci.yml`). The repo uses a pre-push Git
+hook in `.githooks/pre-push` that runs `npm test --prefix shadow-agent`
+once before pushing; `npm install` from the repo root configures
+`core.hooksPath` automatically. Run `npm test` yourself before pushing
+— the pre-push hook will also run it, but catching failures earlier
+is cheaper than re-pushing.
 
 ## Run
 
@@ -101,17 +101,13 @@ variables override the saved file for that run.
 
 ## Prompt Workflow
 
-We maintain a strict synchronization workflow for AI prompts. Before modifying any prompts, please read the **Prompt Change Workflow** in [AGENTS.md](../AGENTS.md).
-
-Run these commands when updating the system prompt:
-```bash
-npm run prompts:generate
-npm run prompts:check
-```
-
-Prompt manifests live under `prompts/` and can be authored in `.json`, `.yaml`,
-or `.yml`. The generated Markdown docs and runtime TypeScript prompt mirrors
-must never be edited directly.
+The shadow system prompt lives in `shadow-agent/src/inference/prompts.ts`
+as a single source of truth. The doc comment at the top contains the
+rationale, philosophy, per-section justification, evaluation plan, and
+iteration log. The template literal at the bottom is the prompt the
+model sees. Edit the file directly — there is no generation step. See
+`.claude/rules/prompts.md` for the editing rules and
+`docs/tooling-philosophy.md` for the meta-rationale.
 
 ## Documentation
 

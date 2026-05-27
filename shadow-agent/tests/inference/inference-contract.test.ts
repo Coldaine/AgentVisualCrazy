@@ -4,17 +4,17 @@
  * Covers:
  * - FakeInferenceClient — scriptable responses for use in future orchestrator tests
  * - Context packer — empty/oversize/deterministic cases
- * - Prompt builder — character-equality against docs/prompts/shadow-system-prompt.md
+ * - Prompt builder — buildUserMessage behavior
  * - Parser fallback — handling malformed JSON and partial insight payloads
  */
-import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 import type { InferenceClient, InferenceRequest, InferenceResult } from '../../src/inference/inference-client';
 import { FakeInferenceClient } from '../helpers/fake-inference-client';
-import { SHADOW_SYSTEM_PROMPT, buildUserMessage, type ShadowContextPacket } from '../../src/inference/prompt-builder';
+import { buildUserMessage, type ShadowContextPacket } from '../../src/inference/prompt-builder';
 import { packContext } from '../../src/inference/context-packager';
+import { SHADOW_SYSTEM_PROMPT } from '../../src/inference/prompts';
 import type { CanonicalEvent, DerivedState } from '../../src/shared/schema';
 
 // ---------------------------------------------------------------------------
@@ -197,23 +197,45 @@ describe('context packager', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Prompt builder — character-equality with docs version
+// Prompt safety invariants (replaces the deleted parity check).
+//
+// The shadow's north-star posture is READ-ONLY observation. These invariants
+// catch regressions where someone weakens the language without realising it.
+// They check semantic intent, not exact wording — the prompt can be reworded
+// freely as long as the read-only posture and observer framing remain.
 // ---------------------------------------------------------------------------
 
-describe('prompt builder — character equality with docs', () => {
-  it('SHADOW_SYSTEM_PROMPT matches the full prompt in docs/prompts/shadow-system-prompt.md', () => {
-    const docsPath = join(TEST_DIR, '../../../docs/prompts/shadow-system-prompt.md');
-    const docsContent = readFileSync(docsPath, 'utf8').replace(/\r\n/g, '\n');
+describe('SHADOW_SYSTEM_PROMPT safety invariants', () => {
+  const lower = SHADOW_SYSTEM_PROMPT.toLowerCase();
 
-    // Extract the prompt string from the Full Prompt (Copy-Paste Ready) section.
-    // Format: ```typescript\nexport const SHADOW_SYSTEM_PROMPT = `...`;```
-    const match = docsContent.match(/export const SHADOW_SYSTEM_PROMPT = `([\s\S]*?)`;/);
-    expect(match, 'Could not find SHADOW_SYSTEM_PROMPT in docs/prompts/shadow-system-prompt.md').toBeTruthy();
-    const docsPrompt = match![1];
-
-    expect(SHADOW_SYSTEM_PROMPT).toBe(docsPrompt);
+  it('declares the read-only constraint', () => {
+    expect(lower).toMatch(/read.only/);
   });
 
+  it('frames the role as observer, not actor', () => {
+    expect(lower).toMatch(/observer|observ(e|ing)/);
+  });
+
+  it('asserts the shadow cannot affect the observed agent', () => {
+    expect(lower).toMatch(/cannot affect|do(es)? not (affect|instruct|write|edit)|must not (affect|instruct|write|edit)/);
+  });
+
+  it('preserves the confidence-calibration instruction', () => {
+    expect(lower).toMatch(/confidence/);
+    expect(lower).toMatch(/0\.9|honest|not every/);
+  });
+
+  it('requires JSON-only output (no prose, no markdown)', () => {
+    expect(lower).toMatch(/json/);
+    expect(lower).toMatch(/no prose|no markdown|valid json only|pure json/);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Prompt builder
+// ---------------------------------------------------------------------------
+
+describe('prompt builder', () => {
   it('buildUserMessage includes all context packet fields', () => {
     const packet: ShadowContextPacket = {
       sessionId: 'sess-abc',

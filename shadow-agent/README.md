@@ -40,15 +40,14 @@ SHADOW_ALLOW_RAW_TRANSCRIPT_STORAGE=true
 
 ```bash
 npm install
-npm run prompts:generate
-npm run prompts:check
 npm test
 npm run build:web
 npm run build
 ```
 
-`npm install` also bootstraps the repo's `.githooks/` pre-commit checks so
-prompt parity and the test suite run before each commit.
+`npm install` at the repo root installs the shared `.githooks/` (via the
+root `prepare` script). The `npm install` inside `shadow-agent/` no longer
+runs that hook installer — run it once at the repo root.
 
 `npm run build:web` emits the reusable renderer bundle in `dist-web/`.
 

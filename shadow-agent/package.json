@@ -10,12 +10,9 @@
     "build:renderer": "vite build",
     "build:electron": "node electron.esbuild.mjs",
     "build": "npm run build:web && npm run build:renderer && npm run build:electron",
-    "prepare": "npm --prefix .. run hooks:install",
     "start": "electron dist-electron/main.cjs",
     "test": "tsc --noEmit && vitest run",
-    "test:coverage": "vitest run --coverage",
-    "prompts:generate": "node scripts/generate-prompts.mjs",
-    "prompts:check": "node scripts/check-prompts.mjs"
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.91.1",
@@ -43,7 +40,6 @@
     "jsdom": "^29.1.1",
     "typescript": "^5.8.3",
     "vite": "^7.3.2",
-    "vitest": "^3.2.4",
-    "yaml": "^2.8.1"
+    "vitest": "^3.2.4"
   }
 }

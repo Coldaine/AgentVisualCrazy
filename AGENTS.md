@@ -21,7 +21,8 @@ everything as a live holographic visualization. See `docs/north-star.md` for the
 | Inference engine research | `docs/research/shadow-inference-architecture.md` |
 | Implementation plans | `docs/plans/` |
 | Testing and logging plan | `docs/plans/plan-testing-observability.md` |
-| Prompt engineering | `prompts/shadow-system-prompt.json` |
+| Prompt engineering | `shadow-agent/src/inference/prompts.ts` (single source of truth — rationale, philosophy, eval plan, iteration log all in the doc comment) |
+| Tooling philosophy (why the build/CI/hooks are sized this way) | `docs/tooling-philosophy.md` |
 | Agent-flow visual patterns (source material) | `docs/research/visual-patterns-agent-flow.md` |
 | Sidecar runtime patterns (source material) | `docs/research/visual-patterns-sidecar.md` |
 | Citadel animation primitives (source material) | `docs/research/visual-patterns-citadel.md` |
@@ -48,29 +49,18 @@ and if a checkout is no longer useful after its patterns are absorbed, removing 
 Shadow-agent never writes files or issues tools on behalf of the observed agent.
 No interventions, no corrections, no acting. It watches and interprets only.
 
-## Prompt Change Workflow (Mandatory)
+## Prompt Changes
 
-**Every prompt now has one source of truth plus generated artifacts that must stay in sync:**
-
-1. **Source** (`prompts/shadow-system-prompt.json`) — canonical prompt definition, commentary,
-   and iteration log.
-2. **Documentation** (`docs/prompts/shadow-system-prompt.md`) — generated from the source file.
-3. **Code** (`shadow-agent/src/inference/prompts.ts`) — generated runtime version, loaded by the app.
-4. **This file** — states they must match.
-
-**To change a prompt:**
-
-1. Edit the source file first.
-2. Update the iteration log in that source file.
-3. Run `npm run prompts:generate`.
-4. Run `npm run prompts:check`.
-5. Use a `prompt:` prefix in the commit message.
-
-Manual edits to generated prompt docs/runtime files cause drift and will fail pre-commit and CI. Don't skip steps.
+The shadow system prompt lives at `shadow-agent/src/inference/prompts.ts`.
+Edit the file directly — both the `SHADOW_SYSTEM_PROMPT` template literal
+and the doc comment that explains the rationale. There is no separate
+source file, no generation step, no parity check. See the rules in
+`.claude/rules/prompts.md` and the meta-rationale in
+`docs/tooling-philosophy.md` for why it's structured this way.
 
 ## Commit Messages
 
-Use conventional commits (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `prompt:`, `chore:`).
+Use conventional commits (`feat:`, `fix:`, `docs:`, `refactor:`, `test:`, `chore:`).
 Always include `Co-authored-by: Copilot <223556219+Copilot@users.noreply.github.com>`.
 
 ## Git Workflow

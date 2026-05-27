@@ -1,25 +1,50 @@
 ---
 paths:
-  - "docs/prompts/**"
+  - "prompts/**"
+  - "shadow-agent/src/inference/prompts.ts"
 ---
 
-# Rules for Prompt Files
+# Rules for the Shadow System Prompt
 
-When reading, editing, or creating files in `docs/prompts/`:
+The shadow system prompt is the single most important piece of behavioral
+configuration in shadow-agent. Treat it accordingly.
 
-1. **Every prompt section must have inline commentary** explaining why it exists
-   and what failure mode it addresses. A prompt without commentary is incomplete.
+## Where it lives
 
-2. **The iteration log at the bottom must be updated** with every change.
-   Record: date, what changed, and why.
+There is **one file**: `shadow-agent/src/inference/prompts.ts`. The prompt
+itself is the `SHADOW_SYSTEM_PROMPT` template literal. The rationale,
+philosophy, per-section justification, evaluation plan, iteration log, and
+"why this lives in one file" meta-decision all live in the file-level doc
+comment immediately above it.
 
-3. **The code-side prompt file must be updated in the same commit.**
-   The documented prompt and the runtime prompt must be identical.
-   See `AGENTS.md` Rule 1 for the full workflow.
+There is no separate JSON source, no generated markdown doc, no parity check.
+The single-file model is deliberate — see the "Why one file" section in
+`prompts.ts` itself and `docs/tooling-philosophy.md` for the broader principle.
 
-4. **Do not remove constraints without documenting why.** Every constraint in a prompt
-   exists because of a specific observed failure. Removing it risks regression.
+## Rules
 
-5. **Confidence calibration language must be preserved.** The instruction "not every
-   situation warrants 0.9+" exists because models default to high confidence.
-   Do not weaken this instruction.
+1. **Every constraint in the prompt has a stated reason.** The "Section
+   rationale" block in the doc comment explains why each line exists and what
+   failure mode it addresses. If you add a new constraint, add the rationale
+   in the same edit. If you remove one, document why in the iteration log and
+   in `git log` — every line is there because of an observed regression.
+
+2. **Confidence calibration language must be preserved.** The instruction
+   "not every situation warrants 0.9+" exists because models default to high
+   confidence. Do not weaken or remove it without a measured replacement.
+
+3. **Update the iteration log for notable changes.** Trivial edits (typo,
+   reformatting) don't need a log entry — `git log` covers them. Notable
+   changes (new constraint, removed constraint, restructured output schema,
+   model-behavior fix) get a one-line entry in the doc comment's iteration
+   log so future-me can scan the history without re-reading every commit.
+
+4. **The prompt text must be a plain template literal.** No imports, no
+   composition, no runtime substitution. The companion context packet is
+   built separately in `prompt-builder.ts`; the system prompt itself stays
+   static and copy-paste-into-a-playground-able.
+
+5. **Do not introduce a second prompt file alongside this one** without
+   first writing down (in `docs/plans/`) the trigger that justifies it.
+   Two prompts is a different cost structure than one — at two, the
+   single-file approach starts losing to a small prompt registry.
