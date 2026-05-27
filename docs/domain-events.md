@@ -95,9 +95,22 @@ come from, and the live runtime now supports multiple capture transports:
   and reconnects after disconnects.
 - **Socket**: Reads raw TCP streams, applies light backpressure-aware pausing, and
   reconnects after disconnects.
+- **Phoenix**: Polls the Arize Phoenix REST API (`/v1/spans`) for new spans every 2 s
+  (configurable via `SHADOW_CAPTURE_RECONNECT_MS`). This is the **default transport**.
+  Supported sources: Claude Code CLI (with `CLAUDE_CODE_ENABLE_TELEMETRY=1`), OpenCode SDK,
+  Codex CLI, and any OpenInference-instrumented SDK (Anthropic, OpenAI, LangChain, LlamaIndex,
+  CrewAI, etc.). Requires `SHADOW_CAPTURE_PHOENIX_URL` pointing at a running Phoenix instance
+  (e.g. `http://localhost:6006`). Optional: `SHADOW_CAPTURE_PHOENIX_PROJECT` (default:
+  `"default"`), `SHADOW_CAPTURE_PHOENIX_API_KEY`. Spans are normalised by
+  `otel-normalizer.ts` which dispatches on OpenInference span kinds (`LLM`, `TOOL`, `AGENT`)
+  and Claude Code log event names (`user_prompt`, `tool_decision`, `tool_result`, `file_edit`).
 
 Each transport feeds the same incremental parser and normalizer pipeline so the downstream
 event buffer, IPC bridge, renderer, and inference consumers stay unchanged.
+
+> **Known gap**: Claude Code's OTel emission does not appear to include extended-thinking
+> blocks. If you need thinking-block visibility, set `SHADOW_CAPTURE_TRANSPORT=file-tail`
+> to use the JSONL path while this is investigated.
 
 ## File Map
 

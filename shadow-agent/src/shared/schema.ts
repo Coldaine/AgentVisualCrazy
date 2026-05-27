@@ -1,4 +1,4 @@
-export type EventSource = 'claude-hook' | 'claude-transcript' | 'replay' | 'shadow-runtime';
+export type EventSource = 'claude-hook' | 'claude-transcript' | 'replay' | 'shadow-runtime' | 'phoenix';
 
 export type EventKind =
   | 'session_started'

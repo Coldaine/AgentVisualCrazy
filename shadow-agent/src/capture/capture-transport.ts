@@ -1,6 +1,6 @@
 import type { EventQueueBackpressureState, EventSource } from '../shared/schema';
 
-export type CaptureTransportKind = 'file-tail' | 'http-stream' | 'websocket' | 'socket';
+export type CaptureTransportKind = 'file-tail' | 'http-stream' | 'websocket' | 'socket' | 'phoenix';
 export type CaptureTransportResetReason = 'rotation' | 'truncation' | 'reconnect';
 
 export interface CaptureSession {
@@ -67,9 +67,20 @@ export interface SocketCaptureTransportOptions {
   sessionLabel?: string;
 }
 
+export interface PhoenixCaptureTransportOptions {
+  kind: 'phoenix';
+  url: string;
+  projectName?: string;
+  pollIntervalMs?: number;
+  apiKey?: string;
+  sessionId?: string;
+  sessionLabel?: string;
+}
+
 export type CaptureTransportOptions =
   | FileTailCaptureTransportOptions
   | HttpStreamCaptureTransportOptions
   | WebSocketCaptureTransportOptions
-  | SocketCaptureTransportOptions;
+  | SocketCaptureTransportOptions
+  | PhoenixCaptureTransportOptions;
 

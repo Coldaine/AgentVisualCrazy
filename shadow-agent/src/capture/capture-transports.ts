@@ -1,10 +1,11 @@
-import type { CaptureTransport, CaptureTransportOptions, HttpStreamCaptureTransportOptions, SocketCaptureTransportOptions, WebSocketCaptureTransportOptions } from './capture-transport';
+import type { CaptureTransport, CaptureTransportOptions, HttpStreamCaptureTransportOptions, PhoenixCaptureTransportOptions, SocketCaptureTransportOptions, WebSocketCaptureTransportOptions } from './capture-transport';
 import { createHttpStreamCaptureTransport } from './http-stream-transport';
+import { createPhoenixCaptureTransport } from './phoenix-transport';
 import { createSocketCaptureTransport } from './socket-transport';
 import { createFileTailCaptureTransport } from './transcript-watcher';
 import { createWebSocketCaptureTransport } from './websocket-transport';
 
-const DEFAULT_CAPTURE_TRANSPORT = 'file-tail';
+const DEFAULT_CAPTURE_TRANSPORT = 'phoenix';
 
 function parseReconnectDelayMs(raw: string | undefined): number | undefined {
   if (!raw?.trim()) {
@@ -76,6 +77,19 @@ export function resolveCaptureTransportOptionsFromEnv(
         sessionId: env.SHADOW_CAPTURE_SESSION_ID?.trim() || undefined,
         sessionLabel: env.SHADOW_CAPTURE_SESSION_LABEL?.trim() || undefined
       } satisfies SocketCaptureTransportOptions;
+    case 'phoenix':
+      return {
+        kind: 'phoenix',
+        url: requiredEnv(
+          env.SHADOW_CAPTURE_PHOENIX_URL ?? env.SHADOW_CAPTURE_TARGET,
+          'SHADOW_CAPTURE_PHOENIX_URL'
+        ),
+        projectName: env.SHADOW_CAPTURE_PHOENIX_PROJECT?.trim() || undefined,
+        pollIntervalMs: parseReconnectDelayMs(env.SHADOW_CAPTURE_RECONNECT_MS),
+        apiKey: env.SHADOW_CAPTURE_PHOENIX_API_KEY?.trim() || undefined,
+        sessionId: env.SHADOW_CAPTURE_SESSION_ID?.trim() || undefined,
+        sessionLabel: env.SHADOW_CAPTURE_SESSION_LABEL?.trim() || undefined
+      } satisfies PhoenixCaptureTransportOptions;
     default:
       throw new Error(`Unsupported SHADOW_CAPTURE_TRANSPORT: ${kind}`);
   }
@@ -91,5 +105,7 @@ export function createCaptureTransport(options: CaptureTransportOptions): Captur
       return createWebSocketCaptureTransport(options);
     case 'socket':
       return createSocketCaptureTransport(options);
+    case 'phoenix':
+      return createPhoenixCaptureTransport(options);
   }
 }

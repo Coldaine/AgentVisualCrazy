@@ -11,6 +11,7 @@ import type { SnapshotPayload, LoadedSource, TranscriptPrivacySettings } from '.
 import { buildRendererInput } from '../shared/renderer-input-adapter';
 import { createIncrementalParser } from './incremental-parser';
 import { normalizeEntry } from './normalizer';
+import { normalizeOtelSpan } from './otel-normalizer';
 import { createEventBuffer, type EventBuffer } from './event-buffer';
 import { createIpcBridge } from './ipc-bridge';
 import { createLogger } from '../shared/logger';
@@ -20,7 +21,7 @@ import type {
   CaptureTransportOptions,
   CaptureTransportSubscription
 } from './capture-transport';
-import { createCaptureTransport } from './capture-transports';
+import { createCaptureTransport, resolveCaptureTransportOptionsFromEnv } from './capture-transports';
 
 const logger = createLogger({ minLevel: 'info' });
 
@@ -57,7 +58,9 @@ export function createSessionManager(
   const transport =
     options.transport && 'start' in options.transport
       ? options.transport
-      : createCaptureTransport(options.transport ?? { kind: 'file-tail' });
+      : createCaptureTransport(options.transport ?? resolveCaptureTransportOptionsFromEnv());
+
+  const resolvedNormalizer = transport.kind === 'phoenix' ? normalizeOtelSpan : normalizeEntry;
 
   const buildSnapshot = async (): Promise<SnapshotPayload | null> => {
     const events = await buffer.getAll();
@@ -88,7 +91,7 @@ export function createSessionManager(
     await buffer.setSession(session.sessionId);
     activeSession = session;
     activeParser = createIncrementalParser((entry) => {
-      const events = normalizeEntry(entry, session.sessionId);
+      const events = resolvedNormalizer(entry, session.sessionId);
       if (events.length === 0) {
         return;
       }
