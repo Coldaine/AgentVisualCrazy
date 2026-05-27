@@ -22,7 +22,7 @@ import {
 } from '../src/shared/schema';
 
 describe('schema — EventSource widening', () => {
-  it('KnownEventSources contains the four ship-tree sources', () => {
+  it('KnownEventSources contains the four shipped-in-tree sources', () => {
     expect(KnownEventSources).toEqual({
       claudeHook: 'claude-hook',
       claudeTranscript: 'claude-transcript',
