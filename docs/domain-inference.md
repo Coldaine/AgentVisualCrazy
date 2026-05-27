@@ -53,6 +53,30 @@ Providers supported: anthropic, openai, openrouter, google, deepseek.
 - POSIX: if a temporary legacy `.env` is used for migration, keep it at `0600` and remove it after verification
 - Windows: keep secrets under the user's profile so inherited ACLs remain per-user; avoid shared directories
 
+Concrete checks:
+
+```bash
+stat -c '%a %n' ~/.shadow-agent ~/.shadow-agent/credentials.enc.json
+chmod 700 ~/.shadow-agent
+chmod 600 ~/.shadow-agent/credentials.enc.json
+```
+
+```powershell
+$storeDir = Join-Path $HOME '.shadow-agent'
+$storeFile = Join-Path $storeDir 'credentials.enc.json'
+$userSid = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value
+icacls $storeDir
+icacls $storeFile
+icacls $storeDir /inheritance:r
+icacls $storeDir /grant:r "*${userSid}:(OI)(CI)(F)" "*S-1-5-18:(OI)(CI)(F)" "*S-1-5-32-544:(OI)(CI)(F)"
+icacls $storeFile /inheritance:r
+icacls $storeFile /grant:r "*${userSid}:F" "*S-1-5-18:F" "*S-1-5-32-544:F"
+```
+
+Do not run with `SHADOW_ALLOW_FILE_CREDENTIAL_FALLBACK=1` as a steady-state setting.
+Use it for an intentional migration run only, then unset it and remove the temporary
+plaintext file after confirming the encrypted store loads.
+
 ## Prompt Strategy
 
 The system prompt defines Shadow as a passive observer that produces structured JSON:

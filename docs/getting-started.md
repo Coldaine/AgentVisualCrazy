@@ -78,6 +78,32 @@ Permission guidance:
 - Windows: leave the store inside your user profile so standard per-user ACLs protect it
 - Do not place credential files in shared folders, synced team drives, or repo working trees
 
+To check and repair POSIX permissions:
+
+```bash
+stat -c '%a %n' ~/.shadow-agent ~/.shadow-agent/credentials.enc.json
+chmod 700 ~/.shadow-agent
+chmod 600 ~/.shadow-agent/credentials.enc.json
+```
+
+To inspect Windows ACLs, keep access scoped to the current user, Administrators, and
+SYSTEM. If broad grants appear, reset the ACLs to those principals:
+
+```powershell
+$storeDir = Join-Path $HOME '.shadow-agent'
+$storeFile = Join-Path $storeDir 'credentials.enc.json'
+$userSid = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value
+icacls $storeDir
+icacls $storeFile
+icacls $storeDir /inheritance:r
+icacls $storeDir /grant:r "*${userSid}:(OI)(CI)(F)" "*S-1-5-18:(OI)(CI)(F)" "*S-1-5-32-544:(OI)(CI)(F)"
+icacls $storeFile /inheritance:r
+icacls $storeFile /grant:r "*${userSid}:F" "*S-1-5-18:F" "*S-1-5-32-544:F"
+```
+
+Treat `SHADOW_ALLOW_FILE_CREDENTIAL_FALLBACK=1` as a one-run migration consent, not a
+normal developer setting.
+
 ## Privacy Controls
 
 Shadow-agent starts in local-only mode. The Electron app's Privacy panel lets you explicitly opt in to:
