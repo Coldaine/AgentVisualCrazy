@@ -203,6 +203,7 @@ export function createEventBuffer(capacityOrOptions: number | EventBufferOptions
   let pendingWrites = 0;
   let operationChain: Promise<void> = Promise.resolve();
   let lastBackpressureLevel: EventQueueBackpressureLevel = 'normal';
+  let hydratedFromDisk = false;
 
   const sessionDir = () => path.join(persistenceRoot, encodeSessionId(sessionId));
   const spillPath = () => path.join(sessionDir(), SPILL_FILE);
@@ -287,10 +288,33 @@ export function createEventBuffer(capacityOrOptions: number | EventBufferOptions
     await writeCheckpointFile(checkpointPath(), checkpoints);
   };
 
+  const hydrateFromDisk = async () => {
+    if (hydratedFromDisk) {
+      return;
+    }
+
+    const spilled = await readSpillFile(spillPath());
+    if (spilled.length > 0) {
+      updateOffsets(spilled);
+      nextOffset = Math.max(nextOffset, (newestOffset ?? -1) + 1);
+    }
+
+    if (checkpoints.size === 0) {
+      const persisted = await readCheckpointFile(checkpointPath());
+      for (const [id, checkpoint] of persisted.entries()) {
+        checkpoints.set(id, checkpoint);
+      }
+    }
+
+    hydratedFromDisk = true;
+  };
+
   const ensureCheckpoint = async (
     consumerId: string,
     options?: { startAt?: 'latest' | 'earliest' }
   ): Promise<EventQueueCheckpoint> => {
+    await hydrateFromDisk();
+
     if (checkpoints.has(consumerId)) {
       return checkpoints.get(consumerId)!;
     }
@@ -299,18 +323,6 @@ export function createEventBuffer(capacityOrOptions: number | EventBufferOptions
       startAt: options?.startAt ?? consumerDefaults.get(consumerId)?.startAt ?? 'latest'
     } as const;
     consumerDefaults.set(consumerId, defaults);
-
-    // Lazy-load persisted checkpoints if this session already has them.
-    if (checkpoints.size === 0) {
-      const persisted = await readCheckpointFile(checkpointPath());
-      for (const [id, checkpoint] of persisted.entries()) {
-        checkpoints.set(id, checkpoint);
-      }
-      const restored = checkpoints.get(consumerId);
-      if (restored) {
-        return restored;
-      }
-    }
 
     const initialOffset =
       defaults.startAt === 'earliest'
@@ -328,7 +340,9 @@ export function createEventBuffer(capacityOrOptions: number | EventBufferOptions
   };
 
   const loadAllEnvelopes = async (): Promise<EventEnvelope[]> => {
-    const spilled = spilledDepth > 0 ? await readSpillFile(spillPath()) : [];
+    await hydrateFromDisk();
+    const spilled = await readSpillFile(spillPath());
+    updateOffsets(spilled);
     return [...spilled, ...memory];
   };
 
@@ -351,7 +365,6 @@ export function createEventBuffer(capacityOrOptions: number | EventBufferOptions
   return {
     async setSession(nextSessionId: string) {
       await enqueueMutation(async () => {
-        const previousDir = sessionDir();
         sessionId = nextSessionId;
         memory.length = 0;
         nextOffset = 0;
@@ -359,6 +372,7 @@ export function createEventBuffer(capacityOrOptions: number | EventBufferOptions
         oldestOffset = null;
         newestOffset = null;
         lastBackpressureLevel = 'normal';
+        hydratedFromDisk = false;
 
         const resetCheckpoints = new Map<string, EventQueueCheckpoint>();
         for (const consumerId of consumerDefaults.keys()) {
@@ -369,13 +383,16 @@ export function createEventBuffer(capacityOrOptions: number | EventBufferOptions
           });
         }
         checkpoints.clear();
-        for (const [consumerId, checkpoint] of resetCheckpoints.entries()) {
-          checkpoints.set(consumerId, checkpoint);
-        }
 
-        await rm(previousDir, { recursive: true, force: true });
-        await rm(sessionDir(), { recursive: true, force: true });
-        await persistCheckpoints();
+        await hydrateFromDisk();
+        for (const [consumerId, checkpoint] of resetCheckpoints.entries()) {
+          if (!checkpoints.has(consumerId)) {
+            checkpoints.set(consumerId, checkpoint);
+          }
+        }
+        if (resetCheckpoints.size > 0) {
+          await persistCheckpoints();
+        }
         logger.info('capture', 'buffer.session_set', { sessionId: nextSessionId });
       });
     },
@@ -393,6 +410,8 @@ export function createEventBuffer(capacityOrOptions: number | EventBufferOptions
       }
 
       return enqueueMutation(async () => {
+        await hydrateFromDisk();
+
         const acceptedEnvelopes = events.map((event) => ({
           offset: nextOffset++,
           event
@@ -400,7 +419,7 @@ export function createEventBuffer(capacityOrOptions: number | EventBufferOptions
         memory.push(...acceptedEnvelopes);
 
         const overflow = Math.max(0, memory.length - memoryCapacity);
-        let spilled = overflow > 0 ? await readSpillFile(spillPath()) : [];
+        let spilled = spilledDepth > 0 ? await readSpillFile(spillPath()) : [];
         let spilledCount = 0;
         let droppedCount = 0;
 

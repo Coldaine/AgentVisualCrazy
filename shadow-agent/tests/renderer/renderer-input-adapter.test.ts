@@ -38,23 +38,28 @@ describe('canonicalEventRendererInputAdapter', () => {
   it('builds renderer input with derived state and default privacy policy', () => {
     const snapshot = buildRendererInput(
       [
-        event({ kind: 'session_started', payload: { label: 'Session Label' } }),
+        event({ kind: 'session_started', payload: { label: 'Session Label for dev@example.com' } }),
         event({
           id: 'evt-2',
           kind: 'message',
           actor: 'user',
           payload: { text: 'Ship capture pipeline for dev@example.com from D:\\_projects\\AgentVisualCrazy' }
         }),
-        event({ id: 'evt-3', kind: 'tool_started', payload: { toolName: 'Read', file_path: 'src/main.ts' } })
+        event({
+          id: 'evt-3',
+          kind: 'tool_started',
+          payload: { toolName: 'Read', file_path: 'D:\\_projects\\AgentVisualCrazy\\src\\main.ts' }
+        })
       ],
       {
-        source: { kind: 'replay', label: 'custom-replay' }
+        source: { kind: 'replay', label: 'custom-replay', path: 'D:\\_projects\\AgentVisualCrazy\\session.jsonl' }
       }
     );
 
-    expect(snapshot.record.title).toBe('Session Label');
+    expect(snapshot.record.title).toBe('Session Label for [redacted-email]');
     expect(snapshot.state.currentObjective).toBe('Ship capture pipeline for [redacted-email] from [redacted-path]');
-    expect(snapshot.state.fileAttention).toEqual([{ filePath: 'src/main.ts', touches: 1 }]);
+    expect(snapshot.state.fileAttention).toEqual([{ filePath: '[redacted-path]', touches: 1 }]);
+    expect(snapshot.source.path).toBe('[redacted-path]');
     expect(snapshot.events[1]?.payload).toEqual({
       text: 'Ship capture pipeline for [redacted-email] from [redacted-path]'
     });
@@ -65,4 +70,5 @@ describe('canonicalEventRendererInputAdapter', () => {
       transcriptHandling: 'sanitized-by-default'
     });
   });
+
 });

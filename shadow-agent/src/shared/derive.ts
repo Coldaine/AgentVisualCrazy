@@ -197,6 +197,7 @@ function buildInsights(title: string, phase: string, riskSignals: string[], next
 
 export function deriveState(events: CanonicalEvent[], title = 'Observed session'): DerivedState {
   const sessionId = events[0]?.sessionId ?? 'unknown';
+  const sanitizedTitle = sanitizeTranscriptText(title);
   const phase = detectPhase(events);
   const riskSignals = collectRiskSignals(events);
   const nextMoves = buildNextMoves(phase, riskSignals);
@@ -205,7 +206,7 @@ export function deriveState(events: CanonicalEvent[], title = 'Observed session'
   const transcript: DerivedState['transcript'] = [];
   const timeline: DerivedState['timeline'] = [];
   const fileAttention = new Map<string, number>();
-  let currentObjective = title;
+  let currentObjective = sanitizedTitle;
 
   for (const event of events) {
     timeline.push({
@@ -224,7 +225,7 @@ export function deriveState(events: CanonicalEvent[], title = 'Observed session'
         timestamp: event.timestamp,
         redacted: sanitizedText !== event.payload.text
       });
-      if (event.actor === 'user' && currentObjective === title) {
+      if (event.actor === 'user' && currentObjective === sanitizedTitle) {
         currentObjective = sanitizedText;
       }
     }
@@ -260,14 +261,15 @@ export function deriveState(events: CanonicalEvent[], title = 'Observed session'
 
       const filePath = extractFilePath(event, getCapabilitiesForEvent(event));
       if (filePath) {
-        fileAttention.set(filePath, (fileAttention.get(filePath) ?? 0) + 1);
+        const sanitizedFilePath = sanitizeTranscriptText(filePath);
+        fileAttention.set(sanitizedFilePath, (fileAttention.get(sanitizedFilePath) ?? 0) + 1);
       }
     }
   }
 
   return {
     sessionId,
-    title,
+    title: sanitizedTitle,
     currentObjective,
     activePhase: phase,
     agentNodes: [...agentMap.values()],

@@ -29,7 +29,8 @@ Inference delivery is local-only by default. Before any prompt is sent off-host,
 must explicitly opt in. Sanitized transcript content is the default payload, and raw
 transcript delivery requires a separate explicit opt-in. The Electron shell persists those
 privacy toggles in `~/.shadow-agent/privacy.json`; environment variables still override the
-saved file when present.
+saved file when present. In local-only mode, the inference engine does not load provider
+credentials or create remote clients.
 
 ## Auth Chain
 

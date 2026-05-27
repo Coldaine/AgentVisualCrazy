@@ -91,7 +91,7 @@ export function createIpcBridge(opts: IpcBridgeOptions): IpcBridge {
       ipcMain.removeHandler('shadow:events-since');
       ipcMain.handle('shadow:events-since', async (_event, eventId: string) => {
         logger.debug('ipc', 'events_since_requested', { eventId });
-        return await buffer.getSince(eventId);
+        return prepareEventsForStorage(await buffer.getSince(eventId), getPrivacy());
       });
 
       return () => {

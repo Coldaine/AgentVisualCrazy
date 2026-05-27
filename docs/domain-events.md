@@ -67,7 +67,8 @@ A bounded event queue in the Electron main process with a hot in-memory window (
 capacity: 2000 events), spill-to-disk persistence, per-consumer checkpoints, and
 backpressure signals. Supports `push`, `getRecent(n)`, `getAll`, `subscribe(callback)`,
 `getSince(eventId)`, `registerConsumer`, `readPending`, and `commitCheckpoint` for
-catch-up. Both the renderer and the inference trigger consume from this queue.
+catch-up. Both the renderer and the inference trigger consume from this queue. Spill files
+are sanitized unless raw transcript storage has been explicitly enabled.
 
 ## IPC Bridge
 
@@ -78,7 +79,8 @@ Two patterns connect main process to renderer:
 
 **Pull (renderer → main):** On startup or reconnect, the renderer requests a full
 snapshot via `ipcMain.handle('shadow:snapshot')` or incremental catch-up via
-`ipcMain.handle('shadow:events-since', eventId)`.
+`ipcMain.handle('shadow:events-since', eventId)`. Both routes sanitize transcript-like
+payloads before sending data to the renderer.
 
 Canvas redraws are governed by requestAnimationFrame (max 60fps, natural throttle).
 
