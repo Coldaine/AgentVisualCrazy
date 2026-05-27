@@ -3,6 +3,8 @@
   "private": true,
   "scripts": {
     "hooks:install": "node scripts/install-git-hooks.mjs",
+    "prompts:generate": "npm run prompts:generate --prefix shadow-agent",
+    "prompts:check": "npm run prompts:check --prefix shadow-agent",
     "prepare": "npm run hooks:install"
   }
 }

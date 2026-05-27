@@ -11,6 +11,8 @@
     "build:electron": "node electron.esbuild.mjs",
     "build": "npm run build:web && npm run build:renderer && npm run build:electron",
     "start": "electron dist-electron/main.cjs",
+    "prompts:generate": "node scripts/prompt-generation.mjs generate",
+    "prompts:check": "node scripts/prompt-generation.mjs check",
     "test": "tsc --noEmit && vitest run",
     "test:coverage": "vitest run --coverage"
   },

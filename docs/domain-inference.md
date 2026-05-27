@@ -12,7 +12,7 @@ stream and produces structured interpretations (phase, risk, predictions, confid
 Full research spec: `docs/research/shadow-inference-architecture.md`
 Sidecar source patterns: `docs/research/visual-patterns-sidecar.md`
 Implementation plan: `docs/plans/plan-inference-engine.md`
-Prompt source: `shadow-agent/src/inference/prompts.ts` (single source of truth — rationale + runtime template literal in one file)
+Prompt source: `prompts/shadow-system-prompt.json` (single source of truth; generated docs and runtime artifacts must match)
 
 ## OpenCode Harness
 
@@ -60,12 +60,11 @@ phase classification, risk signals with severity and confidence, predicted next 
 factual observations, and file attention. Key constraints: read-only, terse, specific,
 honest confidence scores (not everything warrants 0.9+), JSON-only output.
 
-The prompt lives in `shadow-agent/src/inference/prompts.ts` as a single source
-of truth: the runtime template literal `SHADOW_SYSTEM_PROMPT` and the rationale
-doc comment (philosophy, per-section justification, evaluation plan, iteration
-log, "why one file") are co-located. No generation step. See
-`.claude/rules/prompts.md` for editing rules and `docs/tooling-philosophy.md`
-for the meta-rationale.
+The prompt lives in `prompts/shadow-system-prompt.json` as the single source of
+truth. `docs/prompts/shadow-system-prompt.md` and
+`shadow-agent/src/inference/prompts.ts` are generated artifacts. Edit the JSON
+source first, update its iteration log, run `npm run prompts:generate`, then run
+`npm run prompts:check`.
 
 ## Context Budget
 
@@ -121,7 +120,7 @@ src/inference/
   opencode-client.ts     — OpenCode server + client (not yet implemented)
   context-packager.ts    — Build ShadowContextPacket from DerivedState (implemented)
   prompt-builder.ts      — ShadowContextPacket type, buildUserMessage, buildInferenceRequest (implemented)
-  prompts.ts             — System prompt (single source of truth: template literal + rationale doc comment) (implemented)
+  prompts.ts             — Generated system prompt runtime export (implemented)
   response-parser.ts     — JSON → ShadowInsight[] (implemented)
   trigger.ts             — When to invoke inference (implemented)
   shadow-inference-engine.ts  — Orchestrator (implemented)

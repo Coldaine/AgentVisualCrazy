@@ -1,6 +1,7 @@
 ---
 paths:
   - "prompts/**"
+  - "docs/prompts/**"
   - "shadow-agent/src/inference/prompts.ts"
 ---
 
@@ -11,23 +12,22 @@ configuration in shadow-agent. Treat it accordingly.
 
 ## Where it lives
 
-There is **one file**: `shadow-agent/src/inference/prompts.ts`. The prompt
-itself is the `SHADOW_SYSTEM_PROMPT` template literal. The rationale,
-philosophy, per-section justification, evaluation plan, iteration log, and
-"why this lives in one file" meta-decision all live in the file-level doc
-comment immediately above it.
+The canonical source is `prompts/shadow-system-prompt.json`. Generated artifacts
+must stay in sync:
 
-There is no separate JSON source, no generated markdown doc, no parity check.
-The single-file model is deliberate — see the "Why one file" section in
-`prompts.ts` itself and `docs/tooling-philosophy.md` for the broader principle.
+- `docs/prompts/shadow-system-prompt.md`
+- `shadow-agent/src/inference/prompts.ts`
+
+Do not edit generated prompt docs or runtime files directly. Change the JSON
+source, then run `npm run prompts:generate` and `npm run prompts:check`.
 
 ## Rules
 
-1. **Every constraint in the prompt has a stated reason.** The "Section
-   rationale" block in the doc comment explains why each line exists and what
-   failure mode it addresses. If you add a new constraint, add the rationale
-   in the same edit. If you remove one, document why in the iteration log and
-   in `git log` — every line is there because of an observed regression.
+1. **Every constraint in the prompt has a stated reason.** The source JSON
+   records section commentary and design principles. If you add a new
+   constraint, add the rationale in the same edit. If you remove one, document
+   why in the iteration log and in `git log` — every line is there because of
+   an observed regression.
 
 2. **Confidence calibration language must be preserved.** The instruction
    "not every situation warrants 0.9+" exists because models default to high
@@ -36,15 +36,12 @@ The single-file model is deliberate — see the "Why one file" section in
 3. **Update the iteration log for notable changes.** Trivial edits (typo,
    reformatting) don't need a log entry — `git log` covers them. Notable
    changes (new constraint, removed constraint, restructured output schema,
-   model-behavior fix) get a one-line entry in the doc comment's iteration
+   model-behavior fix) get a one-line entry in the source JSON's iteration
    log so future-me can scan the history without re-reading every commit.
 
-4. **The prompt text must be a plain template literal.** No imports, no
-   composition, no runtime substitution. The companion context packet is
-   built separately in `prompt-builder.ts`; the system prompt itself stays
+4. **Generated runtime stays static.** The companion context packet is built
+   separately in `prompt-builder.ts`; the generated system prompt itself stays
    static and copy-paste-into-a-playground-able.
 
-5. **Do not introduce a second prompt file alongside this one** without
-   first writing down (in `docs/plans/`) the trigger that justifies it.
-   Two prompts is a different cost structure than one — at two, the
-   single-file approach starts losing to a small prompt registry.
+5. **Check parity before committing.** `npm run prompts:check` must pass
+   locally, in pre-commit, and in CI.

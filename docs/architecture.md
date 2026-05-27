@@ -103,12 +103,11 @@ tool signatures and implementation.
 
 ## Prompt Engineering
 
-The shadow inference system prompt lives at `shadow-agent/src/inference/prompts.ts`
-as a single file: runtime template literal plus a doc comment containing the
-philosophy, per-section rationale, evaluation plan, iteration log, and the
-"why one file" meta-decision. No JSON source, no generated docs file, no parity
-check — see `docs/tooling-philosophy.md` for the principle and
-`.claude/rules/prompts.md` for the editing rules.
+The shadow inference system prompt lives in `prompts/shadow-system-prompt.json`.
+Generated artifacts at `docs/prompts/shadow-system-prompt.md` and
+`shadow-agent/src/inference/prompts.ts` are produced by `npm run prompts:generate`
+and checked by `npm run prompts:check`. CI and local hooks enforce parity so
+documentation and runtime prompt text cannot drift.
 
 ## Testing & Observability
 

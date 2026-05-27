@@ -45,8 +45,8 @@ This means the highest-leverage comments are ones like:
 - "Why didn't we add an eval harness here?" (with triggers for when to add one)
 - "Why didn't we use a managed platform like LangFuse?" (with the boundary)
 - "Why didn't we build a hook receiver for Codex yet?" (with the dependency)
-- "Why did we collapse the JSON-source pipeline into a single file?" (with what
-  it replaced and what would trigger reinstating it)
+- "Why did we reinstate the JSON-source pipeline?" (with what it protects and
+  what must stay enforced)
 
 Without these notes, future-me will either rebuild what was rejected (wasting
 time) or never build what was intended (missing the upgrade trigger).
@@ -62,16 +62,13 @@ ongoing maintenance attention. If the problem it solves is hypothetical, the
 maintenance cost is real and the benefit is not.
 
 Examples of problems that may not exist yet:
-- Multi-editor file drift (only one editor)
 - Cost attribution (no users → no costs to attribute)
 - Prompt regression in production (no production)
 - Cross-platform build divergence (only one platform in use)
 - CI minute budget (running on a tier with abundant minutes)
 
 When unsure: write down the trigger that would create the problem, ship without
-the infrastructure, and re-evaluate when the trigger fires. See the "When to
-upgrade" sections that appear in artifact comments (e.g., the doc comment in
-`shadow-agent/src/inference/prompts.ts`).
+the infrastructure, and re-evaluate when the trigger fires.
 
 ## Principle 4: Anchor decisions on the north star
 
@@ -84,8 +81,9 @@ ultimately serves the three pillars in `docs/north-star.md`:
 
 Tooling that supports the work that supports the work is suspect. The multi-harness
 refactor passes the test (more harnesses = more contexts where the visualization
-is useful). The prompts-generation pipeline did not (it made editing the prompt
-harder without making the rendered output better, sooner, or more reliable).
+is useful). Prompt generation now also passes the test because the prompt source,
+generated documentation, and runtime prompt are all reviewed and enforced as one
+behavioral contract.
 
 ## Principle 5: WHERE the WHY lives
 

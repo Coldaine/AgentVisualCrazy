@@ -101,13 +101,12 @@ variables override the saved file for that run.
 
 ## Prompt Workflow
 
-The shadow system prompt lives in `shadow-agent/src/inference/prompts.ts`
-as a single source of truth. The doc comment at the top contains the
-rationale, philosophy, per-section justification, evaluation plan, and
-iteration log. The template literal at the bottom is the prompt the
-model sees. Edit the file directly — there is no generation step. See
-`.claude/rules/prompts.md` for the editing rules and
-`docs/tooling-philosophy.md` for the meta-rationale.
+The shadow system prompt lives in `prompts/shadow-system-prompt.json` as the
+single source of truth. Generated artifacts live at
+`docs/prompts/shadow-system-prompt.md` and
+`shadow-agent/src/inference/prompts.ts`. Edit the JSON source first, update its
+iteration log, then run `npm run prompts:generate` and
+`npm run prompts:check`.
 
 ## Documentation
 

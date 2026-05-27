@@ -143,7 +143,7 @@ Each PR: conventional commit prefix; `Co-authored-by: Copilot` trailer; branch o
 - **IPC contract stability.** `ShadowAgentBridge` in `schema.ts:123-135` accepts `CanonicalEvent[]`. Adding optional fields is contract-compatible. Method signatures must NOT change in this refactor.
 - **Spill-to-disk cross-version.** JSON spill format is robust to new optional fields. Capability dispatch in `derive.ts` must tolerate `harnessId === undefined`. Explicit test.
 - **Hardcoded `source: 'claude-hook'` in HTTP/socket/WS transports.** Must be removed in PR 3 or non-Claude harnesses over HTTP get mis-stamped.
-- **Prompt-sync workflow.** Previously [`AGENTS.md`](../../AGENTS.md) enforced sync between `prompts/shadow-system-prompt.json`, `docs/prompts/shadow-system-prompt.md`, and `shadow-agent/src/inference/prompts.ts` via `npm run prompts:check`. That pipeline was removed (May 2026) in favor of a single-file source of truth at `shadow-agent/src/inference/prompts.ts`. See `docs/tooling-philosophy.md` for the principle. This refactor does not touch prompts; harness-awareness in the system prompt is **out of scope for MVP**, flagged as a follow-up — when added, the doc comment in `prompts.ts` should grow a "Per-harness considerations" section in the same edit.
+- **Prompt-sync workflow.** [`AGENTS.md`](../../AGENTS.md) now enforces sync between `prompts/shadow-system-prompt.json`, `docs/prompts/shadow-system-prompt.md`, and `shadow-agent/src/inference/prompts.ts` via `npm run prompts:check`. This refactor does not touch prompt semantics; harness-awareness in the system prompt is **out of scope for MVP**, flagged as a follow-up. When added, update the JSON source first and regenerate artifacts in the same edit.
 - **Inference packager assumptions.** Verify `inference/context-packager.ts` + `prompt-builder.ts` make no implicit assumptions about `source` strings before merging PR 2.
 - **Branch-protected `main`.** Each PR via feature branch + draft PR.
 
@@ -222,12 +222,11 @@ plan keeps these phased so neither change can break the other.
 
 ### Why not a generated EventSource enum auto-derived from the registry?
 
-Tempting (eliminates a manual constant), but generated code reintroduces the
-exact drift-pipeline pattern just removed for prompts (see
-`docs/tooling-philosophy.md`). The widened `string` type plus a runtime
+Tempting (eliminates a manual constant), but generated code introduces another
+artifact pipeline that needs its own source-of-truth rules. The widened `string` type plus a runtime
 `KnownEventSources` constant is honest about what the union actually is — open,
 extensible at runtime, validated where it matters (drivers register themselves).
-No generator, no parity check, no third file.
+No generator, no parity check, no third file for event-source values.
 
 ### Why not a managed observability platform for shadow-agent's own inference?
 
