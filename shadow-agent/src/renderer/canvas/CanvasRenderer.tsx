@@ -15,6 +15,7 @@ import {
   createQualityController,
   getQualityProfile,
   sampleQualityController,
+  selectParticleRenderMode,
   type QualityChangeReason,
   type QualityControllerState,
   type QualityTier,
@@ -23,7 +24,6 @@ import {
 import {
   COLLIDE_RADIUS,
   STATE_COLORS,
-  type Particle,
   type RiskLevel,
   type SimulationEdge,
   type SimulationNode
@@ -38,6 +38,11 @@ import {
   drawShadowNode
 } from './draw-utils';
 import { tickCanvasPulses } from './canvas-pulse';
+import {
+  createWebglParticleRenderer,
+  type ParticleDrawMode,
+  type WebglParticleRenderer
+} from './webgl-particle-renderer';
 export { triggerCanvasPulse, clearCanvasPulses } from './canvas-pulse';
 export type { CanvasPulseKind } from './canvas-pulse';
 
@@ -119,12 +124,14 @@ export interface CanvasRendererProps {
 
 export default function CanvasRenderer({ agentNodes, riskLevel, latestInsight }: CanvasRendererProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const particleCanvasRef = useRef<HTMLCanvasElement>(null);
   const animationFrameRef = useRef<number>(0);
   const lastFrameRef = useRef<number | null>(null);
   const nodesRef = useRef<SimulationNode[]>([]);
   const edgesRef = useRef<SimulationEdge[]>([]);
   const edgesByIdRef = useRef<Map<string, SimulationEdge>>(new Map());
   const simulationRef = useRef<Simulation<SimulationNode, SimulationEdge> | null>(null);
+  const webglParticleRendererRef = useRef<WebglParticleRenderer | null>(null);
   const riskLevelRef = useRef<RiskLevel | undefined>(riskLevel);
   const latestInsightRef = useRef<ShadowInsight | undefined>(latestInsight);
   const qualityStateRef = useRef<QualityControllerState>(
@@ -144,10 +151,12 @@ export default function CanvasRenderer({ agentNodes, riskLevel, latestInsight }:
     tier: QualityTier;
     reason: QualityChangeReason;
     particleMode: 'worker' | 'inline';
+    particleDrawMode: ParticleDrawMode | 'disabled';
   }>({
     tier: qualityStateRef.current.tier,
     reason: qualityStateRef.current.lastChangeReason,
-    particleMode: particleEngineRef.current.mode
+    particleMode: particleEngineRef.current.mode,
+    particleDrawMode: 'canvas'
   });
 
   const collectMetrics = useCallback((particleCount: number): ResourceMetrics => {
@@ -183,7 +192,8 @@ export default function CanvasRenderer({ agentNodes, riskLevel, latestInsight }:
       setRuntimeHud({
         tier: nextState.tier,
         reason: nextState.lastChangeReason,
-        particleMode: particleEngineRef.current.mode
+        particleMode: particleEngineRef.current.mode,
+        particleDrawMode: webglParticleRendererRef.current?.mode ?? 'canvas'
       });
     }
   }, []);
@@ -236,7 +246,33 @@ export default function CanvasRenderer({ agentNodes, riskLevel, latestInsight }:
       }
     }
 
-    drawParticles(ctx, particleSnapshot, nodesById, edgesByIdRef.current, profile.tier);
+    const selectedParticleRenderMode = selectParticleRenderMode(profile.tier, webglParticleRendererRef.current !== null);
+    let particleDrawMode: ParticleDrawMode | 'disabled' = 'disabled';
+
+    if (selectedParticleRenderMode === 'webgl') {
+      const drewParticlesOnGpu = webglParticleRendererRef.current?.draw({
+        particles: particleSnapshot,
+        nodesById,
+        edgesById: edgesByIdRef.current,
+        qualityTier: profile.tier,
+        width: viewport.width,
+        height: viewport.height,
+        dpr: viewport.dpr
+      }) ?? false;
+
+      if (drewParticlesOnGpu) {
+        particleDrawMode = 'webgl';
+      } else {
+        drawParticles(ctx, particleSnapshot, nodesById, edgesByIdRef.current, profile.tier);
+        particleDrawMode = 'canvas';
+      }
+    } else if (selectedParticleRenderMode === 'canvas2d') {
+      webglParticleRendererRef.current?.clear();
+      drawParticles(ctx, particleSnapshot, nodesById, edgesByIdRef.current, profile.tier);
+      particleDrawMode = 'canvas';
+    } else {
+      webglParticleRendererRef.current?.clear();
+    }
 
     for (const node of nodesRef.current) {
       drawAgentNode(ctx, node, time, profile.tier);
@@ -261,6 +297,21 @@ export default function CanvasRenderer({ agentNodes, riskLevel, latestInsight }:
         );
       }
     }
+
+    setRuntimeHud((current) => {
+      const nextHud = {
+        tier: qualityStateRef.current.tier,
+        reason: qualityStateRef.current.lastChangeReason,
+        particleMode: particleEngine.mode,
+        particleDrawMode
+      };
+      return current.tier === nextHud.tier &&
+        current.reason === nextHud.reason &&
+        current.particleMode === nextHud.particleMode &&
+        current.particleDrawMode === nextHud.particleDrawMode
+        ? current
+        : nextHud;
+    });
 
     animationFrameRef.current = requestAnimationFrame(draw);
   }, [applyQualityState, collectMetrics]);
@@ -343,6 +394,13 @@ export default function CanvasRenderer({ agentNodes, riskLevel, latestInsight }:
     }
 
     syncCanvasToDisplaySize(canvas, qualityStateRef.current.profile);
+    webglParticleRendererRef.current = particleCanvasRef.current
+      ? createWebglParticleRenderer(particleCanvasRef.current)
+      : null;
+    setRuntimeHud((current) => ({
+      ...current,
+      particleDrawMode: webglParticleRendererRef.current?.mode ?? 'canvas'
+    }));
     animationFrameRef.current = requestAnimationFrame(draw);
 
     const resizeObserver = new ResizeObserver(() => {
@@ -364,13 +422,31 @@ export default function CanvasRenderer({ agentNodes, riskLevel, latestInsight }:
       cancelAnimationFrame(animationFrameRef.current);
       resizeObserver.disconnect();
       simulationRef.current?.stop();
+      webglParticleRendererRef.current?.destroy();
+      webglParticleRendererRef.current = null;
       particleEngineRef.current.destroy();
     };
   }, [draw]);
 
   return (
-    <div style={{ position: 'relative', width: '100%', height: '100%' }}>
-      <canvas ref={canvasRef} style={{ width: '100%', height: '100%', display: 'block' }} />
+    <div style={{ position: 'relative', width: '100%', height: '100%', background: colors.void }}>
+      <canvas
+        ref={canvasRef}
+        style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', display: 'block', zIndex: 1 }}
+      />
+      <canvas
+        ref={particleCanvasRef}
+        aria-hidden="true"
+        style={{
+          position: 'absolute',
+          inset: 0,
+          width: '100%',
+          height: '100%',
+          display: 'block',
+          pointerEvents: 'none',
+          zIndex: 2
+        }}
+      />
       <div
         style={{
           position: 'absolute',
@@ -385,10 +461,11 @@ export default function CanvasRenderer({ agentNodes, riskLevel, latestInsight }:
           font: '600 11px/1 "Segoe UI Variable Text", system-ui, sans-serif',
           letterSpacing: '0.04em',
           textTransform: 'uppercase',
-          backdropFilter: 'blur(12px)'
+          backdropFilter: 'blur(12px)',
+          zIndex: 3
         }}
       >
-        Auto {runtimeHud.tier} • {runtimeHud.particleMode}
+        Auto {runtimeHud.tier} • {runtimeHud.particleMode} • {runtimeHud.particleDrawMode}
       </div>
     </div>
   );

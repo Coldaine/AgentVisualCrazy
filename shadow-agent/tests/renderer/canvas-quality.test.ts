@@ -3,6 +3,7 @@ import {
   createQualityController,
   estimateResourcePressure,
   sampleQualityController,
+  selectParticleRenderMode,
   tierFromResourcePressure,
   type ResourceMetrics
 } from '../../src/renderer/canvas/quality';
@@ -64,5 +65,13 @@ describe('canvas quality controller', () => {
 
     expect(state.resourceBudgetTier).toBe('medium');
     expect(state.tier).toBe('medium');
+  });
+
+  it('selects GPU particle rendering only for high-detail tiers with WebGL support', () => {
+    expect(selectParticleRenderMode('ultra', true)).toBe('webgl');
+    expect(selectParticleRenderMode('high', true)).toBe('webgl');
+    expect(selectParticleRenderMode('medium', true)).toBe('canvas2d');
+    expect(selectParticleRenderMode('low', true)).toBe('disabled');
+    expect(selectParticleRenderMode('high', false)).toBe('canvas2d');
   });
 });

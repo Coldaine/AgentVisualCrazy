@@ -3,6 +3,7 @@ export const QUALITY_TIER_ORDER = ['ultra', 'high', 'medium', 'low'] as const;
 export type QualityTier = (typeof QUALITY_TIER_ORDER)[number];
 export type QualityChangeReason = 'initial' | 'resource-budget' | 'frame-budget' | 'frame-recovery' | 'stable';
 export type ParticleExecutionMode = 'worker' | 'inline' | 'disabled';
+export type ParticleRenderMode = 'webgl' | 'canvas2d' | 'disabled';
 
 export interface ResourceMetrics {
   nodeCount: number;
@@ -26,6 +27,7 @@ export interface QualityProfile {
   showShadowNode: boolean;
   showPredictionTrail: boolean;
   particleMode: ParticleExecutionMode;
+  particleRenderMode: ParticleRenderMode;
   particlesPerEdge: number;
   maxParticles: number;
   particleSizeScale: number;
@@ -63,6 +65,7 @@ export const QUALITY_PROFILES: Record<QualityTier, QualityProfile> = {
     showShadowNode: true,
     showPredictionTrail: true,
     particleMode: 'worker',
+    particleRenderMode: 'webgl',
     particlesPerEdge: 10,
     maxParticles: 360,
     particleSizeScale: 1.15,
@@ -82,6 +85,7 @@ export const QUALITY_PROFILES: Record<QualityTier, QualityProfile> = {
     showShadowNode: true,
     showPredictionTrail: true,
     particleMode: 'worker',
+    particleRenderMode: 'webgl',
     particlesPerEdge: 6,
     maxParticles: 220,
     particleSizeScale: 1,
@@ -101,6 +105,7 @@ export const QUALITY_PROFILES: Record<QualityTier, QualityProfile> = {
     showShadowNode: true,
     showPredictionTrail: false,
     particleMode: 'worker',
+    particleRenderMode: 'canvas2d',
     particlesPerEdge: 3,
     maxParticles: 120,
     particleSizeScale: 0.86,
@@ -120,6 +125,7 @@ export const QUALITY_PROFILES: Record<QualityTier, QualityProfile> = {
     showShadowNode: false,
     showPredictionTrail: false,
     particleMode: 'disabled',
+    particleRenderMode: 'disabled',
     particlesPerEdge: 0,
     maxParticles: 0,
     particleSizeScale: 0,
@@ -131,6 +137,17 @@ export const QUALITY_PROFILES: Record<QualityTier, QualityProfile> = {
 
 export function getQualityProfile(tier: QualityTier): QualityProfile {
   return QUALITY_PROFILES[tier];
+}
+
+export function selectParticleRenderMode(tier: QualityTier, webglSupported: boolean): ParticleRenderMode {
+  const profile = getQualityProfile(tier);
+  if (profile.particleMode === 'disabled' || profile.particleRenderMode === 'disabled') {
+    return 'disabled';
+  }
+  if (profile.particleRenderMode === 'webgl' && webglSupported) {
+    return 'webgl';
+  }
+  return 'canvas2d';
 }
 
 function clampPressure(value: number): number {
