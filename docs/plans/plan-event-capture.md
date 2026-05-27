@@ -26,7 +26,7 @@ All new files live under `shadow-agent/src/capture/`:
 | `src/capture/transcript-watcher.ts` | FileSystemWatcher on a single JSONL file, emits new lines |
 | `src/capture/incremental-parser.ts` | Parse new JSONL lines into raw objects, handle partial lines |
 | `src/capture/normalizer.ts` | Transform raw Claude Code transcript entries → `CanonicalEvent` |
-| `src/capture/event-buffer.ts` | In-memory ring buffer of recent events, supports subscriptions |
+| `src/capture/event-buffer.ts` | Bounded event queue with hot memory window, spill-to-disk, metrics, backpressure, subscriptions, and consumer checkpoints |
 | `src/capture/ipc-bridge.ts` | Bridge between main-process event buffer and renderer via IPC |
 | `src/capture/session-manager.ts` | Orchestrator: discover → watch → parse → normalize → buffer → IPC |
 
@@ -110,16 +110,21 @@ Each normalized event gets:
 
 ## 6. Event Buffer
 
-`event-buffer.ts` is an in-memory ring buffer holding the last N events (default: 2000).
+`event-buffer.ts` is a bounded queue with a hot in-memory window (default: 2000)
+and spill-to-disk persistence for older events.
 
 Features:
-- `push(event)` — add new event, evict oldest if at capacity
-- `getRecent(n)` — return last N events
-- `getAll()` — return all events in order
-- `subscribe(callback)` — register a listener called on every new event
-- `getSince(eventId)` — return all events after a given ID (for catch-up)
+- `push(events)` — add events, spill older entries to disk, and report enqueue/backpressure metrics
+- `getRecent(n)` — return the last N events across memory and spill storage
+- `getAll()` — return all retained events in order
+- `subscribe(callback)` — register a listener called on every new event batch with queue metrics
+- `getSince(eventId)` — return all retained events after a given ID for catch-up
+- `registerConsumer(consumerId)` / `readPending()` / `commitCheckpoint()` — let renderer and inference consumers drain independently
+- `getMetrics()` / `getBackpressure()` — expose queue depth, consumer lag, pending writes, and throttle state
 
-The buffer is the central data structure that both the renderer and the inference engine consume from. It lives in the Electron main process.
+The buffer is the central data structure that both the renderer and the inference
+engine consume from. It lives in the Electron main process, and capture
+transports consult its backpressure state before delivering chunks.
 
 ---
 

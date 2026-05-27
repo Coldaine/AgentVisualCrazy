@@ -192,6 +192,30 @@ describe('capture transports', () => {
     await waitFor(() => resets.includes('reconnect') && chunks.join('').includes('{"step":2}\n'));
   });
 
+  it('http-stream transport checks queue backpressure before delivering chunks', async () => {
+    const server = http.createServer((_, response) => {
+      response.writeHead(200, { 'Content-Type': 'application/x-ndjson' });
+      response.end('{"step":1}\n');
+    });
+    const port = await listenHttp(server);
+
+    const { context, chunks } = createContext();
+    const getBackpressure = vi.fn(context.getBackpressure);
+    context.getBackpressure = getBackpressure;
+
+    const subscription = await createHttpStreamCaptureTransport({
+      kind: 'http-stream',
+      url: `http://127.0.0.1:${port}/stream`,
+      reconnectDelayMs: 25,
+      sessionId: 'http-backpressure-test'
+    }).start(context);
+    subscriptions.push(subscription);
+
+    await waitFor(() => chunks.join('').includes('{"step":1}\n'));
+
+    expect(getBackpressure).toHaveBeenCalled();
+  });
+
   it('websocket transport normalizes framed messages and reconnects after close', async () => {
     class MockWebSocket {
       static CONNECTING = 0;
@@ -253,6 +277,76 @@ describe('capture transports', () => {
     MockWebSocket.instances[1]?.emitOpen();
 
     await waitFor(() => resets.includes('reconnect'));
+  });
+
+  it('websocket transport delays message delivery while queue backpressure is critical', async () => {
+    vi.useFakeTimers();
+
+    class MockWebSocket {
+      static CONNECTING = 0;
+      static OPEN = 1;
+      static instances: MockWebSocket[] = [];
+
+      readyState = MockWebSocket.CONNECTING;
+      onopen: ((event: Event) => void) | null = null;
+      onmessage: ((event: MessageEvent) => void) | null = null;
+      onclose: ((event: CloseEvent) => void) | null = null;
+      onerror: ((event: Event) => void) | null = null;
+
+      constructor(
+        public readonly url: string,
+        public readonly protocols?: string | string[]
+      ) {
+        MockWebSocket.instances.push(this);
+      }
+
+      emitOpen() {
+        this.readyState = MockWebSocket.OPEN;
+        this.onopen?.({} as Event);
+      }
+
+      emitMessage(data: unknown) {
+        this.onmessage?.({ data } as MessageEvent);
+      }
+
+      close() {
+        this.onclose?.({} as CloseEvent);
+      }
+    }
+
+    globalThis.WebSocket = MockWebSocket as unknown as typeof WebSocket;
+
+    const { context, chunks } = createContext();
+    context.getBackpressure = () => ({
+      level: 'critical',
+      shouldThrottle: true,
+      totalRatio: 1,
+      pendingWrites: 4
+    });
+
+    const subscription = await createWebSocketCaptureTransport({
+      kind: 'websocket',
+      url: 'ws://localhost:4098/shadow',
+      reconnectDelayMs: 25,
+      sessionId: 'ws-backpressure-test'
+    }).start(context);
+    subscriptions.push(subscription);
+
+    try {
+      MockWebSocket.instances[0]?.emitOpen();
+      MockWebSocket.instances[0]?.emitMessage('{"frame":1}');
+      await Promise.resolve();
+
+      expect(chunks).toEqual([]);
+
+      await vi.advanceTimersByTimeAsync(499);
+      expect(chunks).toEqual([]);
+
+      await vi.advanceTimersByTimeAsync(1);
+      expect(chunks).toEqual(['{"frame":1}\n']);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('socket transport reconnects after disconnects and keeps streaming chunks', async () => {

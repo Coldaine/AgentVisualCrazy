@@ -61,6 +61,22 @@ export function computeWatchDelay(
   return baseDelayMs;
 }
 
+export async function waitForBackpressureRelief(
+  backpressure: EventQueueBackpressureState | undefined,
+  baseDelayMs = 0
+): Promise<void> {
+  if (!backpressure?.shouldThrottle) {
+    return;
+  }
+
+  const delayMs = computeWatchDelay(baseDelayMs, backpressure);
+  if (delayMs <= 0) {
+    return;
+  }
+
+  await new Promise((resolve) => setTimeout(resolve, delayMs));
+}
+
 function buildSession(discovered: DiscoveredSession): CaptureSession {
   return {
     sessionId: discovered.sessionId,

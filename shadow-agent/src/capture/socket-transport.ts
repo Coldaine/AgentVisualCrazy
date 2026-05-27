@@ -7,7 +7,7 @@ import type {
   CaptureTransportSubscription,
   SocketCaptureTransportOptions
 } from './capture-transport';
-import { computeWatchDelay } from './transcript-watcher';
+import { computeWatchDelay, waitForBackpressureRelief } from './transcript-watcher';
 
 const logger = createLogger({ minLevel: 'info' });
 const DEFAULT_RECONNECT_DELAY_MS = 1_000;
@@ -92,6 +92,7 @@ export function createSocketCaptureTransport(
                   nextSocket.resume();
                 }
               }, computeWatchDelay(50, backpressure));
+              await waitForBackpressureRelief(backpressure, 50);
             }
             await context.onChunk({ session, chunk });
           })();

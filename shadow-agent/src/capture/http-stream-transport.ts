@@ -6,6 +6,7 @@ import type {
   CaptureTransportSubscription,
   HttpStreamCaptureTransportOptions
 } from './capture-transport';
+import { waitForBackpressureRelief } from './transcript-watcher';
 
 const logger = createLogger({ minLevel: 'info' });
 const DEFAULT_RECONNECT_DELAY_MS = 1_000;
@@ -88,11 +89,13 @@ export function createHttpStreamCaptureTransport(
               if (done) {
                 const trailing = decoder.decode();
                 if (trailing) {
+                  await waitForBackpressureRelief(context.getBackpressure());
                   await context.onChunk({ session, chunk: trailing });
                 }
                 break;
               }
               if (value && value.byteLength > 0) {
+                await waitForBackpressureRelief(context.getBackpressure());
                 await context.onChunk({
                   session,
                   chunk: decoder.decode(value, { stream: true })

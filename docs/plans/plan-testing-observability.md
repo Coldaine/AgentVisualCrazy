@@ -157,7 +157,7 @@ rotation, duplicate events, session switching.
 Required automated coverage:
 - `incremental-parser.ts` unit tests for partial lines and malformed JSON
 - `normalizer.ts` contract tests against known Claude transcript fragments
-- `event-buffer.ts` unit tests for ring behavior, ordering, and subscriptions
+- `event-buffer.ts` unit tests for bounded queue behavior, spill ordering, metrics, backpressure, checkpoints, and subscriptions
 - `session-discovery.ts` tests using temp directories and synthetic file mtimes
 - `transcript-watcher.ts` integration tests with a temp JSONL file that is appended to in
   chunks

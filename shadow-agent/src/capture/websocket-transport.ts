@@ -6,6 +6,7 @@ import type {
   CaptureTransportSubscription,
   WebSocketCaptureTransportOptions
 } from './capture-transport';
+import { waitForBackpressureRelief } from './transcript-watcher';
 
 const logger = createLogger({ minLevel: 'info' });
 const DEFAULT_RECONNECT_DELAY_MS = 1_000;
@@ -104,6 +105,7 @@ export function createWebSocketCaptureTransport(
           void (async () => {
             const chunk = await readMessageData(event.data);
             if (chunk) {
+              await waitForBackpressureRelief(context.getBackpressure());
               await context.onChunk({ session, chunk });
             }
           })();

@@ -107,7 +107,7 @@ src/capture/
   transcript-watcher.ts    — FileSystemWatcher on JSONL file
   incremental-parser.ts    — Chunk → parsed JSON objects
   normalizer.ts            — Raw transcript entry → CanonicalEvent
-  event-buffer.ts          — Ring buffer with subscriptions
+  event-buffer.ts          — Bounded event queue with spill, metrics, and checkpoints
   ipc-bridge.ts            — Main↔renderer IPC
   session-manager.ts       — Orchestrator: discover → watch → parse → normalize → buffer
 ```

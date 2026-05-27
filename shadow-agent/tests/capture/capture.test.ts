@@ -477,6 +477,62 @@ describe('createEventBuffer', () => {
     expect(buf.getMetrics().consumers[0]?.lag).toBe(3);
   });
 
+  it('hydrates spilled events when a queue is recreated for the same session', async () => {
+    const root = makeTempRoot();
+    const first = createEventBuffer({
+      memoryCapacity: 1,
+      totalCapacity: 5,
+      persistenceRoot: root,
+      sessionId: 'persisted-session'
+    });
+    await first.push([makeEvent('a'), makeEvent('b')]);
+
+    const restored = createEventBuffer({
+      memoryCapacity: 1,
+      totalCapacity: 5,
+      persistenceRoot: root,
+      sessionId: 'persisted-session'
+    });
+
+    expect((await restored.getAll()).map((event) => event.id)).toEqual(['a']);
+    expect(restored.getMetrics()).toMatchObject({
+      memoryDepth: 0,
+      spilledDepth: 1,
+      totalDepth: 1,
+      oldestOffset: 0,
+      newestOffset: 0
+    });
+  });
+
+  it('restores persisted consumer checkpoints when a queue is recreated', async () => {
+    const root = makeTempRoot();
+    const first = createEventBuffer({
+      memoryCapacity: 1,
+      totalCapacity: 5,
+      persistenceRoot: root,
+      sessionId: 'checkpoint-session'
+    });
+    await first.push([makeEvent('a'), makeEvent('b')]);
+    await first.registerConsumer('inference', { startAt: 'earliest' });
+    await first.commitCheckpoint('inference', 'a');
+
+    const restored = createEventBuffer({
+      memoryCapacity: 1,
+      totalCapacity: 5,
+      persistenceRoot: root,
+      sessionId: 'checkpoint-session'
+    });
+    await restored.registerConsumer('inference', { startAt: 'earliest' });
+
+    expect((await restored.readPending('inference')).events).toHaveLength(0);
+    expect(restored.getMetrics().consumers[0]).toMatchObject({
+      consumerId: 'inference',
+      lastOffset: 0,
+      lastEventId: 'a',
+      lag: 0
+    });
+  });
+
   it('reports high backpressure as the queue fills', async () => {
     const buf = createEventBuffer({
       memoryCapacity: 2,
@@ -606,8 +662,14 @@ describe('createIpcBridge', () => {
     expect(result).toBe(expected);
   });
 
-  it('shadow:events-since handler delegates to buffer.getSince and returns its result', async () => {
-    const events = [makeCanonicalEvent('a'), makeCanonicalEvent('b')];
+  it('shadow:events-since handler delegates to buffer.getSince and returns sanitized events', async () => {
+    const events = [
+      {
+        ...makeCanonicalEvent('a'),
+        payload: { text: 'Contact dev@example.com using sk-abcdefghijklmnop' }
+      },
+      makeCanonicalEvent('b')
+    ];
     const buffer = makeMockBuffer({
       getSince: vi.fn().mockResolvedValue(events),
     });
@@ -619,7 +681,13 @@ describe('createIpcBridge', () => {
     const result = await handler({} /* _event */, 'evt-a');
 
     expect(buffer.getSince).toHaveBeenCalledWith('evt-a');
-    expect(result).toEqual(events);
+    expect(result).toEqual([
+      {
+        ...events[0],
+        payload: { text: 'Contact [redacted-email] using [redacted-token]' }
+      },
+      events[1]
+    ]);
   });
 
   it('cleanup removes both IPC handlers from ipcMain', () => {
