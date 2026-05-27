@@ -3,7 +3,7 @@
  *
  * A HarnessDriver bundles everything needed to observe one AI coding agent:
  * which EventSource strings it owns, how it normalizes raw entries into
- * CanonicalEvents, and its capability flags that drive.ts consults to decide
+ * CanonicalEvents, and its capability flags that derive.ts consults to decide
  * how to extract file attention, risk signals, and subagent topology.
  *
  * The registry is the single lookup table. Session-manager resolves a driver
@@ -44,8 +44,16 @@ export interface HarnessDriver {
    */
   readonly sources: readonly EventSource[];
   readonly capabilities: HarnessCapabilities;
-  /** Translate one raw ParsedEntry into zero or more CanonicalEvents. */
-  normalizeEntry(entry: ParsedEntry, sessionId: string): CanonicalEvent[];
+  /**
+   * Translate one raw ParsedEntry into zero or more CanonicalEvents.
+   *
+   * `source` is supplied by session-manager from the active CaptureSession so
+   * the same driver can serve multiple transports (e.g. Claude transcript-tail
+   * AND Claude HTTP hook receiver). Drivers should stamp each emitted event
+   * with this source rather than hardcoding one. Defaulted by the driver for
+   * tests that call normalizeEntry directly without a session.
+   */
+  normalizeEntry(entry: ParsedEntry, sessionId: string, source?: EventSource): CanonicalEvent[];
 }
 
 export class HarnessDriverRegistry {

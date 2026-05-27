@@ -89,7 +89,7 @@ export function createSessionManager(
     activeSession = session;
     const driver = driverRegistry.getForSource(session.source) ?? driverRegistry.getDefault();
     activeParser = createIncrementalParser((entry) => {
-      const events = driver.normalizeEntry(entry, session.sessionId);
+      const events = driver.normalizeEntry(entry, session.sessionId, session.source);
       if (events.length === 0) {
         return;
       }

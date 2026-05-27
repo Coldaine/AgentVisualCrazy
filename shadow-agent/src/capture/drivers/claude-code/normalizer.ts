@@ -6,13 +6,14 @@
  * harnessId: 'claude-code' for downstream driver-aware consumers.
  */
 import { randomUUID } from 'node:crypto';
-import type { CanonicalEvent, EventKind } from '../../../shared/schema';
+import type { CanonicalEvent, EventKind, EventSource } from '../../../shared/schema';
 import type { ParsedEntry } from '../../incremental-parser';
 import { createLogger } from '../../../shared/logger';
 
 const logger = createLogger({ minLevel: 'info' });
 
 const HARNESS_ID = 'claude-code' as const;
+const DEFAULT_SOURCE: EventSource = 'claude-transcript';
 
 function extractTimestamp(entry: ParsedEntry): string {
   const ts = entry.timestamp ?? entry.created_at;
@@ -22,11 +23,11 @@ function extractTimestamp(entry: ParsedEntry): string {
 
 export function normalizeEntry(
   entry: ParsedEntry,
-  sessionId: string
+  sessionId: string,
+  source: EventSource = DEFAULT_SOURCE
 ): CanonicalEvent[] {
   const events: CanonicalEvent[] = [];
   const timestamp = extractTimestamp(entry);
-  const source = 'claude-transcript' as const;
 
   const type = typeof entry.type === 'string' ? entry.type : '';
 

@@ -163,6 +163,44 @@ describe('claude-code driver — harnessId', () => {
 });
 
 // ---------------------------------------------------------------------------
+// claude-code driver — source propagation
+//
+// The driver is registered for BOTH 'claude-transcript' and 'claude-hook'.
+// session-manager must be able to pass the active CaptureSession.source
+// through so hook-delivered events get stamped 'claude-hook' instead of
+// being silently mislabelled 'claude-transcript'.
+// ---------------------------------------------------------------------------
+
+describe('claude-code driver — source propagation', () => {
+  it('defaults source to claude-transcript when no source supplied', () => {
+    const entry: ParsedEntry = { type: 'session', cwd: '/tmp' };
+    const events = claudeCodeDriver.normalizeEntry(entry, 'sess-default');
+    expect(events[0]?.source).toBe('claude-transcript');
+  });
+
+  it('stamps the supplied source on every emitted event (claude-hook)', () => {
+    const entry: ParsedEntry = {
+      message: {
+        role: 'assistant',
+        content: [
+          { type: 'text', text: 'hi' },
+          { type: 'tool_use', name: 'Read', id: 'tu-1', input: {} },
+        ],
+      },
+    };
+    const events = claudeCodeDriver.normalizeEntry(entry, 'sess-hook', 'claude-hook');
+    expect(events).toHaveLength(2);
+    expect(events.every((e) => e.source === 'claude-hook')).toBe(true);
+  });
+
+  it('honours an arbitrary future EventSource string', () => {
+    const entry: ParsedEntry = { type: 'session', cwd: '/x' };
+    const events = claudeCodeDriver.normalizeEntry(entry, 'sess-x', 'claude-mcp');
+    expect(events[0]?.source).toBe('claude-mcp');
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Legacy shim backward compat
 // ---------------------------------------------------------------------------
 
