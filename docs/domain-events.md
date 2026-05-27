@@ -99,6 +99,12 @@ come from, and the live runtime now supports multiple capture transports:
 Each transport feeds the same incremental parser and normalizer pipeline so the downstream
 event buffer, IPC bridge, renderer, and inference consumers stay unchanged.
 
+Transport options include an optional `source` field, and the Electron startup path maps
+`SHADOW_CAPTURE_SOURCE` into that field. Defaults preserve the current Claude behavior
+(`claude-transcript` for file-tail and `claude-hook` for network transports), while future
+harness drivers can stamp values such as `codex-transcript`, `cursor-hook`, or
+`opencode-event-stream` without forking the byte-delivery adapters.
+
 ## File Map
 
 ```

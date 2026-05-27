@@ -17,6 +17,11 @@ function parseReconnectDelayMs(raw: string | undefined): number | undefined {
   return parsed;
 }
 
+function parseSource(raw: string | undefined): string | undefined {
+  const source = raw?.trim();
+  return source || undefined;
+}
+
 function requiredEnv(value: string | undefined, variableName: string): string {
   if (value && value.trim()) {
     return value.trim();
@@ -41,7 +46,8 @@ export function resolveCaptureTransportOptionsFromEnv(
     case 'file-tail':
       return {
         kind: 'file-tail',
-        overridePath: env.SHADOW_CAPTURE_FILE?.trim() || undefined
+        overridePath: env.SHADOW_CAPTURE_FILE?.trim() || undefined,
+        source: parseSource(env.SHADOW_CAPTURE_SOURCE)
       };
     case 'http':
     case 'http-stream':
@@ -53,7 +59,8 @@ export function resolveCaptureTransportOptionsFromEnv(
         ),
         reconnectDelayMs: parseReconnectDelayMs(env.SHADOW_CAPTURE_RECONNECT_MS),
         sessionId: env.SHADOW_CAPTURE_SESSION_ID?.trim() || undefined,
-        sessionLabel: env.SHADOW_CAPTURE_SESSION_LABEL?.trim() || undefined
+        sessionLabel: env.SHADOW_CAPTURE_SESSION_LABEL?.trim() || undefined,
+        source: parseSource(env.SHADOW_CAPTURE_SOURCE)
       } satisfies HttpStreamCaptureTransportOptions;
     case 'ws':
     case 'websocket':
@@ -65,7 +72,8 @@ export function resolveCaptureTransportOptionsFromEnv(
         ),
         reconnectDelayMs: parseReconnectDelayMs(env.SHADOW_CAPTURE_RECONNECT_MS),
         sessionId: env.SHADOW_CAPTURE_SESSION_ID?.trim() || undefined,
-        sessionLabel: env.SHADOW_CAPTURE_SESSION_LABEL?.trim() || undefined
+        sessionLabel: env.SHADOW_CAPTURE_SESSION_LABEL?.trim() || undefined,
+        source: parseSource(env.SHADOW_CAPTURE_SOURCE)
       } satisfies WebSocketCaptureTransportOptions;
     case 'socket':
       return {
@@ -74,7 +82,8 @@ export function resolveCaptureTransportOptionsFromEnv(
         port: parsePort(env.SHADOW_CAPTURE_SOCKET_PORT),
         reconnectDelayMs: parseReconnectDelayMs(env.SHADOW_CAPTURE_RECONNECT_MS),
         sessionId: env.SHADOW_CAPTURE_SESSION_ID?.trim() || undefined,
-        sessionLabel: env.SHADOW_CAPTURE_SESSION_LABEL?.trim() || undefined
+        sessionLabel: env.SHADOW_CAPTURE_SESSION_LABEL?.trim() || undefined,
+        source: parseSource(env.SHADOW_CAPTURE_SOURCE)
       } satisfies SocketCaptureTransportOptions;
     default:
       throw new Error(`Unsupported SHADOW_CAPTURE_TRANSPORT: ${kind}`);

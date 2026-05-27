@@ -38,6 +38,7 @@ export interface FileTailCaptureTransportOptions {
   overridePath?: string;
   discoveryIntervalMs?: number;
   fingerprintBytes?: number;
+  source?: EventSource;
 }
 
 export interface HttpStreamCaptureTransportOptions {
@@ -47,6 +48,7 @@ export interface HttpStreamCaptureTransportOptions {
   reconnectDelayMs?: number;
   sessionId?: string;
   sessionLabel?: string;
+  source?: EventSource;
 }
 
 export interface WebSocketCaptureTransportOptions {
@@ -56,6 +58,7 @@ export interface WebSocketCaptureTransportOptions {
   reconnectDelayMs?: number;
   sessionId?: string;
   sessionLabel?: string;
+  source?: EventSource;
 }
 
 export interface SocketCaptureTransportOptions {
@@ -65,6 +68,7 @@ export interface SocketCaptureTransportOptions {
   reconnectDelayMs?: number;
   sessionId?: string;
   sessionLabel?: string;
+  source?: EventSource;
 }
 
 export type CaptureTransportOptions =

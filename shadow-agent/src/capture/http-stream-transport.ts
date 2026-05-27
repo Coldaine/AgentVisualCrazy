@@ -15,7 +15,7 @@ function buildSession(options: HttpStreamCaptureTransportOptions): CaptureSessio
   return {
     sessionId: options.sessionId ?? `http-stream-${url.host}`,
     label: options.sessionLabel ?? `Live HTTP: ${url.host}`,
-    source: 'claude-hook',
+    source: options.source ?? 'claude-hook',
     path: options.url,
     transportId: 'http-stream'
   };

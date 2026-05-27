@@ -61,11 +61,14 @@ export function computeWatchDelay(
   return baseDelayMs;
 }
 
-function buildSession(discovered: DiscoveredSession): CaptureSession {
+function buildSession(
+  discovered: DiscoveredSession,
+  overrideSource?: FileTailCaptureTransportOptions['source']
+): CaptureSession {
   return {
     sessionId: discovered.sessionId,
     label: `Live: ${discovered.sessionId.slice(0, 12)}`,
-    source: 'claude-transcript',
+    source: overrideSource ?? discovered.source,
     path: discovered.filePath,
     transportId: 'file-tail'
   };
@@ -275,7 +278,7 @@ export function createFileTailCaptureTransport(
       };
 
       const activateSession = async (discovered: DiscoveredSession) => {
-        const nextSession = buildSession(discovered);
+        const nextSession = buildSession(discovered, options.source);
         const isSameFile = activeSession?.path === nextSession.path;
         if (isSameFile) {
           return;

@@ -70,6 +70,8 @@ budget.
 Event capture is now transport-pluggable. The default path still watches Claude Code JSONL
 files via a filesystem tailer, but the runtime can also ingest streaming HTTP, WebSocket,
 and raw socket feeds through the same parser → normalizer → queue → IPC pipeline.
+Each transport can carry an explicit `EventSource` via `SHADOW_CAPTURE_SOURCE` or the
+programmatic transport options, so transport choice and harness attribution stay separate.
 
 The file-tail path remains the simplest zero-config option for Claude transcripts, and it
 now adds checksum-based rotation detection so replaced transcript files replay cleanly even

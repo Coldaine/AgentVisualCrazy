@@ -15,7 +15,7 @@ function buildSession(options: WebSocketCaptureTransportOptions): CaptureSession
   return {
     sessionId: options.sessionId ?? `websocket-${url.host}`,
     label: options.sessionLabel ?? `Live WebSocket: ${url.host}`,
-    source: 'claude-hook',
+    source: options.source ?? 'claude-hook',
     path: options.url,
     transportId: 'websocket'
   };

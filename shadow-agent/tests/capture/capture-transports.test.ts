@@ -6,10 +6,12 @@ import path from 'node:path';
 import { tmpdir } from 'node:os';
 import type {
   CaptureSession,
+  CaptureTransportOptions,
   CaptureTransportContext,
   CaptureTransportResetReason,
   CaptureTransportSubscription
 } from '../../src/capture/capture-transport';
+import { createCaptureTransport, resolveCaptureTransportOptionsFromEnv } from '../../src/capture/capture-transports';
 import { createHttpStreamCaptureTransport } from '../../src/capture/http-stream-transport';
 import { createSocketCaptureTransport } from '../../src/capture/socket-transport';
 import { createFileTailCaptureTransport } from '../../src/capture/transcript-watcher';
@@ -165,6 +167,24 @@ describe('capture transports', () => {
     await waitFor(() => resets.includes('rotation') && chunks.join('').includes(rotatedLine));
   });
 
+  it('file-tail transport stamps a caller-supplied source on discovered sessions', async () => {
+    const dir = await makeTempDir('shadow-file-tail-source-');
+    const filePath = path.join(dir, 'session-a.jsonl');
+    await writeFile(filePath, '{"message":{"role":"assistant","content":"hello"}}\n', 'utf8');
+
+    const { context, sessions } = createContext();
+    const subscription = await createFileTailCaptureTransport({
+      kind: 'file-tail',
+      overridePath: filePath,
+      source: 'codex-transcript',
+      discoveryIntervalMs: 5_000
+    }).start(context);
+    subscriptions.push(subscription);
+
+    await waitFor(() => sessions.length === 1);
+    expect(sessions[0]?.source).toBe('codex-transcript');
+  });
+
   it('http-stream transport reconnects and emits streamed chunks', async () => {
     let requestCount = 0;
     const server = http.createServer((_, response) => {
@@ -190,6 +210,26 @@ describe('capture transports', () => {
 
     await waitFor(() => sessions.length === 1 && chunks.join('').includes('{"step":1}\n'));
     await waitFor(() => resets.includes('reconnect') && chunks.join('').includes('{"step":2}\n'));
+  });
+
+  it('http-stream transport stamps a caller-supplied source', async () => {
+    const server = http.createServer((_, response) => {
+      response.writeHead(200, { 'Content-Type': 'application/x-ndjson' });
+      response.end('{"step":1}\n');
+    });
+    const port = await listenHttp(server);
+
+    const { context, sessions } = createContext();
+    const subscription = await createHttpStreamCaptureTransport({
+      kind: 'http-stream',
+      url: `http://127.0.0.1:${port}/stream`,
+      source: 'opencode-event-stream',
+      sessionId: 'http-custom-source'
+    }).start(context);
+    subscriptions.push(subscription);
+
+    await waitFor(() => sessions.length === 1);
+    expect(sessions[0]?.source).toBe('opencode-event-stream');
   });
 
   it('websocket transport normalizes framed messages and reconnects after close', async () => {
@@ -255,6 +295,48 @@ describe('capture transports', () => {
     await waitFor(() => resets.includes('reconnect'));
   });
 
+  it('websocket transport stamps a caller-supplied source', async () => {
+    class MockWebSocket {
+      static CONNECTING = 0;
+      static OPEN = 1;
+      static instances: MockWebSocket[] = [];
+
+      readyState = MockWebSocket.CONNECTING;
+      onopen: ((event: Event) => void) | null = null;
+      onmessage: ((event: MessageEvent) => void) | null = null;
+      onclose: ((event: CloseEvent) => void) | null = null;
+      onerror: ((event: Event) => void) | null = null;
+
+      constructor(public readonly url: string) {
+        MockWebSocket.instances.push(this);
+      }
+
+      emitOpen() {
+        this.readyState = MockWebSocket.OPEN;
+        this.onopen?.({} as Event);
+      }
+
+      close() {
+        this.onclose?.({} as CloseEvent);
+      }
+    }
+
+    globalThis.WebSocket = MockWebSocket as unknown as typeof WebSocket;
+
+    const { context, sessions } = createContext();
+    const subscription = await createWebSocketCaptureTransport({
+      kind: 'websocket',
+      url: 'ws://localhost:4098/shadow',
+      source: 'mcp-json-rpc',
+      sessionId: 'ws-custom-source'
+    }).start(context);
+    subscriptions.push(subscription);
+
+    MockWebSocket.instances[0]?.emitOpen();
+    await waitFor(() => sessions.length === 1);
+    expect(sessions[0]?.source).toBe('mcp-json-rpc');
+  });
+
   it('socket transport reconnects after disconnects and keeps streaming chunks', async () => {
     let connectionCount = 0;
     const server = net.createServer((socket) => {
@@ -276,5 +358,43 @@ describe('capture transports', () => {
 
     await waitFor(() => sessions.length === 1 && chunks.join('').includes('{"connection":1}\n'));
     await waitFor(() => resets.includes('reconnect') && chunks.join('').includes('{"connection":2}\n'));
+  });
+
+  it('socket transport stamps a caller-supplied source', async () => {
+    const server = net.createServer((socket) => {
+      socket.write('{"connection":1}\n');
+      socket.end();
+    });
+    const port = await listenSocket(server);
+
+    const { context, sessions } = createContext();
+    const subscription = await createSocketCaptureTransport({
+      kind: 'socket',
+      host: '127.0.0.1',
+      port,
+      source: 'cursor-hook',
+      sessionId: 'tcp-custom-source'
+    }).start(context);
+    subscriptions.push(subscription);
+
+    await waitFor(() => sessions.length === 1);
+    expect(sessions[0]?.source).toBe('cursor-hook');
+  });
+
+  it('resolves custom capture source from env for pluggable transport options', () => {
+    const options = resolveCaptureTransportOptionsFromEnv({
+      SHADOW_CAPTURE_TRANSPORT: 'socket',
+      SHADOW_CAPTURE_SOCKET_HOST: '127.0.0.1',
+      SHADOW_CAPTURE_SOCKET_PORT: '4876',
+      SHADOW_CAPTURE_SOURCE: 'cursor-hook'
+    } as NodeJS.ProcessEnv);
+
+    expect(options).toMatchObject<CaptureTransportOptions>({
+      kind: 'socket',
+      host: '127.0.0.1',
+      port: 4876,
+      source: 'cursor-hook'
+    });
+    expect(createCaptureTransport(options).kind).toBe('socket');
   });
 });

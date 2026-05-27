@@ -16,7 +16,7 @@ function buildSession(options: SocketCaptureTransportOptions): CaptureSession {
   return {
     sessionId: options.sessionId ?? `socket-${options.host}:${options.port}`,
     label: options.sessionLabel ?? `Live Socket: ${options.host}:${options.port}`,
-    source: 'claude-hook',
+    source: options.source ?? 'claude-hook',
     path: `tcp://${options.host}:${options.port}`,
     transportId: 'socket'
   };
