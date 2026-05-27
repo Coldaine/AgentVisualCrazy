@@ -65,4 +65,34 @@ describe('canonicalEventRendererInputAdapter', () => {
       transcriptHandling: 'sanitized-by-default'
     });
   });
+
+  it('sanitizes derived renderer titles and file attention before display', () => {
+    const snapshot = buildRendererInput(
+      [
+        event({
+          kind: 'message',
+          actor: 'user',
+          payload: { text: 'Audit dev@example.com under D:\\_projects\\AgentVisualCrazy\\secret.txt' }
+        }),
+        event({
+          id: 'evt-2',
+          kind: 'tool_started',
+          payload: {
+            toolName: 'Read',
+            file_path: 'D:\\_projects\\AgentVisualCrazy\\secret.txt'
+          }
+        })
+      ],
+      {
+        source: { kind: 'transcript', label: 'live-transcript' }
+      }
+    );
+
+    expect(snapshot.record.title).toBe('Audit [redacted-email] under [redacted-path]');
+    expect(snapshot.state.title).toBe('Audit [redacted-email] under [redacted-path]');
+    expect(snapshot.state.fileAttention).toEqual([{ filePath: '[redacted-path]', touches: 1 }]);
+    expect(snapshot.events[0]?.payload).toEqual({
+      text: 'Audit [redacted-email] under [redacted-path]'
+    });
+  });
 });

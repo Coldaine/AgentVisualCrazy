@@ -2,7 +2,8 @@ import { deriveState } from './derive';
 import {
   DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS,
   prepareEventsForStorage,
-  resolvePrivacyPolicy
+  resolvePrivacyPolicy,
+  sanitizeTranscriptText
 } from './privacy';
 import { buildSessionRecord } from './replay-store';
 import type {
@@ -58,15 +59,22 @@ export function inferRendererInputTitle(
 export const canonicalEventRendererInputAdapter: RendererInputAdapter<CanonicalEvent[]> = {
   id: 'canonical-event-renderer-input',
   build(events, options) {
-    const title = inferRendererInputTitle(events, options.fallbackTitle ?? options.source.label);
-    const record = buildSessionRecord(events, title);
     const privacySettings = options.privacySettings ?? DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS;
+    const sanitizedEvents = prepareEventsForStorage(events, privacySettings);
+    const source = {
+      ...options.source,
+      label: sanitizeTranscriptText(options.source.label),
+      path: options.source.path ? sanitizeTranscriptText(options.source.path) : undefined
+    };
+    const fallbackTitle = sanitizeTranscriptText(options.fallbackTitle ?? source.label);
+    const title = inferRendererInputTitle(sanitizedEvents, fallbackTitle);
+    const record = buildSessionRecord(sanitizedEvents, title);
 
     return {
-      source: options.source,
+      source,
       record,
-      state: deriveState(events, record.title),
-      events: prepareEventsForStorage(events, privacySettings),
+      state: deriveState(sanitizedEvents, record.title),
+      events: sanitizedEvents,
       privacy: resolvePrivacyPolicy(privacySettings)
     };
   }

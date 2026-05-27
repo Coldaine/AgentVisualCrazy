@@ -145,8 +145,6 @@ export function createInferenceEngine(opts: InferenceEngineOptions): InferenceEn
 
   return {
     async start() {
-      await loadCredentials();
-
       if (!privacy.allowOffHostInference) {
         logger.info('inference', 'engine.local_only_mode', {
           message: 'Off-host inference is disabled until the user explicitly opts in.'
@@ -154,6 +152,7 @@ export function createInferenceEngine(opts: InferenceEngineOptions): InferenceEn
         return;
       }
 
+      await loadCredentials();
       client = opts.client ?? await createInferenceClient();
 
       if (!client) {
