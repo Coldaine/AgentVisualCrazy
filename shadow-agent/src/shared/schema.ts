@@ -1,4 +1,28 @@
-export type EventSource = 'claude-hook' | 'claude-transcript' | 'replay' | 'shadow-runtime';
+/**
+ * Known event sources used by the current set of capture drivers.
+ *
+ * `EventSource` is intentionally open (`string`) rather than a closed union so
+ * new harness drivers (Cursor hook receiver, Codex JSONL tail, Gemini OTLP,
+ * etc.) can register their own source strings without modifying this file.
+ * `KnownEventSource` preserves autocomplete for the values shipped in-tree.
+ *
+ * Spill-to-disk persistence in event-buffer.ts does not validate this type,
+ * so widening is safe at the persistence layer. See
+ * docs/plans/plan-multi-harness-mvp.md for the broader refactor context.
+ */
+export const KnownEventSources = {
+  claudeHook: 'claude-hook',
+  claudeTranscript: 'claude-transcript',
+  replay: 'replay',
+  shadowRuntime: 'shadow-runtime',
+} as const;
+
+export type KnownEventSource = (typeof KnownEventSources)[keyof typeof KnownEventSources];
+
+// The `(string & {})` intersection keeps the KnownEventSource literals visible
+// in IDE autocomplete while still accepting any string at the type level.
+// See https://github.com/microsoft/TypeScript/issues/29729 for the pattern.
+export type EventSource = KnownEventSource | (string & {});
 
 export type EventKind =
   | 'session_started'
@@ -32,6 +56,22 @@ export interface CanonicalEvent<TPayload = Record<string, unknown>> {
   actor: string;
   kind: EventKind;
   payload: TPayload;
+  /**
+   * Identifies the harness driver that produced this event (e.g.
+   * 'claude-code', 'cursor', 'codex'). Optional during the multi-harness
+   * migration; the driver registry assigns 'claude-code' as the default
+   * when an event with `source: 'claude-transcript'` or `'claude-hook'`
+   * arrives without an explicit `harnessId`.
+   */
+  harnessId?: string;
+  /** SemVer of the driver bundle that produced this event. Optional. */
+  driverVersion?: string;
+  /**
+   * Free-form key used to group concurrently-observed harness sessions
+   * that share a logical context (e.g. the same workspace cwd). Optional;
+   * each harness session still has its own distinct `sessionId`.
+   */
+  correlationId?: string;
 }
 
 export interface ShadowInsight {
@@ -138,6 +178,12 @@ export interface AgentNode {
   id: string;
   label: string;
   parentId?: string;
+  /**
+   * Identifies the harness driver associated with this agent node so the
+   * renderer can apply a per-harness palette accent without forking layout.
+   * Optional during the multi-harness migration.
+   */
+  harnessId?: string;
   state: 'active' | 'idle' | 'completed';
   toolCount: number;
 }
