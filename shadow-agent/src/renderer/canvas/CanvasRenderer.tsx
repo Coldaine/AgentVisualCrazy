@@ -1,14 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import {
-  forceCenter,
-  forceCollide,
-  forceLink,
-  forceManyBody,
-  forceSimulation,
-  type Simulation
-} from 'd3-force';
 import type { AgentNode, ShadowInsight } from '../../shared/schema';
 import { colors } from '../theme/colors';
+import { getGraphPhysicsAdapter, type GraphPhysicsSimulation } from './force-simulation-adapter';
 import { createParticleEngine } from './particle-engine';
 import type { ParticleSceneEdge } from './particle-engine-core';
 import {
@@ -124,7 +117,8 @@ export default function CanvasRenderer({ agentNodes, riskLevel, latestInsight }:
   const nodesRef = useRef<SimulationNode[]>([]);
   const edgesRef = useRef<SimulationEdge[]>([]);
   const edgesByIdRef = useRef<Map<string, SimulationEdge>>(new Map());
-  const simulationRef = useRef<Simulation<SimulationNode, SimulationEdge> | null>(null);
+  const simulationRef = useRef<GraphPhysicsSimulation | null>(null);
+  const graphPhysicsAdapterRef = useRef(getGraphPhysicsAdapter());
   const riskLevelRef = useRef<RiskLevel | undefined>(riskLevel);
   const latestInsightRef = useRef<ShadowInsight | undefined>(latestInsight);
   const qualityStateRef = useRef<QualityControllerState>(
@@ -316,24 +310,22 @@ export default function CanvasRenderer({ agentNodes, riskLevel, latestInsight }:
     const height = canvas?.clientHeight ?? 720;
 
     if (!simulationRef.current) {
-      simulationRef.current = forceSimulation<SimulationNode>(nextNodes)
-        .force('charge', forceManyBody().strength(-300))
-        .force('link', forceLink<SimulationNode, SimulationEdge>(nextEdges).id((node) => node.id).distance(150))
-        .force('center', forceCenter(width / 2, height / 2))
-        .force('collide', forceCollide(COLLIDE_RADIUS))
-        .alphaDecay(0.02)
-        .on('tick', () => {
+      simulationRef.current = graphPhysicsAdapterRef.current.createSimulation({
+        nodes: nextNodes,
+        edges: nextEdges,
+        width,
+        height,
+        collideRadius: COLLIDE_RADIUS,
+        onTick: () => {
           nodesRef.current = [...nextNodes];
-        });
+        }
+      });
       return;
     }
 
-    simulationRef.current.nodes(nextNodes);
-    const linkForce = simulationRef.current.force('link');
-    if (linkForce) {
-      (linkForce as ReturnType<typeof forceLink<SimulationNode, SimulationEdge>>).links(nextEdges);
-    }
-    simulationRef.current.alpha(0.35).restart();
+    simulationRef.current.updateNodes(nextNodes);
+    simulationRef.current.updateLinks(nextEdges);
+    simulationRef.current.restart(0.35);
   }, [agentNodes]);
 
   useEffect(() => {
@@ -351,11 +343,7 @@ export default function CanvasRenderer({ agentNodes, riskLevel, latestInsight }:
       if (!simulation) {
         return;
       }
-      const centerForce = simulation.force('center');
-      if (centerForce) {
-        (centerForce as ReturnType<typeof forceCenter>).x(viewport.width / 2);
-        (centerForce as ReturnType<typeof forceCenter>).y(viewport.height / 2);
-      }
+      simulation.updateCenter(viewport.width / 2, viewport.height / 2);
     });
 
     resizeObserver.observe(canvas);

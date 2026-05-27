@@ -1,8 +1,6 @@
 import { useRef, useCallback } from 'react';
 import type { TimelineItem } from '../../shared/schema';
-import { animated, useSpring } from '@react-spring/web';
-
-const AnimatedDiv = animated.div as React.ElementType;
+import { AnimatedDiv, useMotionSpring } from '../motion-adapter';
 
 export interface TimelineScrubberProps {
   timeline: TimelineItem[];
@@ -39,7 +37,7 @@ function EventMarker({ event: timelineEvent }: { event: TimelineItem }) {
 export default function TimelineScrubber({ timeline }: TimelineScrubberProps) {
   const trackRef = useRef<HTMLDivElement>(null);
 
-  const [{ playhead }, playheadApi] = useSpring(() => ({
+  const [{ playhead }, playheadApi] = useMotionSpring(() => ({
     playhead: 0,
     config: { tension: 200, friction: 40 },
   }));

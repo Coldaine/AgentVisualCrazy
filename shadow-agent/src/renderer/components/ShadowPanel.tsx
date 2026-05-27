@@ -1,5 +1,5 @@
-import { animated, useSpring } from '@react-spring/web';
 import type { ShadowInsight } from '../../shared/schema';
+import { AnimatedAside, useMotionSpring } from '../motion-adapter';
 
 export interface ShadowPanelProps {
   phase: string;
@@ -34,11 +34,9 @@ function ConfidenceRing({ confidence }: { confidence: number }) {
   );
 }
 
-const AnimatedAside = animated.aside as React.ElementType;
-
 export default function ShadowPanel({ phase, objective, riskSignals, nextMoves, insights }: ShadowPanelProps) {
   // Slide in from right
-  const slideStyle = useSpring({
+  const slideStyle = useMotionSpring({
     from: { opacity: 0, transform: 'translateX(32px)' },
     to: { opacity: 1, transform: 'translateX(0)' },
     config: { tension: 220, friction: 28 },

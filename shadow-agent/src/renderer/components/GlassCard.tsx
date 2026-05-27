@@ -1,11 +1,11 @@
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
-import { cva, type VariantProps } from 'class-variance-authority';
+import { createClassVariants, type VariantProps } from '../style-variant-adapter';
 import { TIMING } from '../theme/timing';
 
 /**
  * GlassCard — glass-morphism card with backdrop blur and mount animation.
  */
-const glassCVA = cva('glass-card', {
+const glassCVA = createClassVariants('glass-card', {
   variants: {
     size: {
       sm: 'glass-card--sm',
