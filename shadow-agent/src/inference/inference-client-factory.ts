@@ -7,12 +7,17 @@
 import type { InferenceClient } from './inference-client';
 import { createDirectApiClient } from './direct-api';
 import { createOpencodeClient } from './opencode-client';
+import { createOpenAiCompatibleClient } from './openai-compatible-client';
 
 export async function createInferenceClient(): Promise<InferenceClient | null> {
   const preference = process.env.SHADOW_INFERENCE_PROVIDER?.trim().toLowerCase();
 
   if (preference === 'anthropic' || preference === 'direct') {
     return createDirectApiClient();
+  }
+
+  if (preference === 'openai' || preference === 'openai-compatible') {
+    return createOpenAiCompatibleClient();
   }
 
   if (preference === 'opencode') {

@@ -12,7 +12,7 @@ const logger = createLogger({ minLevel: 'info' });
 const DEFAULT_PORT = 4097;
 const POLL_INTERVAL_MS = 1_000;
 const POLL_TIMEOUT_MS = 120_000;
-const MODEL = { provider: 'anthropic', model: 'claude-sonnet-4-5' };
+const MODEL = { provider: 'anthropic', model: process.env.SHADOW_INFERENCE_MODEL?.trim() || 'claude-sonnet-4-5' };
 
 export interface OpencodeClientDependencies {
   port?: number;

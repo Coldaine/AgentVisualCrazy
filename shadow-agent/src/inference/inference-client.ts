@@ -15,7 +15,7 @@ export interface InferenceResult {
   latencyMs: number;
 }
 
-export type Provider = 'opencode' | 'anthropic' | 'fake';
+export type Provider = 'opencode' | 'anthropic' | 'openai' | 'fake';
 
 /**
  * Concrete inference adapters must ship with focused unit tests that exercise

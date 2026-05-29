@@ -79,4 +79,33 @@ describe('createDirectApiClient', () => {
       latencyMs: 25
     });
   });
+
+  it('uses deps.model to override the default model', async () => {
+    const calls: Array<{ model: string }> = [];
+
+    class FakeAnthropicClient {
+      messages = {
+        create: async (request: {
+          model: string;
+          max_tokens: number;
+          system: string;
+          messages: Array<{ role: 'user'; content: string }>;
+        }) => {
+          calls.push({ model: request.model });
+          return { content: [{ type: 'text', text: 'x' }], model: request.model, usage: {} };
+        }
+      };
+
+      constructor(_opts: { apiKey: string }) {}
+    }
+
+    const client = await createDirectApiClient({
+      apiKey: 'test-key',
+      model: 'custom-model-id',
+      loadSdk: async () => ({ default: FakeAnthropicClient })
+    });
+
+    await client!.infer({ systemPrompt: 's', userMessage: 'u' });
+    expect(calls[0]?.model).toBe('custom-model-id');
+  });
 });

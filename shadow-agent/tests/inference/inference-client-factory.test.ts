@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import * as directApi from '../../src/inference/direct-api';
 import * as opencodeClient from '../../src/inference/opencode-client';
+import * as openaiClient from '../../src/inference/openai-compatible-client';
 import { createInferenceClient } from '../../src/inference/inference-client-factory';
 
 describe('createInferenceClient', () => {
@@ -48,5 +49,19 @@ describe('createInferenceClient', () => {
     const client = await createInferenceClient();
 
     expect(client).toBe(direct);
+  });
+
+  it('uses the OpenAI-compatible client when SHADOW_INFERENCE_PROVIDER=openai', async () => {
+    process.env.SHADOW_INFERENCE_PROVIDER = 'openai';
+    const openai = { id: 'openai-compatible', provider: 'openai' as const, infer: vi.fn() };
+    vi.spyOn(openaiClient, 'createOpenAiCompatibleClient').mockReturnValue(openai);
+    const opencodeSpy = vi.spyOn(opencodeClient, 'createOpencodeClient');
+    const directSpy = vi.spyOn(directApi, 'createDirectApiClient');
+
+    const client = await createInferenceClient();
+
+    expect(client).toBe(openai);
+    expect(opencodeSpy).not.toHaveBeenCalled();
+    expect(directSpy).not.toHaveBeenCalled();
   });
 });

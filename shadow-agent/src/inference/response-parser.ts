@@ -33,6 +33,75 @@ function stripMarkdownFences(text: string): string {
     .trim();
 }
 
+function tryParseJson(candidate: string): ModelResponse | null {
+  try {
+    return JSON.parse(candidate) as ModelResponse;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Extracts the first balanced top-level `{...}` object from arbitrary text,
+ * skipping braces inside strings. Lets us recover the JSON object from
+ * prose-wrapped or extra-fenced output that local OpenAI-compatible endpoints
+ * (llama.cpp, vLLM, Ollama, LM Studio) commonly emit.
+ */
+function extractFirstJsonObject(text: string): string | null {
+  const start = text.indexOf('{');
+  if (start === -1) {
+    return null;
+  }
+  let depth = 0;
+  let inString = false;
+  let escaped = false;
+  for (let i = start; i < text.length; i += 1) {
+    const ch = text[i];
+    if (escaped) {
+      escaped = false;
+      continue;
+    }
+    if (ch === '\\') {
+      escaped = true;
+      continue;
+    }
+    if (ch === '"') {
+      inString = !inString;
+      continue;
+    }
+    if (inString) {
+      continue;
+    }
+    if (ch === '{') {
+      depth += 1;
+    } else if (ch === '}') {
+      depth -= 1;
+      if (depth === 0) {
+        return text.slice(start, i + 1);
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * Tolerant model-object parse. STRICT SUPERSET of the previous behavior: a
+ * clean (optionally single-fenced) JSON response parses byte-identically via
+ * step 1; only when that fails do we fall back to extracting a balanced object
+ * from prose/multi-fence wrappers.
+ */
+function parseModelObject(text: string): ModelResponse | null {
+  const direct = tryParseJson(stripMarkdownFences(text));
+  if (direct) {
+    return direct;
+  }
+  const extracted = extractFirstJsonObject(text);
+  if (extracted) {
+    return tryParseJson(extracted);
+  }
+  return null;
+}
+
 function clamp(n: number): number {
   return Math.max(0, Math.min(1, n));
 }
@@ -55,14 +124,11 @@ function makeInsight(
 }
 
 export function parseModelResponse(text: string): ShadowInsight[] {
-  const cleaned = stripMarkdownFences(text);
-  let parsed: ModelResponse;
+  const parsed = parseModelObject(text);
 
-  try {
-    parsed = JSON.parse(cleaned) as ModelResponse;
-  } catch {
+  if (!parsed) {
     logger.warn('inference', 'response_parser.json_parse_failed', {
-      preview: cleaned.slice(0, 200),
+      preview: text.slice(0, 200),
     });
     return [];
   }

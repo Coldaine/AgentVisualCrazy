@@ -37,6 +37,7 @@ type AnthropicSdkConstructor = new (opts: { apiKey: string }) => AnthropicSdkIns
 
 export interface DirectApiClientDependencies {
   apiKey?: string;
+  model?: string;
   loadSdk?: () => Promise<{ default: AnthropicSdkConstructor }>;
   now?: () => number;
 }
@@ -69,6 +70,7 @@ export async function createDirectApiClient(
 
   const client = new AnthropicClass({ apiKey });
   const now = deps.now ?? Date.now;
+  const model = deps.model ?? (process.env.SHADOW_INFERENCE_MODEL?.trim() || MODEL);
 
   return {
     id: 'anthropic-direct-api',
@@ -79,7 +81,7 @@ export async function createDirectApiClient(
       logger.info('inference', 'direct_api.request_start');
 
       const response = await client.messages.create({
-        model: MODEL,
+        model,
         max_tokens: MAX_TOKENS,
         system: request.systemPrompt,
         messages: [{ role: 'user', content: request.userMessage }]
