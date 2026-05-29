@@ -283,11 +283,12 @@ export default function App({ host }: ShadowAgentAppProps) {
     };
 
     const unsubscribe = liveBridge.onLiveEvents((events: CanonicalEvent[]) => {
-      if (events.length === 0) {
-        return;
+      // Non-empty batches pulse the canvas. Empty "dirty" batches (e.g. new
+      // model insights with no new transcript events) still trigger a snapshot
+      // re-pull, but stay render-inert — no spurious pulse.
+      if (events.length > 0) {
+        triggerPulsesForEvents(events);
       }
-
-      triggerPulsesForEvents(events);
 
       if (debounceTimer) {
         clearTimeout(debounceTimer);

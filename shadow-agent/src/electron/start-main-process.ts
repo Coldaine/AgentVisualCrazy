@@ -159,6 +159,12 @@ export function startMainProcess(): void {
           privacy: getPrivacySettings(),
           onInsights: (insights) => {
             logger.info('inference', 'insights_received', { count: insights.length });
+            // Forward the model's insights to the renderer unless explicitly
+            // disabled. Stored on the stable session manager (created once),
+            // so the wire survives engine rebuilds on privacy toggles.
+            if (process.env.SHADOW_DISABLE_INSIGHT_RENDER !== '1') {
+              currentSessionManager.setModelInsights(insights);
+            }
           }
         });
       const refreshInferenceEngine = async () => {

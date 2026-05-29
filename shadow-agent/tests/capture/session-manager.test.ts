@@ -102,4 +102,32 @@ describe('createSessionManager', () => {
     manager.stop();
     expect(subscriptionStopped).toBe(true);
   });
+
+  it('quarantines model insights: setModelInsights replaces heuristic insights; clearing falls back', async () => {
+    const tempRoot = await mkdtemp(path.join(tmpdir(), 'shadow-session-insights-'));
+    tempDirs.push(tempRoot);
+
+    const manager = createSessionManager(() => null, { queuePersistenceRoot: tempRoot });
+
+    // No model insights yet -> heuristic-only fallback.
+    const before = await manager.getCurrentSnapshot();
+    expect(before?.state.shadowInsights.length ?? 0).toBeGreaterThan(0);
+    expect(before?.state.shadowInsights.every((insight) => insight.source === 'heuristic')).toBe(true);
+
+    // Model insights present -> model-only (never interleaved with heuristics).
+    manager.setModelInsights([
+      { kind: 'risk', source: 'model', confidence: 0.9, scope: 'session', summary: 'model: config churn', evidenceEventIds: [] }
+    ]);
+    const withModel = await manager.getCurrentSnapshot();
+    expect(withModel?.state.shadowInsights).toHaveLength(1);
+    expect(withModel?.state.shadowInsights[0]?.source).toBe('model');
+    expect(withModel?.state.shadowInsights[0]?.summary).toBe('model: config churn');
+
+    // Clearing model insights falls back to heuristics again.
+    manager.setModelInsights([]);
+    const cleared = await manager.getCurrentSnapshot();
+    expect(cleared?.state.shadowInsights.every((insight) => insight.source === 'heuristic')).toBe(true);
+
+    manager.stop();
+  });
 });

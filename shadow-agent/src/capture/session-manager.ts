@@ -7,12 +7,12 @@
  */
 import type { WebContents } from 'electron';
 import { DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS } from '../shared/privacy';
-import type { SnapshotPayload, LoadedSource, TranscriptPrivacySettings } from '../shared/schema';
+import type { SnapshotPayload, LoadedSource, TranscriptPrivacySettings, ShadowInsight } from '../shared/schema';
 import { buildRendererInput } from '../shared/renderer-input-adapter';
 import { createIncrementalParser } from './incremental-parser';
 import { driverRegistry } from './drivers';
 import { createEventBuffer, type EventBuffer } from './event-buffer';
-import { createIpcBridge } from './ipc-bridge';
+import { createIpcBridge, type IpcBridge } from './ipc-bridge';
 import { createLogger } from '../shared/logger';
 import type {
   CaptureSession,
@@ -29,6 +29,12 @@ export interface SessionManager {
   stop(): void;
   getBuffer(): EventBuffer;
   getCurrentSnapshot(): Promise<SnapshotPayload | null>;
+  /**
+   * Store the latest model-produced insights. They are merged into the next
+   * snapshot (quarantined: model insights replace heuristic ones when present)
+   * and a renderer re-pull is nudged via the IPC bridge.
+   */
+  setModelInsights(insights: ShadowInsight[]): void;
 }
 
 export function createSessionManager(
@@ -53,6 +59,8 @@ export function createSessionManager(
   let activeParser = createIncrementalParser(() => undefined);
   let transportSubscription: CaptureTransportSubscription | null = null;
   let bridgeCleanup: (() => void) | null = null;
+  let bridge: IpcBridge | null = null;
+  let latestModelInsights: ShadowInsight[] = [];
   let sessionTitle = 'Live session';
   const transport =
     options.transport && 'start' in options.transport
@@ -67,12 +75,25 @@ export function createSessionManager(
       path: activeSession?.path
     };
 
+    const rendererInput = buildRendererInput(events, {
+      source,
+      fallbackTitle: sessionTitle,
+      privacySettings: getPrivacy()
+    });
+
+    // Quarantine: when the model has produced insights, render those ONLY.
+    // Otherwise fall back to the heuristic insights from deriveState. The two
+    // are never interleaved — heuristic insights are tagged source:'heuristic'
+    // and serve purely as a no-model fallback.
+    const shadowInsights =
+      latestModelInsights.length > 0 ? latestModelInsights : rendererInput.state.shadowInsights;
+
     return {
-      ...buildRendererInput(events, {
-        source,
-        fallbackTitle: sessionTitle,
-        privacySettings: getPrivacy()
-      }),
+      ...rendererInput,
+      state: {
+        ...rendererInput.state,
+        shadowInsights
+      },
       captureQueue: buffer.getMetrics()
     };
   };
@@ -111,7 +132,7 @@ export function createSessionManager(
   return {
     async start(overridePath?: string) {
       // Start the IPC bridge
-      const bridge = createIpcBridge({
+      bridge = createIpcBridge({
         buffer,
         getWebContents,
         buildSnapshot,
@@ -167,6 +188,7 @@ export function createSessionManager(
         bridgeCleanup();
         bridgeCleanup = null;
       }
+      bridge = null;
       logger.info('capture', 'session_manager.stopped');
     },
 
@@ -176,6 +198,13 @@ export function createSessionManager(
 
     getCurrentSnapshot() {
       return buildSnapshot();
+    },
+
+    setModelInsights(insights: ShadowInsight[]) {
+      latestModelInsights = insights;
+      // Nudge the renderer to re-pull the snapshot so new model insights
+      // surface even between transcript events (and on idle / session-end).
+      bridge?.markDirty();
     },
   };
 }
