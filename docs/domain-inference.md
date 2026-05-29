@@ -1,10 +1,15 @@
 # Domain: Inference Engine
 
-> **Status: Landed on main** — Auth loader, context packager, prompt builder, response
-> parser, inference trigger, orchestrator, OpenCode client (`opencode-client.ts`),
-> provider selection (`inference-client-factory.ts`), direct Anthropic fallback, and
-> MCP server are on main. Runtime order: OpenCode when the SDK starts, otherwise
-> direct Anthropic (`SHADOW_INFERENCE_PROVIDER` can force either path).
+> **Status: engine on main; model→renderer wire + OpenAI-compatible provider added in the
+> INTERPRET→RENDER work (2026-05-29).** Auth loader, context packager, prompt builder, response
+> parser, inference trigger, orchestrator, OpenCode client (`opencode-client.ts`), provider
+> selection (`inference-client-factory.ts`), direct Anthropic fallback, and MCP server landed on
+> main. **Correction:** until the INTERPRET→RENDER work the engine's insights were produced but
+> only *logged* — the UI rendered heuristic insights only. Model insights now reach the renderer
+> (quarantined: model insights replace heuristic ones when present; heuristics are a labeled
+> no-model fallback). Runtime order: OpenCode when its SDK starts, otherwise direct Anthropic,
+> otherwise an OpenAI-compatible endpoint — `SHADOW_INFERENCE_PROVIDER` forces a path
+> (`openai` + `OPENAI_BASE_URL` + `SHADOW_INFERENCE_MODEL` for the OpenAI-compatible client).
 
 The inference engine is shadow-agent's brain — it consumes the observed agent's event
 stream and produces structured interpretations (phase, risk, predictions, confidence).

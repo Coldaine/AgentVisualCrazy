@@ -213,7 +213,7 @@ The inference engine integrates into `electron/main.ts`:
 8. ~~Inference trigger (`trigger.ts`)~~ — shipped
 9. ~~Shadow inference engine orchestrator (`shadow-inference-engine.ts`)~~ — shipped
 10. ~~MCP server (`shadow-mcp-server.ts`)~~ — shipped
-11. ~~Wire everything into `electron/main.ts`~~ — shipped, with continued fit-and-finish on top
+11. ~~Wire the engine into the Electron runtime (`electron/start-main-process.ts`)~~ — shipped. **Correction (2026-05-29):** the engine was wired, but its `onInsights` callback only *logged* the model's insights — they never reached the renderer, so the UI rendered heuristic (`source: 'heuristic'`) insights only. The model→renderer wire (`onInsights` → `SessionManager.setModelInsights` → quarantined `buildSnapshot` → IPC dirty-refresh) is now in place (INTERPRET→RENDER work). (`electron/main.ts` is a thin shim; the real wiring lives in `start-main-process.ts`.)
 
 Steps 1–5 produce testable units with no external dependencies. Step 6 is the first live integration point. Steps 7–11 build on top.
 

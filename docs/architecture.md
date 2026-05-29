@@ -145,8 +145,12 @@ remaining optional harness work is either implemented or explicitly deferred.
   and session manager landed on main via PR #27.
 - **Advanced Rendering**: Canvas2D + D3-Force renderer, overlay panels, and host abstraction
   landed on main via PR #26 and follow-up renderer hardening.
-- **Integration**: End-to-end local flow now exists on main; remaining work is fit-and-finish,
-  embed surfaces, and deeper inference-provider support.
+- **Integration**: The capture→render and capture→inference legs landed on main. The
+  inference→render leg — the shadow model's insights reaching the holographic graph — was
+  NOT connected (the engine produced insights, but `onInsights` only logged them); it is now
+  wired (model insights → `SessionManager.setModelInsights` → quarantined snapshot → renderer),
+  with an OpenAI-compatible provider option. See `docs/domain-inference.md`. Remaining work is
+  fit-and-finish, embed surfaces, and deeper inference-provider support.
 
 ### Phase 3+: Advanced Features (Planned)
 - **OpenCode Integration**: Deep bidirectional communication.
