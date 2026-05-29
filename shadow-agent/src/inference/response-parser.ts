@@ -45,6 +45,7 @@ function makeInsight(
 ): ShadowInsight {
   return {
     kind,
+    source: 'model',
     confidence: clamp(confidence),
     scope: 'session',
     summary,

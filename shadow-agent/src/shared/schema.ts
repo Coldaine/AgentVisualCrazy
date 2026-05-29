@@ -76,6 +76,14 @@ export interface CanonicalEvent<TPayload = Record<string, unknown>> {
 
 export interface ShadowInsight {
   kind: InsightKind;
+  /**
+   * Provenance of this insight. `'model'` = produced by the shadow inference
+   * model (see inference/response-parser.ts); `'heuristic'` = rule-based
+   * fallback (see shared/derive.ts buildInsights). The renderer quarantines
+   * the two: model insights are rendered when present, heuristic insights only
+   * as an explicitly-labeled fallback — they are never interleaved by kind.
+   */
+  source: 'model' | 'heuristic';
   confidence: number;
   scope: 'session' | 'agent' | 'file';
   summary: string;

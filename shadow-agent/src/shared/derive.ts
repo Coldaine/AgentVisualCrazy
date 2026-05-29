@@ -166,6 +166,7 @@ function buildInsights(title: string, phase: string, riskSignals: string[], next
   return [
     {
       kind: 'objective',
+      source: 'heuristic',
       confidence: 0.72,
       scope: 'session',
       summary: title,
@@ -173,6 +174,7 @@ function buildInsights(title: string, phase: string, riskSignals: string[], next
     },
     {
       kind: 'phase',
+      source: 'heuristic',
       confidence: 0.68,
       scope: 'session',
       summary: `Current phase appears to be ${phase}.`,
@@ -180,6 +182,7 @@ function buildInsights(title: string, phase: string, riskSignals: string[], next
     },
     ...riskSignals.map<ShadowInsight>((risk) => ({
       kind: 'risk',
+      source: 'heuristic',
       confidence: 0.61,
       scope: 'session',
       summary: risk,
@@ -187,6 +190,7 @@ function buildInsights(title: string, phase: string, riskSignals: string[], next
     })),
     ...nextMoves.slice(0, 2).map<ShadowInsight>((move) => ({
       kind: 'next_move',
+      source: 'heuristic',
       confidence: 0.58,
       scope: 'session',
       summary: move,

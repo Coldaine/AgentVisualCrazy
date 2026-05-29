@@ -13,7 +13,7 @@ import { appReducer, initialAppState } from './app-state';
 import { triggerPulsesForEvents } from './canvas/canvas-pulse';
 import { getHostCapabilities, type ShadowAgentHost } from './host';
 import { getRendererSurfaceAdapter } from './renderer-surface-adapter';
-import { formatClock, safeFileName, toLabel } from './view-model';
+import { deriveRiskLevel, formatClock, pickPrimaryModelInsight, safeFileName, toLabel } from './view-model';
 
 const LIVE_REFRESH_DEBOUNCE_MS = 300;
 
@@ -492,7 +492,11 @@ export default function App({ host }: ShadowAgentAppProps) {
         <div className="panels panels--3col">
           <Panel title="Graph" eyebrow="Agent topology" className="panel--wide panel--graph">
             <div className="graph-shell">
-              <GraphCanvas agentNodes={snapshot?.state.agentNodes ?? []} />
+              <GraphCanvas
+                agentNodes={snapshot?.state.agentNodes ?? []}
+                latestInsight={snapshot ? pickPrimaryModelInsight(snapshot.state.shadowInsights) : undefined}
+                riskLevel={snapshot ? deriveRiskLevel(snapshot.state.riskSignals) : undefined}
+              />
             </div>
           </Panel>
 
