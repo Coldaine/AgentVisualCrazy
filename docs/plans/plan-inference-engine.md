@@ -60,7 +60,7 @@ Port from sidecar's `src/utils/auth-json.js`. Priority chain:
 3. `~/.shadow-agent/.env` (legacy plaintext fallback, only with explicit consent)
 4. `~/.local/share/opencode/auth.json` (legacy OpenCode fallback, only with explicit consent)
 
-The auth loader runs once at app startup in `electron/main.ts`, before any inference code. It sets `process.env` values so downstream code can use them transparently.
+The auth loader runs once at app startup in `electron/start-main-process.ts`, before any inference code. It sets `process.env` values so downstream code can use them transparently.
 
 Legacy file-based fallbacks are disabled by default and require
 `SHADOW_ALLOW_FILE_CREDENTIAL_FALLBACK=1`. When enabled, supported provider keys are
@@ -184,13 +184,13 @@ Three tools:
 
 All tools are annotated `readOnlyHint: true`. Transport: stdio (McpServer + StdioServerTransport).
 
-The MCP server starts as a child process from `electron/main.ts` or as a standalone CLI command (`shadow-agent mcp`).
+The MCP server starts as a child process from `electron/start-main-process.ts` or as a standalone CLI command (`shadow-agent mcp`).
 
 ---
 
 ## 12. Wiring to Electron Main
 
-The inference engine integrates into `electron/main.ts`:
+The inference engine integrates into the Electron runtime (`electron/start-main-process.ts`):
 
 1. On app ready: call `loadCredentials()` from auth.ts
 2. On session start: attempt `startInferenceServer()` — if it fails, enable direct API fallback
