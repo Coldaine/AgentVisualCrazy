@@ -85,6 +85,25 @@ describe('createOpenAiCompatibleClient', () => {
     await expect(client!.infer({ systemPrompt: 's', userMessage: 'u' })).rejects.toThrow(/returned 500/);
   });
 
+  it('throws a typed error when a 2xx body is not valid JSON', async () => {
+    const fetchImpl = vi.fn(
+      async () =>
+        ({
+          ok: true,
+          status: 200,
+          text: async () => 'upstream proxy says hello, not json',
+          json: async () => {
+            throw new SyntaxError('Unexpected token');
+          }
+        }) as unknown as Response
+    );
+    const client = createOpenAiCompatibleClient({
+      baseUrl: 'http://x/v1',
+      fetchImpl: fetchImpl as unknown as typeof fetch
+    });
+    await expect(client!.infer({ systemPrompt: 's', userMessage: 'u' })).rejects.toThrow(/invalid JSON/);
+  });
+
   it('throws a timeout error when the request aborts', async () => {
     const fetchImpl = vi.fn(async () => {
       const err = new Error('aborted');

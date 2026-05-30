@@ -19,7 +19,8 @@ scripts/*.d.mts
 .claude/agents/
 .gemini/agents/
 
-# Local git hooks managed by external tooling (entire)
+# External tooling state (entire) — re-injects locally; keep it out of the repo
+.entire/
 .githooks/commit-msg
 .githooks/post-commit
 .githooks/prepare-commit-msg

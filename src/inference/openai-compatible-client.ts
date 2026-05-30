@@ -104,7 +104,14 @@ export function createOpenAiCompatibleClient(
         throw new Error(`OpenAI-compatible endpoint returned ${response.status}: ${bodyText.slice(0, 200)}`);
       }
 
-      const json = (await response.json()) as ChatCompletionResponse;
+      const bodyText = await safeReadText(response);
+      let json: ChatCompletionResponse;
+      try {
+        json = JSON.parse(bodyText) as ChatCompletionResponse;
+      } catch {
+        logger.warn('inference', 'openai_compatible.invalid_json', { status: response.status });
+        throw new Error(`OpenAI-compatible endpoint returned invalid JSON: ${bodyText.slice(0, 200)}`);
+      }
       const text = json.choices?.[0]?.message?.content ?? '';
       const latencyMs = now() - start;
 
