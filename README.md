@@ -1,74 +1,58 @@
-# Shadow Agent
+# AgentVisualCrazy
 
-`shadow-agent` is a passive observer for agent sessions.
+A passive visual observer for AI coding agents. It watches an agent's session (Claude Code
+today), interprets what the agent is doing via a separate "shadow" model, and renders it as a
+live, glassy visualization you can glance at instead of reading the transcript.
 
-This README is for the app inside the larger workspace. For workspace layout, shared tooling,
-and the role of `third_party/`, see the repo-root [README.md](../README.md).
+Read [`docs/north-star.md`](docs/north-star.md) for the vision and
+[`docs/plans/roadmap.md`](docs/plans/roadmap.md) for what's next.
 
-It combines:
-- Sidecar-style separation between the observed agent and a secondary shadow runtime
-- Agent Flow-style event ingestion, replay, and visualization
+> "Shadow agent" is the concept — one agent quietly shadowing another. The product is **AgentVisualCrazy**.
 
-The current slice is intentionally small:
-- loads a built-in replay fixture on startup
-- opens replay JSONL or Claude transcript JSONL from disk
-- normalizes events into a canonical schema
-- derives a lightweight session state with risks, next moves, and file attention
-- renders a platform-agnostic web dashboard with graph, timeline, transcript, and insight panels
-- exports canonical replay JSONL back to disk
+## What it does today
 
-Electron is now just one optional host shell. The shared renderer mounts through a host contract,
-ships a standalone library build, and can also be registered as a custom element for web embeds.
+- Live-tails Claude Code JSONL transcripts, normalizing them into one canonical event stream
+- Runs a separate model (local-only by default) that interprets the session
+- Renders a Canvas2D + D3-Force graph and a glass-panel dashboard (timeline, transcript, file
+  attention, insights) with a LIVE source badge
+- Loads/exports replay JSONL; opens a built-in fixture on startup
 
-## Privacy Defaults
+It is **read-only** — it never writes files or acts on behalf of the observed agent.
 
-Shadow-agent runs in local-only mode by default.
+## Run it
 
-- Transcript-like content is sanitized before it is rendered, exported, persisted, or prepared for prompt delivery.
-- Off-host inference stays disabled until the user explicitly opts in.
-- Raw transcript storage/export requires its own explicit opt-in.
+```bash
+npm install      # also installs the shared .githooks (via the prepare script)
+npm test         # tsc --noEmit + vitest (47 files / 427 tests)
+npm run build    # web + renderer + electron bundles
+npm start        # launch the Electron app
+```
 
-The Electron app exposes these consent gates in its Privacy panel and persists them locally in
-`~/.shadow-agent/privacy.json`. Environment variables still work and override the saved file:
+## Privacy defaults
+
+Local-only by default. Transcript text is sanitized before it is rendered, exported, persisted,
+or sent to a model. Off-host inference and raw-transcript storage each require explicit opt-in
+(via the in-app Privacy panel, or environment variables):
 
 ```bash
 SHADOW_ALLOW_OFF_HOST_INFERENCE=true
 SHADOW_ALLOW_RAW_TRANSCRIPT_STORAGE=true
 ```
 
-## Commands
+Inference credentials prefer secure sources: `process.env` →
+`~/.shadow-agent/credentials.enc.json` (encrypted) → legacy plaintext only when
+`SHADOW_ALLOW_FILE_CREDENTIAL_FALLBACK=1`. See [`docs/domain-inference.md`](docs/domain-inference.md).
 
-```bash
-npm install
-npm test
-npm run build:web
-npm run build
+## Layout
+
+```
+src/             — the app: capture / inference / renderer / electron / shared / mcp
+tests/           — vitest suite + fixtures
+docs/            — north-star, architecture, roadmap, domain docs
+  ideas/repoviz/ — preserved RepoViz UI idea bank (the visual ambition)
 ```
 
-`npm install` at the repo root installs the shared `.githooks/` (via the
-root `prepare` script). The `npm install` inside `shadow-agent/` no longer
-runs that hook installer — run it once at the repo root.
+## More
 
-`npm run build:web` emits the reusable renderer bundle in `dist-web/`.
-
-After `npm run build`, launch the Electron shell with:
-
-```bash
-npx electron dist-electron/main.cjs
-```
-
-## Credentials
-
-Inference credentials prefer secure sources:
-
-- `process.env`
-- `~/.shadow-agent/credentials.enc.json` (encrypted local store)
-- legacy plaintext fallbacks only when `SHADOW_ALLOW_FILE_CREDENTIAL_FALLBACK=1`
-
-See [`docs/domain-inference.md`](../docs/domain-inference.md) for the consent workflow
-and secure permission guidance.
-
-## Scope
-
-This is a read-only prototype. It does not edit files, intervene in the main agent session, or spawn helper agents.
-
+- [`docs/architecture.md`](docs/architecture.md) — technical decisions, domain map
+- [`AGENTS.md`](AGENTS.md) — rules for AI agents working in this repo
