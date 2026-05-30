@@ -1,26 +1,58 @@
 # AgentVisualCrazy
 
-This is the umbrella workspace for the shadow-agent project.
+A passive visual observer for AI coding agents. It watches an agent's session (Claude Code
+today), interprets what the agent is doing via a separate "shadow" model, and renders it as a
+live, glassy visualization you can glance at instead of reading the transcript.
 
-Layout:
-- `shadow-agent/`: the actual product under development
-- `docs/`: product notes and implementation plans
-- `third_party/sidecar/`: reference clone for runtime and shadow-session patterns
-- `third_party/agent-flow/`: reference clone for ingestion, replay, and visualization patterns
+Read [`docs/north-star.md`](docs/north-star.md) for the vision and
+[`docs/plans/roadmap.md`](docs/plans/roadmap.md) for what's next.
 
-How to read this repo:
-- this root `README.md` explains the workspace-level layout and shared tooling
-- `shadow-agent/README.md` explains the app itself: scope, commands, and current behavior
+> "Shadow agent" is the concept — one agent quietly shadowing another. The product is **AgentVisualCrazy**.
 
-The `third_party` repos are disposable local references.
-- They exist so we can inspect and port patterns into `shadow-agent/`.
-- Product code should not import from them at runtime.
-- Once a pattern has been absorbed or we no longer need the reference checkout, removing it is fine.
-- They are intentionally not part of the main repo history.
+## What it does today
 
-Repo-root Git hooks are sourced from `.githooks/` and auto-installed during `npm install`.
-Pre-push runs the shadow-agent test suite once before push.
+- Live-tails Claude Code JSONL transcripts, normalizing them into one canonical event stream
+- Runs a separate model (local-only by default) that interprets the session
+- Renders a Canvas2D + D3-Force graph and a glass-panel dashboard (timeline, transcript, file
+  attention, insights) with a LIVE source badge
+- Loads/exports replay JSONL; opens a built-in fixture on startup
 
-The shadow system prompt lives in `shadow-agent/src/inference/prompts.ts` as a single
-source of truth (both runtime template literal and rationale doc comment). No generation
-pipeline. See `docs/tooling-philosophy.md` for why.
+It is **read-only** — it never writes files or acts on behalf of the observed agent.
+
+## Run it
+
+```bash
+npm install      # also installs the shared .githooks (via the prepare script)
+npm test         # tsc --noEmit + vitest (47 files / 427 tests)
+npm run build    # web + renderer + electron bundles
+npm start        # launch the Electron app
+```
+
+## Privacy defaults
+
+Local-only by default. Transcript text is sanitized before it is rendered, exported, persisted,
+or sent to a model. Off-host inference and raw-transcript storage each require explicit opt-in
+(via the in-app Privacy panel, or environment variables):
+
+```bash
+SHADOW_ALLOW_OFF_HOST_INFERENCE=true
+SHADOW_ALLOW_RAW_TRANSCRIPT_STORAGE=true
+```
+
+Inference credentials prefer secure sources: `process.env` →
+`~/.shadow-agent/credentials.enc.json` (encrypted) → legacy plaintext only when
+`SHADOW_ALLOW_FILE_CREDENTIAL_FALLBACK=1`. See [`docs/domain-inference.md`](docs/domain-inference.md).
+
+## Layout
+
+```
+src/             — the app: capture / inference / renderer / electron / shared / mcp
+tests/           — vitest suite + fixtures
+docs/            — north-star, architecture, roadmap, domain docs
+  ideas/repoviz/ — preserved RepoViz UI idea bank (the visual ambition)
+```
+
+## More
+
+- [`docs/architecture.md`](docs/architecture.md) — technical decisions, domain map
+- [`AGENTS.md`](AGENTS.md) — rules for AI agents working in this repo

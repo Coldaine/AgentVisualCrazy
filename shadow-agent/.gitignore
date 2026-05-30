@@ -1,8 +1,0 @@
-dist/
-dist-electron/
-dist-web/
-node_modules/
-
-coverage/
-.env
-scripts/*.d.mts

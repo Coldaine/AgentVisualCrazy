@@ -1,15 +1,27 @@
+# Dependencies
 node_modules/
+
+# Build output
+dist/
+dist-electron/
+dist-web/
+coverage/
+
+# Local env
+.env
+
+# Generated types
+scripts/*.d.mts
+
+# Agent / tooling state (not part of the product)
+.omc/
+.opencode/
 .claude/agents/
 .gemini/agents/
+
+# External tooling state (entire) — re-injects locally; keep it out of the repo
+.entire/
 .githooks/commit-msg
 .githooks/post-commit
 .githooks/prepare-commit-msg
 .githooks/*.pre-entire
-third_party/*
-!third_party/README.md
-
-shadow-agent/node_modules/
-shadow-agent/dist/
-shadow-agent/dist-electron/
-
-.omc/

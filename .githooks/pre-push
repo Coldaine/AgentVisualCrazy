@@ -1,4 +1,4 @@
 #!/usr/bin/env sh
 set -e
 
-npm test --prefix shadow-agent
+npm test
