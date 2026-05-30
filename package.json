@@ -12,6 +12,7 @@
     "build": "npm run build:web && npm run build:renderer && npm run build:electron",
     "start": "electron dist-electron/main.cjs",
     "test": "tsc --noEmit && vitest run",
+    "test:live": "vitest run --config vitest.live.config.ts",
     "test:coverage": "vitest run --coverage",
     "hooks:install": "node scripts/install-git-hooks.mjs",
     "prepare": "npm run hooks:install"
