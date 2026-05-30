@@ -11,12 +11,32 @@ import { join } from 'node:path';
 import { mkdtemp } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
+
+// file-replay-store and session-io build module-level loggers with a bare
+// `createLogger()` whose minLevel is read from SHADOW_LOG_LEVEL at IMPORT time.
+// If the ambient env sets warn|error, the INFO logs these tests assert get
+// filtered out and the suite fails nondeterministically. Pin the level before
+// those imports run (vi.hoisted is hoisted above all imports) and restore after.
+const ORIGINAL_LOG_LEVEL = vi.hoisted(() => {
+  const previous = process.env['SHADOW_LOG_LEVEL'];
+  process.env['SHADOW_LOG_LEVEL'] = 'debug';
+  return previous;
+});
+
 import { createLogger, type StructuredLogger } from '../src/shared/logger';
 import { FileReplayStore } from '../src/persistence/file-replay-store';
 import { createSnapshot, buildFixtureSnapshot, loadSnapshotFromFile } from '../src/electron/session-io';
 import { parseReplay } from '../src/shared/replay-store';
 import type { LoadedSource } from '../src/shared/schema';
+
+afterAll(() => {
+  if (ORIGINAL_LOG_LEVEL === undefined) {
+    delete process.env['SHADOW_LOG_LEVEL'];
+  } else {
+    process.env['SHADOW_LOG_LEVEL'] = ORIGINAL_LOG_LEVEL;
+  }
+});
 
 const REPLAY_FIXTURES = join(import.meta.dirname, 'fixtures/replays');
 
