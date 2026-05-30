@@ -337,6 +337,23 @@ describe('parser fallback', () => {
     ]);
   });
 
+  it('tolerates non-array riskSignals/observations instead of throwing', () => {
+    // Valid JSON with the wrong shape is untrusted provider output, not a parse
+    // failure — it must degrade gracefully, never throw out of parseModelResponse.
+    expect(() => parseModelResponse('{"observations":42}')).not.toThrow();
+    expect(() => parseModelResponse('{"riskSignals":{}}')).not.toThrow();
+    expect(parseModelResponse('{"observations":42}')).toEqual([]);
+    expect(parseModelResponse('{"riskSignals":"oops"}')).toEqual([]);
+
+    // Recognized fields still render even when a sibling field has the wrong shape.
+    expect(parseModelResponse('{"phase":"testing","observations":42}')).toContainEqual(
+      expect.objectContaining({ kind: 'phase', summary: 'Phase: testing' })
+    );
+    // Null elements inside a riskSignals array must be skipped, not dereferenced.
+    expect(() => parseModelResponse('{"riskSignals":[null,42]}')).not.toThrow();
+    expect(parseModelResponse('{"riskSignals":[null,42]}')).toEqual([]);
+  });
+
   it('FakeInferenceClient can feed malformed model text into the production parser', async () => {
     // This keeps the fake client tied to the real parser path used by orchestrator-style tests.
     const client = new FakeInferenceClient();

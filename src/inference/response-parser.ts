@@ -147,8 +147,13 @@ export function parseModelResponse(text: string): ShadowInsight[] {
     );
   }
 
-  // Risk signals
-  for (const rs of parsed.riskSignals ?? []) {
+  // Risk signals. `parsed` is untrusted provider JSON, so the field may not be
+  // an array (e.g. `{"riskSignals": 42}`) and elements may not be objects —
+  // guard both so malformed output is ignored rather than throwing.
+  const riskSignals: unknown[] = Array.isArray(parsed.riskSignals) ? parsed.riskSignals : [];
+  for (const raw of riskSignals) {
+    if (!raw || typeof raw !== 'object') continue;
+    const rs = raw as { signal?: string; severity?: string; confidence?: number };
     if (!rs.signal) continue;
     insights.push(
       makeInsight(
@@ -183,10 +188,11 @@ export function parseModelResponse(text: string): ShadowInsight[] {
     );
   }
 
-  // Observations
-  for (const obs of parsed.observations ?? []) {
-    if (typeof obs !== 'string') continue;
-    if (!obs) continue;
+  // Observations. Same untrusted-JSON guard: ignore a non-array `observations`
+  // (e.g. `{"observations": 42}`) and skip non-string / empty entries.
+  const observations: unknown[] = Array.isArray(parsed.observations) ? parsed.observations : [];
+  for (const obs of observations) {
+    if (typeof obs !== 'string' || !obs) continue;
     insights.push(makeInsight('summary', obs, 0.6));
   }
 
