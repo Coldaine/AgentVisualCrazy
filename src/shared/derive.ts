@@ -41,8 +41,15 @@ function extractFilePath(
   capabilities: HarnessCapabilities
 ): string | null {
   if (capabilities.fileAttention === 'tool-args') {
+    // Tool args live at the payload top level for some adapters and nested
+    // under `payload.args` for others (the claude-code normalizer nests them).
+    // Check both so file attention works regardless of which produced the event.
+    const nested =
+      event.payload.args && typeof event.payload.args === 'object'
+        ? (event.payload.args as Record<string, unknown>)
+        : undefined;
     for (const key of TOOL_FILE_KEYS) {
-      const value = event.payload[key];
+      const value = event.payload[key] ?? nested?.[key];
       if (typeof value === 'string' && value.length > 0) {
         return value;
       }
