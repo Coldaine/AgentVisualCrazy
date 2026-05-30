@@ -18,7 +18,9 @@ const APP_TITLE = 'Shadow Agent';
 const logger = createLogger({ minLevel: 'info' });
 
 function getIndexHtmlPath(): string {
-  return path.resolve(app.getAppPath(), 'dist', 'index.html');
+  // app.getAppPath() resolves to dist-electron/ (the bundled main.cjs lives there);
+  // the renderer bundle is one level up at dist/index.html.
+  return path.resolve(app.getAppPath(), '..', 'dist', 'index.html');
 }
 
 function getPreloadPath(): string {

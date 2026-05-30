@@ -4,6 +4,8 @@ import path from 'node:path';
 
 export default defineConfig({
   plugins: [react()],
+  // Relative asset paths so the built index.html loads under Electron's file:// protocol.
+  base: './',
   resolve: {
     alias: {
       '@': path.resolve(__dirname, 'src')
