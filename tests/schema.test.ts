@@ -1,96 +1,62 @@
-/**
- * Schema contract tests — locks in the additive widening for the multi-harness
- * MVP refactor. See docs/plans/plan-multi-harness-mvp.md (PR 2).
- *
- * The changes under test:
- *   - `EventSource` is open (`string`) so new driver registries can register
- *     their own sources without modifying schema.ts.
- *   - `CanonicalEvent` gains optional `harnessId`, `driverVersion`,
- *     `correlationId` for harness identity.
- *   - `AgentNode` gains optional `harnessId` for per-harness palette accents.
- *
- * Backward compatibility: all new fields are optional; existing literal
- * `source` values keep working unchanged.
- */
 import { describe, expect, it } from 'vitest';
-import {
-  KnownEventSources,
-  type AgentNode,
-  type CanonicalEvent,
-  type EventSource,
-  type KnownEventSource,
-} from '../src/shared/schema';
+import { deriveState } from '../src/shared/derive';
+import { parseReplay, serializeEvents } from '../src/shared/replay-store';
+import { KnownEventSources, type CanonicalEvent } from '../src/shared/schema';
 
-describe('schema — EventSource widening', () => {
-  it('KnownEventSources contains the four shipped-in-tree sources', () => {
+describe('schema runtime contracts', () => {
+  it('exports the shipped source literals as unique runtime strings', () => {
+    // schema.ts has no runtime validator, so this file only tests exported values and round trips.
     expect(KnownEventSources).toEqual({
       claudeHook: 'claude-hook',
       claudeTranscript: 'claude-transcript',
       replay: 'replay',
       shadowRuntime: 'shadow-runtime',
     });
+    expect(new Set(Object.values(KnownEventSources)).size).toBe(Object.keys(KnownEventSources).length);
   });
 
-  it('accepts each KnownEventSource literal', () => {
-    const sources: KnownEventSource[] = [
-      'claude-hook',
-      'claude-transcript',
-      'replay',
-      'shadow-runtime',
+  it('replay serialization preserves open source strings and harness identity fields', () => {
+    const events = [
+      makeEvent({
+        id: 'known-source',
+        source: KnownEventSources.claudeTranscript,
+      }),
+      makeEvent({
+        id: 'future-source',
+        source: 'cursor-hook',
+        harnessId: 'cursor',
+        driverVersion: '0.2.1',
+        correlationId: 'workspace:/repo',
+      }),
     ];
-    for (const s of sources) {
-      const event: CanonicalEvent = makeEvent({ source: s });
-      expect(event.source).toBe(s);
-    }
-  });
 
-  it('accepts arbitrary driver source strings (open union)', () => {
-    const future: EventSource = 'cursor-hook'; // not yet in KnownEventSources
-    const event: CanonicalEvent = makeEvent({ source: future });
-    expect(event.source).toBe('cursor-hook');
-  });
-});
-
-describe('schema — CanonicalEvent harness identity fields', () => {
-  it('accepts events without any harness fields (back-compat)', () => {
-    const event: CanonicalEvent = makeEvent({});
-    expect(event.harnessId).toBeUndefined();
-    expect(event.driverVersion).toBeUndefined();
-    expect(event.correlationId).toBeUndefined();
-  });
-
-  it('accepts events with harness identity fields populated', () => {
-    const event: CanonicalEvent = makeEvent({
+    // The runtime contract is that persistence does not discard future harness metadata.
+    const parsed = parseReplay(serializeEvents(events));
+    expect(parsed.map((event) => event.source)).toEqual(['claude-transcript', 'cursor-hook']);
+    expect(parsed[1]).toMatchObject({
       harnessId: 'cursor',
       driverVersion: '0.2.1',
-      correlationId: 'workspace:/home/user/project',
+      correlationId: 'workspace:/repo',
     });
-    expect(event.harnessId).toBe('cursor');
-    expect(event.driverVersion).toBe('0.2.1');
-    expect(event.correlationId).toBe('workspace:/home/user/project');
-  });
-});
-
-describe('schema — AgentNode harness identity', () => {
-  it('accepts nodes without harnessId (back-compat)', () => {
-    const node: AgentNode = {
-      id: 'node-1',
-      label: 'agent',
-      state: 'active',
-      toolCount: 0,
-    };
-    expect(node.harnessId).toBeUndefined();
   });
 
-  it('accepts nodes with harnessId populated', () => {
-    const node: AgentNode = {
-      id: 'node-1',
-      label: 'agent',
+  it('deriveState carries harness identity from tool events onto renderer agent nodes', () => {
+    const events = [
+      makeEvent({
+        kind: 'tool_started',
+        actor: 'cursor-agent',
+        source: 'cursor-hook',
+        harnessId: 'cursor',
+        payload: { toolName: 'read_file', args: { filePath: 'src/index.ts' } },
+      }),
+    ];
+
+    // Renderer coloring depends on this runtime propagation, not on TypeScript accepting a field.
+    expect(deriveState(events).agentNodes[0]).toMatchObject({
+      id: 'cursor-agent',
       harnessId: 'cursor',
-      state: 'active',
-      toolCount: 0,
-    };
-    expect(node.harnessId).toBe('cursor');
+      toolCount: 1,
+    });
   });
 });
 

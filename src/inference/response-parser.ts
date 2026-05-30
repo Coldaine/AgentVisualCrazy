@@ -185,6 +185,7 @@ export function parseModelResponse(text: string): ShadowInsight[] {
 
   // Observations
   for (const obs of parsed.observations ?? []) {
+    if (typeof obs !== 'string') continue;
     if (!obs) continue;
     insights.push(makeInsight('summary', obs, 0.6));
   }

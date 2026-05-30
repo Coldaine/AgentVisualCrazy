@@ -238,9 +238,17 @@ describe('record-2d-context', () => {
     expect(ctx.getRecordedCommands()).toHaveLength(0);
   });
 
-  it('returns empty unimplemented methods set initially', () => {
-    getUnimplementedMethods().length = 0;
-    expect(getUnimplementedMethods()).toHaveLength(0);
+  it('reports unimplemented methods through defensive snapshots', () => {
+    const ctx = createRecordedContext();
+    expect(() => {
+      (ctx as unknown as { measureText(_text: string): void }).measureText('test');
+    }).toThrow(/unimplemented method "measureText"/);
+
+    // Mutating the returned array must not erase the registry used to diagnose missing canvas APIs.
+    const snapshot = getUnimplementedMethods();
+    expect(snapshot).toContain('measureText');
+    snapshot.length = 0;
+    expect(getUnimplementedMethods()).toContain('measureText');
   });
 
   it('records a typical production draw flow', () => {
@@ -315,8 +323,8 @@ describe('record-2d-context', () => {
   it('throws on calling an unimplemented method', () => {
     const ctx = createRecordedContext();
     expect(() => {
-      (ctx as unknown as { measureText(_text: string): void }).measureText('test');
-    }).toThrow(/unimplemented method "measureText"/);
+      (ctx as unknown as { resetTransform(): void }).resetTransform();
+    }).toThrow(/unimplemented method "resetTransform"/);
   });
 
   it('throws on setting an unimplemented property', () => {

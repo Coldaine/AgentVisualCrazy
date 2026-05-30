@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { SnapshotPayload } from '../../src/shared/schema';
+import type { SnapshotPayload, TranscriptPrivacySettings } from '../../src/shared/schema';
 
 const handleMock = vi.fn();
 const removeHandlerMock = vi.fn();
@@ -221,41 +221,57 @@ describe('registerIpcHandlers', () => {
 });
 
 // ---------------------------------------------------------------------------
-// Preload bridge surface contract
+// Live IPC behavior
 // ---------------------------------------------------------------------------
 
-describe('ShadowAgentBridge surface', () => {
-  it('exposes the live bridge methods alongside the file operations', async () => {
-    // Import the type and verify the bridge object shape matches
-    const { getShadowAgentBridge } = await import('../../src/electron/renderer-host');
-    const bridge = {
-      bootstrap: async () => makeSnapshot(),
-      onLiveEvents: () => () => undefined,
-      getLiveSnapshot: async () => null as SnapshotPayload | null,
-      openReplayFile: async () => null as SnapshotPayload | null,
-      getPrivacyPolicy: async () => makeSnapshot().privacy,
-      updatePrivacySettings: async () => makeSnapshot().privacy,
-      exportReplayJsonl: async (_events = [], _suggestedFileName?: string, _options?: { storeRawTranscript?: boolean }) => ({ canceled: true })
+describe('registerIpcHandlers live settings wiring', () => {
+  it('uses the latest privacy settings for later bootstrap and open-replay handlers', async () => {
+    handleMock.mockReset();
+    removeHandlerMock.mockReset();
+    vi.resetModules();
+
+    const { registerIpcHandlers } = await import('../../src/electron/start-main-process');
+    const { buildFixtureSnapshot, pickOpenFile, loadSnapshotFromFile } = await import('../../src/electron/session-io');
+    const fixtureDir = fileURLToPath(new URL('../fixtures/replays', import.meta.url));
+    const filePath = path.join(fixtureDir, 'happy-path.replay.jsonl');
+    const snapshot = makeSnapshot();
+    let privacySettings: TranscriptPrivacySettings = {
+      allowRawTranscriptStorage: false,
+      allowOffHostInference: false
     };
-    (globalThis as unknown as { window: { shadowAgent: typeof bridge } }).window = { shadowAgent: bridge };
+    const updateSettings = vi.fn(async (updates: Partial<TranscriptPrivacySettings>) => {
+      privacySettings = { ...privacySettings, ...updates };
+      return privacySettings;
+    });
 
-    const result = getShadowAgentBridge();
-    expect(typeof result.bootstrap).toBe('function');
-    expect(typeof result.onLiveEvents).toBe('function');
-    expect(typeof result.getLiveSnapshot).toBe('function');
-    expect(typeof result.openReplayFile).toBe('function');
-    expect(typeof result.exportReplayJsonl).toBe('function');
-    expect(Object.keys(result).sort()).toEqual([
-      'bootstrap',
-      'exportReplayJsonl',
-      'getLiveSnapshot',
-      'getPrivacyPolicy',
-      'onLiveEvents',
-      'openReplayFile',
-      'updatePrivacySettings'
-    ]);
+    vi.mocked(buildFixtureSnapshot).mockReturnValue(snapshot);
+    vi.mocked(pickOpenFile).mockResolvedValue(filePath);
+    vi.mocked(loadSnapshotFromFile).mockResolvedValue(snapshot);
 
-    Reflect.deleteProperty(globalThis, 'window');
+    registerIpcHandlers(() => null, {
+      getSettings: () => privacySettings,
+      updateSettings
+    });
+
+    const updateHandler = getHandlerFor('shadow-agent:update-privacy-settings');
+    await updateHandler(undefined, { allowOffHostInference: true });
+    const bootstrapHandler = getHandlerFor('shadow-agent:bootstrap');
+    await bootstrapHandler();
+    const openReplayHandler = getHandlerFor('shadow-agent:open-replay-file');
+    await openReplayHandler();
+
+    // This guards production handler wiring that would break if settings were captured once at registration.
+    expect(buildFixtureSnapshot).toHaveBeenCalledWith({
+      allowRawTranscriptStorage: false,
+      allowOffHostInference: true
+    });
+    expect(loadSnapshotFromFile).toHaveBeenCalledWith(
+      filePath,
+      expect.objectContaining({
+        allowRawTranscriptStorage: false,
+        allowOffHostInference: true
+      })
+    );
   });
 });
 

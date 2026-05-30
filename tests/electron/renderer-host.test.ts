@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type { ShadowAgentBridge } from '../../src/shared/schema';
+import type { ShadowAgentBridge, SnapshotPayload } from '../../src/shared/schema';
 import { createElectronHost, getShadowAgentBridge } from '../../src/electron/renderer-host';
 
 function makePrivacyPolicy() {
@@ -8,6 +8,35 @@ function makePrivacyPolicy() {
     allowOffHostInference: false,
     processingMode: 'local-only' as const,
     transcriptHandling: 'sanitized-by-default' as const
+  };
+}
+
+function makeSnapshot(title: string): SnapshotPayload {
+  return {
+    source: { kind: 'fixture', label: title },
+    record: {
+      sessionId: 's',
+      title,
+      startedAt: '2026-01-01T00:00:00.000Z',
+      updatedAt: '2026-01-01T00:00:00.000Z',
+      source: 'replay',
+      eventCount: 0
+    },
+    state: {
+      sessionId: 's',
+      title,
+      currentObjective: title,
+      activePhase: 'idle',
+      agentNodes: [],
+      timeline: [],
+      transcript: [],
+      fileAttention: [],
+      riskSignals: [],
+      nextMoves: [],
+      shadowInsights: []
+    },
+    events: [],
+    privacy: makePrivacyPolicy()
   };
 }
 
@@ -40,26 +69,33 @@ describe('electron renderer host', () => {
     );
   });
 
-  it('adapts the preload bridge into the platform-agnostic renderer host', async () => {
+  it('delegates every host capability to the preload bridge', async () => {
+    const snapshot = makeSnapshot('initial snapshot');
+    const privacyPolicy = makePrivacyPolicy();
+    const updatedPrivacyPolicy = { ...privacyPolicy, allowOffHostInference: true, processingMode: 'off-host-opted-in' as const };
     const bridge: ShadowAgentBridge = {
-      bootstrap: vi.fn(async () => {
-        throw new Error('not used');
-      }),
+      bootstrap: vi.fn(async () => snapshot),
       onLiveEvents: vi.fn(() => vi.fn()),
       getLiveSnapshot: vi.fn(async () => null),
       openReplayFile: vi.fn(async () => null),
-      getPrivacyPolicy: vi.fn(async () => makePrivacyPolicy()),
-      updatePrivacySettings: vi.fn(async () => makePrivacyPolicy()),
+      getPrivacyPolicy: vi.fn(async () => privacyPolicy),
+      updatePrivacySettings: vi.fn(async () => updatedPrivacyPolicy),
       exportReplayJsonl: vi.fn(async () => ({ canceled: true }))
     };
 
     const host = createElectronHost(bridge);
 
-    expect(host.loadInitialSnapshot).not.toBe(bridge.bootstrap);
+    // Delegation checks catch broken Electron-to-renderer wiring, not just object shape drift.
+    await expect(host.loadInitialSnapshot()).resolves.toBe(snapshot);
     await host.openReplayFile?.();
+    await host.getPrivacyPolicy?.();
+    await host.updatePrivacySettings?.({ allowOffHostInference: true });
     await host.exportReplayJsonl?.([], 'session.jsonl');
 
+    expect(bridge.bootstrap).toHaveBeenCalledTimes(1);
     expect(bridge.openReplayFile).toHaveBeenCalledTimes(1);
+    expect(bridge.getPrivacyPolicy).toHaveBeenCalledTimes(1);
+    expect(bridge.updatePrivacySettings).toHaveBeenCalledWith({ allowOffHostInference: true });
     expect(bridge.exportReplayJsonl).toHaveBeenCalledWith([], 'session.jsonl');
   });
 });

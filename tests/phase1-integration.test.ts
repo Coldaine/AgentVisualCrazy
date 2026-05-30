@@ -107,7 +107,7 @@ describe('Phase 1 integration: replay fixtures → deriveState', () => {
     expect(state.fileAttention.some((f) => f.filePath.includes('.spec.ts'))).toBe(true);
   });
 
-  it('all valid fixture replays produce valid DerivedState without throwing', () => {
+  it('all valid fixture replays preserve cross-pipeline DerivedState invariants', () => {
     const fixtures = [
       'happy-path.replay.jsonl',
       'subagent-flow.replay.jsonl',
@@ -115,10 +115,17 @@ describe('Phase 1 integration: replay fixtures → deriveState', () => {
     ];
     for (const fname of fixtures) {
       const raw = readReplayFixture(fname);
-      expect(() => {
-        const events = parseReplay(raw);
-        deriveState(events);
-      }).not.toThrow();
+      const events = parseReplay(raw);
+      const state = deriveState(events, fname);
+
+      // Cross-fixture invariants catch duplicate smoke coverage that only proves no exception was thrown.
+      expect(events.length).toBeGreaterThan(0);
+      expect(state.sessionId).toBe(events[0]?.sessionId);
+      expect(state.title).toBe(fname);
+      expect(state.timeline).toHaveLength(events.length);
+      expect(state.shadowInsights.some((insight) => insight.kind === 'objective')).toBe(true);
+      expect(state.shadowInsights.some((insight) => insight.kind === 'phase')).toBe(true);
+      expect(state.nextMoves.length).toBeGreaterThan(0);
     }
   });
 });

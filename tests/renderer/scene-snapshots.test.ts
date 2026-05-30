@@ -2,88 +2,91 @@ import '../helpers/path2d-polyfill';
 import { describe, expect, it } from 'vitest';
 import { drawScene } from '../../src/renderer/canvas/scene-drawer';
 import { ALL_CANONICAL_SCENES } from '../fixtures/canvas-scenes';
+import {
+  createRecordedContext,
+  type CanvasCommand,
+  type RecordedGradient
+} from '../helpers/record-2d-context';
 
-function createRecordingContext() {
-  const calls: Array<{ method: string; props: Record<string, unknown> }> = [];
-  const props: Record<string, unknown> = {};
-  let gradientId = 0;
+function isRecordedGradient(value: unknown): value is RecordedGradient {
+  return Boolean(
+    value &&
+    typeof value === 'object' &&
+    'id' in value &&
+    'type' in value &&
+    'addColorStop' in value
+  );
+}
 
-  function record(method: string, args: Record<string, unknown> = {}) {
-    calls.push({ method, props: { ...props, ...args } });
+function normalizeForSnapshot(command: CanvasCommand): Record<string, unknown> {
+  if (command.type === 'setProperty' && isRecordedGradient(command.value)) {
+    return {
+      ...command,
+      value: {
+        gradientId: command.value.id,
+        type: command.value.type
+      }
+    };
   }
 
-  const ctx: Record<string, unknown> = {
-    calls,
-    snapshot: () => JSON.parse(JSON.stringify(calls)),
+  return { ...command };
+}
 
-    save: () => record('save'),
-    restore: () => record('restore'),
-    beginPath: () => record('beginPath'),
-    closePath: () => record('closePath'),
-
-    clearRect(x: number, y: number, w: number, h: number) { record('clearRect', { x, y, w, h }); },
-    fillRect(x: number, y: number, w: number, h: number) { record('fillRect', { x, y, w, h }); },
-    moveTo(x: number, y: number) { record('moveTo', { x, y }); },
-    lineTo(x: number, y: number) { record('lineTo', { x, y }); },
-    quadraticCurveTo(cpx: number, cpy: number, x: number, y: number) { record('quadraticCurveTo', { cpx, cpy, x, y }); },
-    arc(x: number, y: number, radius: number, startAngle: number, endAngle: number) { record('arc', { x, y, radius, startAngle, endAngle }); },
-    fill() { record('fill'); },
-    stroke() { record('stroke'); },
-    setLineDash(segments: number[]) { record('setLineDash', { segments: segments.map(String) }); },
-    setTransform(a: number, b: number, c: number, d: number, e: number, f: number) { record('setTransform', { a, b, c, d, e, f }); },
-    fillText(text: string, x: number, y: number) { record('fillText', { text, x, y }); },
-
-    createLinearGradient(x0: number, y0: number, x1: number, y1: number) {
-      const id = ++gradientId;
-      record('createLinearGradient', { x0, y0, x1, y1, gradientId: id });
-      return { addColorStop: (offset: number, color: string) => record('addColorStop', { offset, color, gradientId: id }) };
-    },
-
-    createRadialGradient(x0: number, y0: number, r0: number, x1: number, y1: number, r1: number) {
-      const id = ++gradientId;
-      record('createRadialGradient', { x0, y0, r0, x1, y1, r1, gradientId: id });
-      return { addColorStop: (offset: number, color: string) => record('addColorStop', { offset, color, gradientId: id }) };
-    },
-
-    get fillStyle() { return props.fillStyle ?? ''; },
-    set fillStyle(v) { props.fillStyle = String(v); },
-    get strokeStyle() { return props.strokeStyle ?? ''; },
-    set strokeStyle(v) { props.strokeStyle = String(v); },
-    get lineWidth() { return props.lineWidth ?? 1; },
-    set lineWidth(v) { props.lineWidth = v; },
-    get shadowColor() { return props.shadowColor ?? ''; },
-    set shadowColor(v) { props.shadowColor = v; },
-    get shadowBlur() { return props.shadowBlur ?? 0; },
-    set shadowBlur(v) { props.shadowBlur = v; },
-    get font() { return props.font ?? ''; },
-    set font(v) { props.font = v; },
-    get textAlign() { return props.textAlign ?? 'start'; },
-    set textAlign(v) { props.textAlign = v; },
-    get textBaseline() { return props.textBaseline ?? 'alphabetic'; },
-    set textBaseline(v) { props.textBaseline = v; },
-    get globalAlpha() { return props.globalAlpha ?? 1; },
-    set globalAlpha(v) { props.globalAlpha = v; },
-    get globalCompositeOperation() { return props.globalCompositeOperation ?? 'source-over'; },
-    set globalCompositeOperation(v) { props.globalCompositeOperation = v; },
-    get canvas() { return null; },
-  };
-
-  return ctx as unknown as CanvasRenderingContext2D & { snapshot: () => unknown[] };
+function commandTypes(commands: readonly CanvasCommand[]): CanvasCommand['type'][] {
+  return commands.map((command) => command.type);
 }
 
 describe('canvas scene pixel snapshots', () => {
-  it('recording context works', () => {
-    const ctx = createRecordingContext();
-    const calls = ctx.snapshot();
-    expect(calls).toEqual([]);
+  it('shared recording context captures the frame prologue used by scene snapshots', () => {
+    const ctx = createRecordedContext();
+    drawScene(ctx, ALL_CANONICAL_SCENES[0]);
+
+    // This guards the renderer frame reset/background contract before scene-specific drawing starts.
+    expect(commandTypes(ctx.getRecordedCommands()).slice(0, 5)).toEqual([
+      'setTransform',
+      'clearRect',
+      'setTransform',
+      'setProperty',
+      'fillRect'
+    ]);
   });
 
   for (const scene of ALL_CANONICAL_SCENES) {
     it(`matches the "${scene.label}" canonical scene`, () => {
-      const ctx = createRecordingContext();
+      const ctx = createRecordedContext();
       drawScene(ctx, scene);
-      const calls = ctx.snapshot();
-      expect(calls).toMatchSnapshot(scene.label);
+      const commands = ctx.getRecordedCommands();
+
+      // Snapshots catch broad command drift; semantic assertions catch missing scene content directly.
+      const types = commandTypes(commands);
+      expect(types).toContain('fillRect');
+      expect(commands.filter((command) => command.type === 'quadraticCurveTo')).toHaveLength(scene.edges.length);
+      expect(commands.filter((command) => command.type === 'arc')).toHaveLength(scene.particles.length);
+
+      for (const node of scene.nodes) {
+        expect(commands).toContainEqual({
+          type: 'fillText',
+          text: node.label,
+          x: node.x,
+          y: node.y - 4,
+          maxWidth: undefined
+        });
+        expect(commands).toContainEqual({
+          type: 'fillText',
+          text: `${node.toolCount} tools`,
+          x: node.x,
+          y: node.y + 10,
+          maxWidth: undefined
+        });
+      }
+
+      if (scene.riskLevel === 'low') {
+        expect(types).not.toContain('createRadialGradient');
+      } else {
+        expect(types).toContain('createRadialGradient');
+      }
+
+      expect(commands.map(normalizeForSnapshot)).toMatchSnapshot(scene.label);
     });
   }
 });
