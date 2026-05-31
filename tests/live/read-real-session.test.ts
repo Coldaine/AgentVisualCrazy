@@ -55,7 +55,9 @@ beforeAll(async () => {
 
   const events: CanonicalEvent[] = [];
   for (const entry of entries) {
-    events.push(...normalizeEntry(entry, (entry.sessionId as string) ?? session.sessionId));
+    // Real JSONL is untrusted: only trust a string sessionId, else fall back.
+    const entrySessionId = typeof entry.sessionId === 'string' ? entry.sessionId : session.sessionId;
+    events.push(...normalizeEntry(entry, entrySessionId));
   }
   const state = deriveState(events, 'live');
 

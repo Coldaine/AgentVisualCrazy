@@ -85,12 +85,13 @@ describe('electron renderer host', () => {
 
     const host = createElectronHost(bridge);
 
-    // Delegation checks catch broken Electron-to-renderer wiring, not just object shape drift.
+    // Delegation must pass the bridge's return value straight through, not just
+    // call it — asserting the resolved value catches wiring that drops results.
     await expect(host.loadInitialSnapshot()).resolves.toBe(snapshot);
-    await host.openReplayFile?.();
-    await host.getPrivacyPolicy?.();
-    await host.updatePrivacySettings?.({ allowOffHostInference: true });
-    await host.exportReplayJsonl?.([], 'session.jsonl');
+    await expect(host.openReplayFile?.()).resolves.toBeNull();
+    await expect(host.getPrivacyPolicy?.()).resolves.toBe(privacyPolicy);
+    await expect(host.updatePrivacySettings?.({ allowOffHostInference: true })).resolves.toBe(updatedPrivacyPolicy);
+    await expect(host.exportReplayJsonl?.([], 'session.jsonl')).resolves.toEqual({ canceled: true });
 
     expect(bridge.bootstrap).toHaveBeenCalledTimes(1);
     expect(bridge.openReplayFile).toHaveBeenCalledTimes(1);
