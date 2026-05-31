@@ -1,4 +1,11 @@
 #!/usr/bin/env sh
 set -e
 
+# Unit + integration suite (this is also the CI gate).
 npm test
+
+# Live tests: run the REAL read pipeline against a real ~/.claude session.
+# Intentionally NOT in CI (no real session data there) — pre-push, on a
+# developer machine, is the right place. They SKIP (not fail) when no real
+# session exists, so a fresh checkout still pushes cleanly.
+npm run test:live

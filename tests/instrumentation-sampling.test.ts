@@ -11,12 +11,32 @@ import { join } from 'node:path';
 import { mkdtemp } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
+
+// file-replay-store and session-io build module-level loggers with a bare
+// `createLogger()` whose minLevel is read from SHADOW_LOG_LEVEL at IMPORT time.
+// If the ambient env sets warn|error, the INFO logs these tests assert get
+// filtered out and the suite fails nondeterministically. Pin the level before
+// those imports run (vi.hoisted is hoisted above all imports) and restore after.
+const ORIGINAL_LOG_LEVEL = vi.hoisted(() => {
+  const previous = process.env['SHADOW_LOG_LEVEL'];
+  process.env['SHADOW_LOG_LEVEL'] = 'debug';
+  return previous;
+});
+
 import { createLogger, type StructuredLogger } from '../src/shared/logger';
 import { FileReplayStore } from '../src/persistence/file-replay-store';
 import { createSnapshot, buildFixtureSnapshot, loadSnapshotFromFile } from '../src/electron/session-io';
 import { parseReplay } from '../src/shared/replay-store';
 import type { LoadedSource } from '../src/shared/schema';
+
+afterAll(() => {
+  if (ORIGINAL_LOG_LEVEL === undefined) {
+    delete process.env['SHADOW_LOG_LEVEL'];
+  } else {
+    process.env['SHADOW_LOG_LEVEL'] = ORIGINAL_LOG_LEVEL;
+  }
+});
 
 const REPLAY_FIXTURES = join(import.meta.dirname, 'fixtures/replays');
 
@@ -32,30 +52,52 @@ function eventsOf(logger: StructuredLogger) {
   return logger.getRecent(200).map((e) => ({ domain: e.domain, event: e.event, level: e.level }));
 }
 
+function captureStructuredConsole() {
+  return vi.spyOn(console, 'log').mockImplementation(() => undefined);
+}
+
+function expectStructuredLog(
+  spy: ReturnType<typeof captureStructuredConsole>,
+  level: 'INFO' | 'ERROR',
+  domain: string,
+  event: string,
+  context: Record<string, unknown>
+) {
+  expect(spy).toHaveBeenCalledWith(
+    expect.stringContaining(`${level} ${domain}:${event}`),
+    expect.objectContaining(context)
+  );
+}
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
+
 // ---------------------------------------------------------------------------
 // Persistence subsystem
 // ---------------------------------------------------------------------------
 
 describe('instrumentation sampling — persistence', () => {
-  it('persistence.replay.saved fires after saveSession', async () => {
+  it('emits persistence.replay.saved after saveSession writes a replay', async () => {
+    const consoleLog = captureStructuredConsole();
     const tmpDir = await mkdtemp(path.join(os.tmpdir(), 'shadow-inst-pers-'));
     const store = new FileReplayStore(tmpDir);
 
     const raw = readFileSync(join(REPLAY_FIXTURES, 'happy-path.replay.jsonl'), 'utf8');
     const events = parseReplay(raw);
-    await store.saveSession('test-session', events, 'Sampling test');
+    const record = await store.saveSession('test-session', events, 'Sampling test');
 
-    // The module-level logger in file-replay-store.ts writes the event.
-    // We verify by loading the session back and checking the return value
-    // rather than intercepting the module logger (which requires DI).
-    // A simpler proxy: assert the file was written (saveSession returned a record).
-    const record = await store.saveSession('test-session-2', events);
+    // This assertion samples the real module logger side effect, not the saveSession return value.
+    expectStructuredLog(consoleLog, 'INFO', 'persistence', 'persistence.replay.saved', {
+      sessionId: 'test-session',
+      eventCount: events.length
+    });
     expect(record.eventCount).toBe(events.length);
-    // sessionId comes from the event data itself, not the directory name
     expect(typeof record.sessionId).toBe('string');
   });
 
-  it('persistence.replay.loaded fires after loadSession', async () => {
+  it('emits persistence.replay.loaded after loadSession reads stored events', async () => {
+    const consoleLog = captureStructuredConsole();
     const tmpDir = await mkdtemp(path.join(os.tmpdir(), 'shadow-inst-load-'));
     const store = new FileReplayStore(tmpDir);
 
@@ -65,17 +107,27 @@ describe('instrumentation sampling — persistence', () => {
     const loaded = await store.loadSession('load-test');
 
     expect(loaded.events).toHaveLength(events.length);
-    // sessionId comes from the event data; the store dir name is just a key
+    // Loaded instrumentation must carry the replay key and count for support diagnostics.
+    expectStructuredLog(consoleLog, 'INFO', 'persistence', 'persistence.replay.loaded', {
+      sessionId: 'load-test',
+      eventCount: events.length
+    });
     expect(typeof loaded.record.sessionId).toBe('string');
   });
 
-  it('persistence.replay.load_failed fires on nonexistent session', async () => {
+  it('emits persistence.replay.load_failed on nonexistent session', async () => {
+    const consoleLog = captureStructuredConsole();
     const tmpDir = await mkdtemp(path.join(os.tmpdir(), 'shadow-inst-fail-'));
     const store = new FileReplayStore(tmpDir);
     await expect(store.loadSession('does-not-exist')).rejects.toThrow();
+    // Failure logs are the observable behavior; throwing alone would not prove instrumentation.
+    expectStructuredLog(consoleLog, 'ERROR', 'persistence', 'persistence.replay.load_failed', {
+      sessionId: 'does-not-exist'
+    });
   });
 
-  it('persistence.store.listed fires after listSessions', async () => {
+  it('emits persistence.store.listed after listSessions returns valid sessions', async () => {
+    const consoleLog = captureStructuredConsole();
     const tmpDir = await mkdtemp(path.join(os.tmpdir(), 'shadow-inst-list-'));
     const store = new FileReplayStore(tmpDir);
 
@@ -86,6 +138,10 @@ describe('instrumentation sampling — persistence', () => {
 
     const sessions = await store.listSessions();
     expect(sessions).toHaveLength(2);
+    // List instrumentation proves the store boundary reported the final filtered count.
+    expectStructuredLog(consoleLog, 'INFO', 'persistence', 'persistence.store.listed', {
+      sessionCount: 2
+    });
   });
 });
 
@@ -94,47 +150,76 @@ describe('instrumentation sampling — persistence', () => {
 // ---------------------------------------------------------------------------
 
 describe('instrumentation sampling — ipc / session-io', () => {
-  it('ipc.snapshot.created fires when createSnapshot is called', () => {
+  it('emits ipc.snapshot.created when createSnapshot builds renderer input', () => {
+    const consoleLog = captureStructuredConsole();
     const raw = readFileSync(join(REPLAY_FIXTURES, 'happy-path.replay.jsonl'), 'utf8');
     const events = parseReplay(raw);
     const source: LoadedSource = { kind: 'replay', label: 'test.jsonl', path: '/test.jsonl' };
 
-    // createSnapshot logs via the module-level logger.
-    // We verify the function completes without error and returns a valid snapshot.
     const snapshot = createSnapshot(events, source);
+    // Snapshot creation must emit the same source/count the renderer receives.
+    expectStructuredLog(consoleLog, 'INFO', 'ipc', 'ipc.snapshot.created', {
+      sourceKind: 'replay',
+      eventCount: events.length
+    });
     expect(snapshot.events).toHaveLength(events.length);
     expect(snapshot.source.kind).toBe('replay');
     expect(snapshot.record.eventCount).toBe(events.length);
   });
 
-  it('ipc.snapshot.fixture_built fires when buildFixtureSnapshot is called', () => {
+  it('emits ipc.snapshot.fixture_built when buildFixtureSnapshot uses the bundled fixture', () => {
+    const consoleLog = captureStructuredConsole();
     const snapshot = buildFixtureSnapshot();
+    // Fixture instrumentation proves the app boot path reported its built-in replay size.
+    expectStructuredLog(consoleLog, 'INFO', 'ipc', 'ipc.snapshot.fixture_built', {
+      eventCount: snapshot.events.length
+    });
     expect(snapshot.source.kind).toBe('fixture');
     expect(snapshot.events.length).toBeGreaterThan(0);
     expect(snapshot.state.transcript.length).toBeGreaterThan(0);
   });
 
-  it('ipc.snapshot.loaded fires when loadSnapshotFromFile reads a replay file', async () => {
+  it('emits ipc.snapshot.loaded when loadSnapshotFromFile reads a replay file', async () => {
+    const consoleLog = captureStructuredConsole();
     const filePath = join(REPLAY_FIXTURES, 'happy-path.replay.jsonl');
     const snapshot = await loadSnapshotFromFile(filePath);
+    // Loaded logs must identify the parser format chosen for the file.
+    expectStructuredLog(consoleLog, 'INFO', 'ipc', 'ipc.snapshot.loaded', {
+      fileName: 'happy-path.replay.jsonl',
+      format: 'replay',
+      eventCount: snapshot.events.length
+    });
     expect(snapshot.source.kind).toBe('replay');
     expect(snapshot.events.length).toBeGreaterThan(0);
   });
 
-  it('ipc.snapshot.loaded fires for a transcript fixture', async () => {
+  it('emits ipc.snapshot.loaded for a transcript fixture', async () => {
+    const consoleLog = captureStructuredConsole();
     const filePath = join(import.meta.dirname, 'fixtures/transcripts/happy-path.jsonl');
     const snapshot = await loadSnapshotFromFile(filePath);
+    // Transcript logs prove fallback detection did not silently label the file as replay.
+    expectStructuredLog(consoleLog, 'INFO', 'ipc', 'ipc.snapshot.loaded', {
+      fileName: 'happy-path.jsonl',
+      format: 'transcript',
+      eventCount: snapshot.events.length
+    });
     expect(snapshot.events.length).toBeGreaterThan(0);
   });
 
-  it('ipc.snapshot.load_failed: loadSnapshotFromFile throws for empty file', async () => {
+  it('emits ipc.snapshot.load_failed when loadSnapshotFromFile rejects an empty file', async () => {
+    const consoleLog = captureStructuredConsole();
     const tmpDir = await mkdtemp(path.join(os.tmpdir(), 'shadow-inst-empty-'));
     const emptyFile = path.join(tmpDir, 'empty.jsonl');
     const { writeFile } = await import('node:fs/promises');
     await writeFile(emptyFile, '', 'utf8');
 
-    // Empty file should result in zero events → throws
     await expect(loadSnapshotFromFile(emptyFile)).rejects.toThrow(/No events/);
+    // The failure event carries parser context that the thrown message alone cannot sample.
+    expectStructuredLog(consoleLog, 'ERROR', 'ipc', 'ipc.snapshot.load_failed', {
+      fileName: 'empty.jsonl',
+      primaryFormat: 'replay',
+      secondaryFormat: 'transcript'
+    });
   });
 });
 

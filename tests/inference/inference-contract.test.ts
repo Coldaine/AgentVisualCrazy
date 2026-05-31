@@ -7,14 +7,13 @@
  * - Prompt builder — buildUserMessage behavior
  * - Parser fallback — handling malformed JSON and partial insight payloads
  */
-import { join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-import type { InferenceClient, InferenceRequest, InferenceResult } from '../../src/inference/inference-client';
+import type { InferenceRequest } from '../../src/inference/inference-client';
 import { FakeInferenceClient } from '../helpers/fake-inference-client';
 import { buildUserMessage, type ShadowContextPacket } from '../../src/inference/prompt-builder';
 import { packContext } from '../../src/inference/context-packager';
 import { SHADOW_SYSTEM_PROMPT } from '../../src/inference/prompts';
+import { parseModelResponse } from '../../src/inference/response-parser';
 import type { CanonicalEvent, DerivedState } from '../../src/shared/schema';
 
 // ---------------------------------------------------------------------------
@@ -25,8 +24,6 @@ import type { CanonicalEvent, DerivedState } from '../../src/shared/schema';
 // Helpers
 // ---------------------------------------------------------------------------
 
-const TEST_DIR = fileURLToPath(new URL('.', import.meta.url));
-const FIXTURES = join(TEST_DIR, '../fixtures');
 let eventCounter = 0;
 
 function emptyDerivedState(overrides: Partial<DerivedState> = {}): DerivedState {
@@ -277,67 +274,108 @@ describe('prompt builder', () => {
 // Parser fallback — malformed JSON and partial payloads
 // ---------------------------------------------------------------------------
 
-/** Minimal inline parser matching what a real response parser would do. */
-function parseInferenceResponse(text: string): {
-  phase: string;
-  riskLevel: string;
-  observations: string[];
-} | null {
-  try {
-    const raw = JSON.parse(text) as Record<string, unknown>;
-    return {
-      phase: typeof raw['phase'] === 'string' ? raw['phase'] : 'idle',
-      riskLevel: typeof raw['riskLevel'] === 'string' ? raw['riskLevel'] : 'low',
-      observations: Array.isArray(raw['observations'])
-        ? (raw['observations'] as unknown[]).filter((o): o is string => typeof o === 'string')
-        : []
-    };
-  } catch {
-    return null;
-  }
-}
-
 describe('parser fallback', () => {
-  it('returns null for completely malformed JSON', () => {
-    expect(parseInferenceResponse('not json at all')).toBeNull();
-    expect(parseInferenceResponse('{broken')).toBeNull();
-    expect(parseInferenceResponse('')).toBeNull();
+  it('returns no insights for completely malformed JSON', () => {
+    // Guard the production response parser, not a local stand-in with similar intentions.
+    expect(parseModelResponse('not json at all')).toEqual([]);
+    expect(parseModelResponse('{broken')).toEqual([]);
+    expect(parseModelResponse('')).toEqual([]);
   });
 
-  it('handles partial payloads with missing fields gracefully', () => {
-    const result = parseInferenceResponse('{"phase":"debugging"}');
-    expect(result).not.toBeNull();
-    expect(result?.phase).toBe('debugging');
-    expect(result?.riskLevel).toBe('low');   // default
-    expect(result?.observations).toEqual([]); // default
+  it('maps partial phase payloads into a default-confidence phase insight', () => {
+    // Missing optional fields should degrade into a usable insight instead of dropping model signal.
+    const result = parseModelResponse('{"phase":"debugging"}');
+    expect(result).toEqual([
+      expect.objectContaining({
+        kind: 'phase',
+        source: 'model',
+        confidence: 0.5,
+        summary: 'Phase: debugging',
+        structuredPayload: { phase: 'debugging' }
+      })
+    ]);
   });
 
-  it('handles JSON with extra/unknown fields without error', () => {
-    const result = parseInferenceResponse(JSON.stringify({
+  it('ignores unknown fields while preserving recognized model signals', () => {
+    // Unknown provider-specific fields are tolerated, but the recognized fields must still render.
+    const result = parseModelResponse(JSON.stringify({
       phase: 'testing',
       riskLevel: 'medium',
       unknownField: 'should be ignored',
-      observations: ['test is running']
+      riskSignals: [{ signal: 'tests are failing', severity: 'high', confidence: 0.82 }],
+      predictedNextAction: 'inspect the failing assertion',
+      observations: ['test is running'],
+      attention: { primaryFile: 'tests/example.test.ts', intent: 'stabilize coverage' }
     }));
-    expect(result?.phase).toBe('testing');
-    expect(result?.observations).toEqual(['test is running']);
+
+    expect(result.map((insight) => insight.kind)).toEqual([
+      'phase',
+      'risk',
+      'next_move',
+      'objective',
+      'summary'
+    ]);
+    expect(result).toContainEqual(expect.objectContaining({
+      kind: 'risk',
+      summary: 'tests are failing',
+      confidence: 0.82,
+      structuredPayload: { severity: 'high', riskLevel: 'medium' }
+    }));
   });
 
   it('filters non-string entries from observations array', () => {
-    const result = parseInferenceResponse(JSON.stringify({
+    // Provider JSON is untrusted at runtime, so malformed observation items must not become renderer summaries.
+    const result = parseModelResponse(JSON.stringify({
       phase: 'idle',
       riskLevel: 'low',
       observations: ['valid', 42, null, 'also valid']
     }));
-    expect(result?.observations).toEqual(['valid', 'also valid']);
+
+    expect(result.filter((insight) => insight.kind === 'summary').map((insight) => insight.summary)).toEqual([
+      'valid',
+      'also valid'
+    ]);
   });
 
-  it('FakeInferenceClient can simulate malformed response for parser fallback test', async () => {
+  it('tolerates non-array riskSignals/observations instead of throwing', () => {
+    // Valid JSON with the wrong shape is untrusted provider output, not a parse
+    // failure — it must degrade gracefully, never throw out of parseModelResponse.
+    expect(() => parseModelResponse('{"observations":42}')).not.toThrow();
+    expect(() => parseModelResponse('{"riskSignals":{}}')).not.toThrow();
+    expect(parseModelResponse('{"observations":42}')).toEqual([]);
+    expect(parseModelResponse('{"riskSignals":"oops"}')).toEqual([]);
+
+    // Recognized fields still render even when a sibling field has the wrong shape.
+    expect(parseModelResponse('{"phase":"testing","observations":42}')).toContainEqual(
+      expect.objectContaining({ kind: 'phase', summary: 'Phase: testing' })
+    );
+    // Null elements inside a riskSignals array must be skipped, not dereferenced.
+    expect(() => parseModelResponse('{"riskSignals":[null,42]}')).not.toThrow();
+    expect(parseModelResponse('{"riskSignals":[null,42]}')).toEqual([]);
+  });
+
+  it('defaults wrong-typed confidence fields to 0.5 instead of emitting NaN', () => {
+    // Untrusted JSON can carry a non-numeric confidence (e.g. "high"); it must
+    // never reach the insight as NaN (Math.min(1, "high") === NaN).
+    const [phase] = parseModelResponse('{"phase":"testing","phaseConfidence":"high"}');
+    expect(phase.confidence).toBe(0.5);
+    expect(Number.isNaN(phase.confidence)).toBe(false);
+
+    const risk = parseModelResponse(
+      '{"riskSignals":[{"signal":"tests failing","confidence":"0.9"}]}'
+    ).find((i) => i.kind === 'risk');
+    expect(risk?.confidence).toBe(0.5);
+
+    const [move] = parseModelResponse('{"predictedNextAction":"run tests","predictedNextConfidence":null}');
+    expect(move.confidence).toBe(0.5);
+  });
+
+  it('FakeInferenceClient can feed malformed model text into the production parser', async () => {
+    // This keeps the fake client tied to the real parser path used by orchestrator-style tests.
     const client = new FakeInferenceClient();
     client.enqueue({ text: 'not valid json', model: 'fake/1', latencyMs: 1 });
 
     const result = await client.infer({ systemPrompt: 'sys', userMessage: 'x' });
-    const parsed = parseInferenceResponse(result.text);
-    expect(parsed).toBeNull();
+    expect(parseModelResponse(result.text)).toEqual([]);
   });
 });

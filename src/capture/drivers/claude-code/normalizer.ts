@@ -113,6 +113,17 @@ export function normalizeEntry(
         },
         harnessId: HARNESS_ID,
       });
+    } else if (blockType === 'thinking' && typeof block.thinking === 'string') {
+      events.push({
+        id: randomUUID(),
+        sessionId,
+        source,
+        timestamp,
+        actor: role,
+        kind: 'message',
+        payload: { text: block.thinking, thinking: true },
+        harnessId: HARNESS_ID,
+      });
     } else if (blockType !== '') {
       logger.debug('capture', 'claude_driver.unknown_block_type', { blockType });
     }

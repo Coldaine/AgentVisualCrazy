@@ -1,14 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import { getRendererSurfaceAdapter } from '../../src/renderer/renderer-surface-adapter';
+import CanvasRenderer from '../../src/renderer/canvas/CanvasRenderer';
+import ShadowPanel from '../../src/renderer/components/ShadowPanel';
+import TimelineScrubber from '../../src/renderer/components/TimelineScrubber';
 
 describe('renderer surface adapter', () => {
-  it('exposes surface wiring that resolves to renderable React components', () => {
+  it('maps each surface slot to the intended production component', () => {
     const adapter = getRendererSurfaceAdapter();
 
     expect(adapter.id).toBe('default-renderer-surfaces');
-    // Contract: components are valid React function components, not undefined/null
-    expect(typeof adapter.GraphCanvas).toBe('function');
-    expect(typeof adapter.Timeline).toBe('function');
-    expect(typeof adapter.ShadowPanel).toBe('function');
+    // Identity checks protect adapter wiring instead of proving React components are functions.
+    expect(adapter.GraphCanvas).toBe(CanvasRenderer);
+    expect(adapter.Timeline).toBe(TimelineScrubber);
+    expect(adapter.ShadowPanel).toBe(ShadowPanel);
   });
 });

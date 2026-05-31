@@ -14,12 +14,12 @@
  *   that full pipe. This is the only test that does. If it goes red,
  *   the multi-harness palette accent in PR 7 silently won't work.
  *
- * Findings logged by this test (followed up in PR 5):
- *   - The live normalizer puts file paths under `payload.args.file_path`,
- *     but `derive.ts:6 extractFilePath()` only looks at `payload.file_path`.
- *     So `fileAttention` is empty for live capture today, while replay (via
- *     transcript-adapter.ts which flattens input into payload) produces it
- *     correctly. PR 5 (capability-driven derive) is the place to unify.
+ * Previously-logged finding, now FIXED:
+ *   - The live normalizer puts file paths under `payload.args.file_path`, but
+ *     `derive.ts extractFilePath()` used to only look at `payload.file_path`, so
+ *     `fileAttention` was silently empty for live capture. extractFilePath now
+ *     also reads `payload.args`, so live capture produces file attention too
+ *     (asserted below).
  */
 import { copyFileSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -160,11 +160,12 @@ describe('end-to-end: jsonl fixture → real pipeline → DerivedState', () => {
     // 8. Phase detection ran on real tool names.
     expect(state.activePhase).toMatch(/exploration|implementation|idle/);
 
-    // NOTE (PR 5 follow-up): fileAttention is empty here even though the
-    // fixture's Read/Write tools clearly target src/utils.ts and src/logger.ts.
-    // The live normalizer wraps file_path inside payload.args, but derive's
-    // extractFilePath() looks at payload.file_path directly. Capability-driven
-    // derive in PR 5 unifies the extraction strategy.
-    expect(state.fileAttention).toEqual([]);
+    // 9. fileAttention is populated from the live normalizer's payload.args.
+    //    The fixture's Read targets src/utils.ts and Write targets src/logger.ts
+    //    (one touch each; equal touches preserve first-seen order).
+    expect(state.fileAttention).toEqual([
+      { filePath: 'src/utils.ts', touches: 1 },
+      { filePath: 'src/logger.ts', touches: 1 },
+    ]);
   });
 });

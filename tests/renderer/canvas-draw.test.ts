@@ -1,31 +1,14 @@
 import '../helpers/path2d-polyfill';
 import { describe, expect, it } from 'vitest';
-import { colors } from '../../src/renderer/theme/colors';
-import { createRecordedContext } from '../helpers/record-2d-context';
-import { STATE_COLORS } from '../../src/renderer/canvas/types';
-import { drawPredictionTrail, drawShadowNode } from '../../src/renderer/canvas/draw-utils';
+import { createRecordedContext, type CanvasCommand } from '../helpers/record-2d-context';
+import { drawAgentNode, drawPredictionTrail, drawShadowNode } from '../../src/renderer/canvas/draw-utils';
 
-describe('canvas draw semantics', () => {
-  it('STATE_COLORS aligns thinking state with holo base', () => {
-    expect(STATE_COLORS.thinking).toBe(colors.holoBase);
-  });
-
-  it('recorded context captures fill and stroke styles', () => {
-    const ctx = createRecordedContext();
-    ctx.fillStyle = colors.void;
-    ctx.fillRect(0, 0, 400, 300);
-    ctx.strokeStyle = colors.holoBase;
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    const commands = ctx.getRecordedCommands();
-    expect(commands).toContainEqual({ type: 'setProperty', property: 'fillStyle', value: colors.void });
-    expect(commands).toContainEqual({ type: 'fillRect', x: 0, y: 0, width: 400, height: 300 });
-    expect(commands).toContainEqual({ type: 'setProperty', property: 'strokeStyle', value: colors.holoBase });
-    expect(commands).toContainEqual({ type: 'setProperty', property: 'lineWidth', value: 2 });
-    expect(commands.some((c) => c.type === 'stroke')).toBe(true);
-  });
-});
+function commandsOfType<T extends CanvasCommand['type']>(
+  commands: readonly CanvasCommand[],
+  type: T
+): Array<Extract<CanvasCommand, { type: T }>> {
+  return commands.filter((command): command is Extract<CanvasCommand, { type: T }> => command.type === type);
+}
 
 // US-003: brain-visual render proof. These exercise the SAME draw functions the
 // live CanvasRenderer invokes (draw-utils.ts), proving the holographic shadow
@@ -41,24 +24,53 @@ describe('brain-visual render path (model insight reaches the canvas)', () => {
       5000
     );
     const commands = ctx.getRecordedCommands();
-    // dashed connector from the agent node to the shadow node
-    expect(commands.some((c) => c.type === 'setLineDash')).toBe(true);
-    // hexagon body filled
-    expect(commands.some((c) => c.type === 'fill')).toBe(true);
-    // the crystal-ball glyph label
-    expect(commands.some((c) => c.type === 'fillText' && c.text.includes('🔮'))).toBe(true);
+    // These coordinates protect the actual connector geometry, not a palette constant.
+    expect(commandsOfType(commands, 'moveTo')[0]).toEqual({ type: 'moveTo', x: 220, y: 160 });
+    expect(commandsOfType(commands, 'lineTo')[0]).toEqual({ type: 'lineTo', x: 308, y: 98 });
+    expect(commands).toContainEqual({ type: 'setLineDash', segments: [6, 5] });
+    expect(commandsOfType(commands, 'fill')).toHaveLength(1);
+    expect(commandsOfType(commands, 'stroke')).toHaveLength(2);
+    expect(commands).toContainEqual({ type: 'fillText', text: '\uD83D\uDD2E', x: 308, y: 96, maxWidth: undefined });
   });
 
   it('drawPredictionTrail renders a dashed bezier with a labeled confidence percentage', () => {
     const ctx = createRecordedContext();
     drawPredictionTrail(ctx, 220, 160, 'Will likely run tests next', 0.72);
     const commands = ctx.getRecordedCommands();
-    expect(commands.some((c) => c.type === 'quadraticCurveTo')).toBe(true);
-    expect(commands.some((c) => c.type === 'setLineDash')).toBe(true);
-    expect(
-      commands.some(
-        (c) => c.type === 'fillText' && c.text.includes('Will likely run tests next') && c.text.includes('72%')
-      )
-    ).toBe(true);
+    // The bezier endpoint and label position are the observable prediction-trail contract.
+    expect(commandsOfType(commands, 'moveTo')[0]).toEqual({ type: 'moveTo', x: 220, y: 160 });
+    expect(commandsOfType(commands, 'quadraticCurveTo')[0]).toEqual({
+      type: 'quadraticCurveTo',
+      cpx: 300,
+      cpy: 184,
+      x: 360,
+      y: 258
+    });
+    expect(commands).toContainEqual({ type: 'setLineDash', segments: [7, 6] });
+    expect(commands).toContainEqual({
+      type: 'fillText',
+      text: 'Will likely run tests next (72%)',
+      x: 372,
+      y: 256,
+      maxWidth: undefined
+    });
+  });
+
+  it('drawAgentNode renders node labels and tool counts at stable node-relative positions', () => {
+    const ctx = createRecordedContext();
+    drawAgentNode(
+      ctx,
+      { id: 'agent-1', label: 'Implementer', state: 'thinking', toolCount: 3, x: 140, y: 90, vx: 0, vy: 0 },
+      5000,
+      'high'
+    );
+
+    const commands = ctx.getRecordedCommands();
+    // Label assertions protect the user-visible canvas semantics that snapshots can obscure.
+    expect(commands).toContainEqual({ type: 'fillText', text: 'Implementer', x: 140, y: 86, maxWidth: undefined });
+    expect(commands).toContainEqual({ type: 'fillText', text: '3 tools', x: 140, y: 100, maxWidth: undefined });
+    expect(commands.some((command) => command.type === 'setProperty' && command.property === 'shadowBlur')).toBe(true);
+    expect(commandsOfType(commands, 'fill')).toHaveLength(1);
+    expect(commandsOfType(commands, 'stroke')).toHaveLength(1);
   });
 });
