@@ -106,6 +106,15 @@ function clamp(n: number): number {
   return Math.max(0, Math.min(1, n));
 }
 
+/**
+ * Provider confidence is untrusted JSON: a wrong-typed value (e.g. "high" or
+ * null) would coerce to NaN through clamp() and propagate into the insight.
+ * Accept only finite numbers; everything else falls back to the neutral 0.5.
+ */
+function asConfidence(n: unknown): number {
+  return typeof n === 'number' && Number.isFinite(n) ? clamp(n) : 0.5;
+}
+
 function makeInsight(
   kind: InsightKind,
   summary: string,
@@ -141,7 +150,7 @@ export function parseModelResponse(text: string): ShadowInsight[] {
       makeInsight(
         'phase',
         parsed.phaseReason ?? `Phase: ${parsed.phase}`,
-        parsed.phaseConfidence ?? 0.5,
+        asConfidence(parsed.phaseConfidence),
         { phase: parsed.phase }
       )
     );
@@ -159,7 +168,7 @@ export function parseModelResponse(text: string): ShadowInsight[] {
       makeInsight(
         'risk',
         rs.signal,
-        rs.confidence ?? 0.5,
+        asConfidence(rs.confidence),
         { severity: rs.severity ?? 'medium', riskLevel: parsed.riskLevel ?? 'low' }
       )
     );
@@ -171,7 +180,7 @@ export function parseModelResponse(text: string): ShadowInsight[] {
       makeInsight(
         'next_move',
         parsed.predictedNextAction,
-        parsed.predictedNextConfidence ?? 0.5
+        asConfidence(parsed.predictedNextConfidence)
       )
     );
   }

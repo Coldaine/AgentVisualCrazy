@@ -354,6 +354,22 @@ describe('parser fallback', () => {
     expect(parseModelResponse('{"riskSignals":[null,42]}')).toEqual([]);
   });
 
+  it('defaults wrong-typed confidence fields to 0.5 instead of emitting NaN', () => {
+    // Untrusted JSON can carry a non-numeric confidence (e.g. "high"); it must
+    // never reach the insight as NaN (Math.min(1, "high") === NaN).
+    const [phase] = parseModelResponse('{"phase":"testing","phaseConfidence":"high"}');
+    expect(phase.confidence).toBe(0.5);
+    expect(Number.isNaN(phase.confidence)).toBe(false);
+
+    const risk = parseModelResponse(
+      '{"riskSignals":[{"signal":"tests failing","confidence":"0.9"}]}'
+    ).find((i) => i.kind === 'risk');
+    expect(risk?.confidence).toBe(0.5);
+
+    const [move] = parseModelResponse('{"predictedNextAction":"run tests","predictedNextConfidence":null}');
+    expect(move.confidence).toBe(0.5);
+  });
+
   it('FakeInferenceClient can feed malformed model text into the production parser', async () => {
     // This keeps the fake client tied to the real parser path used by orchestrator-style tests.
     const client = new FakeInferenceClient();
