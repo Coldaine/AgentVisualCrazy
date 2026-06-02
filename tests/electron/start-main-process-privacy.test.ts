@@ -26,7 +26,9 @@ const browserWindowInstance = {
   loadURL: loadUrlMock,
   webContents: {}
 };
-const BrowserWindowMock = vi.fn(() => browserWindowInstance);
+const BrowserWindowMock = vi.fn(function BrowserWindow() {
+  return browserWindowInstance;
+});
 
 const loadTranscriptPrivacySettingsMock = vi.fn(async () => OPTED_IN_PRIVACY_SETTINGS);
 
@@ -100,7 +102,7 @@ vi.mock('../../src/inference/shadow-inference-engine', () => ({
 
 async function flushStartup(): Promise<void> {
   await vi.waitFor(() => {
-    expect(createSessionManagerMock).toHaveBeenCalled();
+    expect(createInferenceEngineMock).toHaveBeenCalled();
   });
 }
 
