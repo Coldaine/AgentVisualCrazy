@@ -2,7 +2,7 @@ import { describe, expect, it, afterEach } from 'vitest';
 import { mkdtemp, readFile, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { createLogger } from '../src/shared/logger';
+import { createLogger, createTestLogger } from '../src/shared/logger';
 
 describe('structured logger', () => {
   it('applies minimum level filtering and memory capacity', () => {
@@ -261,5 +261,92 @@ describe('structured logger — bounded write queue backpressure', () => {
     logger.info('app', 'write_3');
 
     expect(logger.getDroppedWriteCount()).toBeGreaterThanOrEqual(1);
+  });
+});
+
+describe('structured logger — child loggers', () => {
+  it('createTestLogger() captures debug events by default', () => {
+    const logger = createTestLogger();
+
+    logger.debug('capture', 'buffer.pushed', { accepted: 1 });
+
+    expect(logger.getRecent()).toContainEqual(expect.objectContaining({
+      level: 'debug',
+      domain: 'capture',
+      event: 'buffer.pushed',
+      context: expect.objectContaining({ accepted: 1 })
+    }));
+  });
+
+  it('child logger inherits parent context and shares the parent memory ring', () => {
+    const parent = createLogger({ minLevel: 'debug', includeConsole: false });
+    const child = parent.child({ sessionId: 'abc123', source: 'claude-code' });
+
+    child.info('capture', 'session.started');
+    child.info('capture', 'buffer.pushed', { eventCount: 47 });
+
+    const logs = parent.getRecent();
+    expect(logs).toContainEqual(expect.objectContaining({
+      level: 'info',
+      domain: 'capture',
+      event: 'session.started',
+      context: expect.objectContaining({ sessionId: 'abc123', source: 'claude-code' })
+    }));
+    expect(logs).toContainEqual(expect.objectContaining({
+      level: 'info',
+      domain: 'capture',
+      event: 'buffer.pushed',
+      context: expect.objectContaining({ sessionId: 'abc123', source: 'claude-code', eventCount: 47 })
+    }));
+  });
+
+  it('nested child loggers fold contexts correctly', () => {
+    const root = createLogger({ minLevel: 'debug', includeConsole: false });
+    const session = root.child({ sessionId: 's1' });
+    const buffer = session.child({ component: 'buffer' });
+
+    buffer.info('capture', 'buffer.flushed', { depth: 12 });
+
+    const logs = root.getRecent();
+    expect(logs).toContainEqual(expect.objectContaining({
+      level: 'info',
+      domain: 'capture',
+      event: 'buffer.flushed',
+      context: expect.objectContaining({ sessionId: 's1', component: 'buffer', depth: 12 })
+    }));
+  });
+
+  it('redaction applies to merged parent + child context', () => {
+    const parent = createLogger({ minLevel: 'debug', includeConsole: false });
+    const child = parent.child({ component: 'inference' });
+
+    child.info('inference', 'prompt.sent', { prompt: 'system instructions', text: 'user input' });
+
+    const logs = parent.getRecent();
+    expect(logs).toContainEqual(expect.objectContaining({
+      level: 'info',
+      domain: 'inference',
+      event: 'prompt.sent',
+      context: expect.objectContaining({
+        component: 'inference',
+        prompt: '[redacted]',
+        text: '[redacted]'
+      })
+    }));
+  });
+
+  it('createTestLogger() supports child() and child logs appear in getRecent()', () => {
+    const parent = createTestLogger();
+    const child = parent.child({ testId: 't1' });
+
+    child.info('capture', 'test.event', { value: 42 });
+
+    const logs = parent.getRecent();
+    expect(logs).toContainEqual(expect.objectContaining({
+      level: 'info',
+      domain: 'capture',
+      event: 'test.event',
+      context: expect.objectContaining({ testId: 't1', value: 42 })
+    }));
   });
 });

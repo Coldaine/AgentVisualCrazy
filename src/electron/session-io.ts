@@ -13,9 +13,7 @@ import type {
 } from '../shared/schema';
 import { buildRendererInput, inferRendererInputTitle } from '../shared/renderer-input-adapter';
 import { parseClaudeTranscriptJsonl } from '../shared/transcript-adapter';
-import { createLogger } from '../shared/logger';
-
-const logger = createLogger();
+import { createLogger, type Logger } from '../shared/logger';
 
 function formatErrorMessage(error: unknown): string {
   if (error instanceof Error) {
@@ -29,7 +27,8 @@ export const inferTitle = inferRendererInputTitle;
 export function createSnapshot(
   events: CanonicalEvent[],
   source: LoadedSource,
-  privacySettings: TranscriptPrivacySettings = DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS
+  privacySettings: TranscriptPrivacySettings = DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS,
+  logger: Logger = createLogger()
 ): SnapshotPayload {
   const snapshot = buildRendererInput(events, {
     source,
@@ -37,6 +36,8 @@ export function createSnapshot(
     privacySettings
   });
 
+  // Log snapshot creation so we can verify the IPC pipeline produced the
+  // same source/count the renderer receives. Missing = stuck loading screen.
   logger.info('ipc', 'ipc.snapshot.created', {
     sourceKind: source.kind,
     eventCount: events.length
@@ -64,7 +65,6 @@ export function detectReplayFormat(raw: string): 'replay' | 'transcript' {
       if ('sessionId' in parsed || 'message' in parsed) {
         return 'transcript';
       }
-      // Keep scanning for a decisive replay marker.
     } catch {
       // Try later lines. JSONL may contain non-JSON prelude lines.
     }
@@ -75,7 +75,8 @@ export function detectReplayFormat(raw: string): 'replay' | 'transcript' {
 
 export async function loadSnapshotFromFile(
   filePath: string,
-  privacySettings: TranscriptPrivacySettings = DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS
+  privacySettings: TranscriptPrivacySettings = DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS,
+  logger: Logger = createLogger()
 ): Promise<SnapshotPayload> {
   const raw = await readFile(filePath, 'utf8');
   const primaryFormat = detectReplayFormat(raw);
@@ -105,6 +106,7 @@ export async function loadSnapshotFromFile(
       if (fallbackEvents.length > 0) {
         format = secondaryFormat;
         events = fallbackEvents;
+        // Log format fallback so we can diagnose auto-detection edge cases.
         logger.info('ipc', 'ipc.snapshot.format_fallback_used', { fileName, fallbackFormat: secondaryFormat });
       }
     } catch (error) {
@@ -127,6 +129,8 @@ export async function loadSnapshotFromFile(
       `Primary parser (${primaryFormat}) ${primaryDetail}. ` +
       `Secondary parser (${secondaryFormat}) ${secondaryDetail}.`;
 
+    // Log load failures so we can diagnose corrupted files, wrong format
+    // detection, or unsupported transcript versions.
     logger.error('ipc', 'ipc.snapshot.load_failed', {
       fileName,
       primaryFormat,
@@ -138,22 +142,27 @@ export async function loadSnapshotFromFile(
     throw new Error(msg);
   }
 
+  // Log loaded snapshot so we can confirm the parser detection worked and
+  // the renderer received the expected event count.
   logger.info('ipc', 'ipc.snapshot.loaded', { fileName, format, eventCount: events.length });
   return createSnapshot(events, {
     kind: format,
     label: fileName,
     path: filePath
-  }, privacySettings);
+  }, privacySettings, logger);
 }
 
 export function buildFixtureSnapshot(
-  privacySettings: TranscriptPrivacySettings = DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS
+  privacySettings: TranscriptPrivacySettings = DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS,
+  logger: Logger = createLogger()
 ): SnapshotPayload {
+  // Log fixture build so we can verify the app boot path produced the
+  // expected built-in replay size. Missing = blank landing screen.
   logger.info('ipc', 'ipc.snapshot.fixture_built', { eventCount: paymentRefactorSession.length });
   return createSnapshot(paymentRefactorSession, {
     kind: 'fixture',
     label: 'Built-in replay fixture'
-  }, privacySettings);
+  }, privacySettings, logger);
 }
 
 export async function pickOpenFile(mainWindow: BrowserWindow | null): Promise<string | undefined> {
@@ -180,7 +189,8 @@ export async function saveReplayFile(
   events: CanonicalEvent[],
   suggestedFileName = 'shadow-agent-replay.jsonl',
   options: { storeRawTranscript?: boolean } = {},
-  privacySettings: TranscriptPrivacySettings = DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS
+  privacySettings: TranscriptPrivacySettings = DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS,
+  logger: Logger = createLogger()
 ): Promise<ExportResult> {
   try {
     const saveDialogResult = await dialog.showSaveDialog(mainWindow ?? null!, {
@@ -195,9 +205,13 @@ export async function saveReplayFile(
     }
 
     await writeFile(saveDialogResult.filePath, serializeEvents(events, options, privacySettings), 'utf8');
+    // Log export save so we can confirm the file was written with the
+    // expected event count. Missing exports = broken file dialog or disk full.
     logger.info('ipc', 'ipc.export.saved', { fileName: path.basename(saveDialogResult.filePath), eventCount: events.length });
     return { canceled: false, filePath: saveDialogResult.filePath };
   } catch (error) {
+    // Log export failures so we can diagnose permission issues, disk errors,
+    // or other file I/O failures that block user-initiated export.
     logger.error('ipc', 'ipc.export.failed', { error });
     return {
       canceled: false,

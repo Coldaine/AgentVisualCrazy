@@ -1,0 +1,40 @@
+# Auto-detect text files and normalize line endings to LF on commit
+* text=auto
+
+# Source code — always LF in the repository
+*.ts text eol=lf
+*.tsx text eol=lf
+*.js text eol=lf
+*.jsx text eol=lf
+*.css text eol=lf
+*.json text eol=lf
+*.jsonl text eol=lf
+*.md text eol=lf
+*.html text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+*.toml text eol=lf
+*.replay text eol=lf
+
+# Snapshots are generated; keep LF
+*.snap text eol=lf
+
+# Scripts
+*.sh text eol=lf
+*.ps1 text eol=lf
+
+# Windows-specific — keep CRLF
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Binary files — never touch line endings
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.eot binary
+*.ttf binary
+*.woff binary
+*.woff2 binary
+*.wasm binary

@@ -182,7 +182,17 @@ async function writeJsonLine(filePath: string, entry: LogEntry): Promise<void> {
 
 const DEFAULT_ROTATION_MAX_BYTES = 10 * 1024 * 1024; // 10 MiB
 
-export class StructuredLogger {
+export interface Logger {
+  debug(domain: LogDomain, event: string, context?: Record<string, unknown>): void;
+  info(domain: LogDomain, event: string, context?: Record<string, unknown>): void;
+  warn(domain: LogDomain, event: string, context?: Record<string, unknown>): void;
+  error(domain: LogDomain, event: string, context?: Record<string, unknown>): void;
+  getRecent(limit?: number): LogEntry[];
+  /** Create a child logger that inherits configuration and prepends `context` to every log entry. */
+  child(context: Record<string, unknown>): Logger;
+}
+
+export class StructuredLogger implements Logger {
   private readonly minLevel: LogLevel;
   private readonly includeConsole: boolean;
   private readonly includeMemory: boolean;
@@ -197,8 +207,9 @@ export class StructuredLogger {
   private droppedWriteCount = 0;
   private readonly writeQueue: LogEntry[] = [];
   private isProcessingQueue = false;
+  private readonly baseContext: Record<string, unknown>;
 
-  public constructor(options: LoggerOptions = {}) {
+  public constructor(options: LoggerOptions = {}, baseContext: Record<string, unknown> = {}) {
     this.minLevel = options.minLevel ?? 'info';
     this.includeConsole = options.includeConsole ?? true;
     this.includeMemory = options.includeMemory ?? true;
@@ -207,6 +218,11 @@ export class StructuredLogger {
     this.rotationMaxBytes = options.rotationMaxBytes ?? DEFAULT_ROTATION_MAX_BYTES;
     this.maxQueueDepth = Math.max(1, options.maxQueueDepth ?? 200);
     this.memory = this.memoryCapacity > 0 ? new Array(this.memoryCapacity) : [];
+    this.baseContext = {};
+    // Apply baseContext through the regular merge path (redaction-safe).
+    for (const [key, value] of Object.entries(baseContext)) {
+      this.baseContext[key] = value;
+    }
   }
 
   public debug(domain: LogDomain, event: string, context?: Record<string, unknown>): void {
@@ -223,6 +239,10 @@ export class StructuredLogger {
 
   public error(domain: LogDomain, event: string, context?: Record<string, unknown>): void {
     this.log('error', domain, event, context);
+  }
+
+  public child(context: Record<string, unknown>): Logger {
+    return new ChildLogger(this, { ...this.baseContext, ...context });
   }
 
   public getRecent(limit = 100): LogEntry[] {
@@ -253,7 +273,14 @@ export class StructuredLogger {
     return this.droppedWriteCount;
   }
 
-  private log(level: LogLevel, domain: LogDomain, event: string, context?: Record<string, unknown>): void {
+  /**
+   * Internal entry point for child loggers. Accepts pre-merged context
+   * so the child can inject its inherited fields without duplicating the
+   * redaction / level-check / memory-ring / console / file-write pipeline.
+   *
+   * @internal
+   */
+  public _logMerged(level: LogLevel, domain: LogDomain, event: string, mergedContext?: Record<string, unknown>): void {
     if (LEVEL_WEIGHT[level] < LEVEL_WEIGHT[this.minLevel]) {
       return;
     }
@@ -263,7 +290,7 @@ export class StructuredLogger {
       level,
       domain,
       event,
-      context: redactContext(context)
+      context: redactContext(mergedContext)
     };
 
     if (this.includeMemory && this.memoryCapacity > 0) {
@@ -289,6 +316,10 @@ export class StructuredLogger {
     if (this.filePath) {
       this.enqueueWrite(entry);
     }
+  }
+
+  private log(level: LogLevel, domain: LogDomain, event: string, context?: Record<string, unknown>): void {
+    this._logMerged(level, domain, event, { ...this.baseContext, ...context });
   }
 
   /**
@@ -357,6 +388,51 @@ export class StructuredLogger {
 }
 
 /**
+ * Child logger that delegates to a parent `StructuredLogger` while injecting
+ * inherited context into every log call.
+ *
+ * Critical design properties:
+ * 1. Shares the parent's memory ring — `parentLogger.getRecent()` sees child logs.
+ * 2. Shares the parent's file — no split rotation schedules.
+ * 3. Merges context per-call — no state mutation, no stale snapshots.
+ * 4. Lightweight — only holds a parent reference + context object.
+ * 5. Recursive child() — nesting child loggers folds contexts correctly.
+ */
+class ChildLogger implements Logger {
+  private readonly _parent: StructuredLogger;
+  private readonly _context: Record<string, unknown>;
+
+  constructor(parent: StructuredLogger, context: Record<string, unknown>) {
+    this._parent = parent;
+    this._context = context;
+  }
+
+  debug(domain: LogDomain, event: string, context?: Record<string, unknown>): void {
+    this._parent._logMerged('debug', domain, event, { ...this._context, ...context });
+  }
+
+  info(domain: LogDomain, event: string, context?: Record<string, unknown>): void {
+    this._parent._logMerged('info', domain, event, { ...this._context, ...context });
+  }
+
+  warn(domain: LogDomain, event: string, context?: Record<string, unknown>): void {
+    this._parent._logMerged('warn', domain, event, { ...this._context, ...context });
+  }
+
+  error(domain: LogDomain, event: string, context?: Record<string, unknown>): void {
+    this._parent._logMerged('error', domain, event, { ...this._context, ...context });
+  }
+
+  getRecent(limit?: number): LogEntry[] {
+    return this._parent.getRecent(limit);
+  }
+
+  child(context: Record<string, unknown>): Logger {
+    return new ChildLogger(this._parent, { ...this._context, ...context });
+  }
+}
+
+/**
  * Create a `StructuredLogger`.
  *
  * `minLevel` defaults to the value of the `SHADOW_LOG_LEVEL` environment variable
@@ -366,5 +442,21 @@ export function createLogger(options: LoggerOptions = {}): StructuredLogger {
   return new StructuredLogger({
     ...options,
     minLevel: options.minLevel ?? resolveEnvLogLevel()
+  });
+}
+
+/**
+ * Create a logger configured for test use.
+ *
+ * Console output is disabled so CI runs stay clean. Debug logging is enabled
+ * by default so tests can assert the full instrumentation stream. The in-memory ring is
+ * smaller than the production default (500 entries) to keep test memory
+ * footprint low. Use `logger.getRecent()` to assert on emitted log entries.
+ */
+export function createTestLogger(): StructuredLogger {
+  return new StructuredLogger({
+    minLevel: 'debug',
+    includeConsole: false,
+    memoryCapacity: 500,
   });
 }

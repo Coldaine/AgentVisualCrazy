@@ -3,15 +3,14 @@ import { join } from 'node:path';
 import { DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS } from '../shared/privacy';
 import { buildSessionRecord, parseReplay, serializeEvents } from '../shared/replay-store';
 import type { CanonicalEvent, SessionRecord, TranscriptPrivacySettings } from '../shared/schema';
-import { createLogger } from '../shared/logger';
-
-const logger = createLogger();
+import { createLogger, type Logger } from '../shared/logger';
 
 export interface FileReplayStoreOptions {
   sessionsDirName?: string;
   eventsFileName?: string;
   recordFileName?: string;
   privacy?: TranscriptPrivacySettings;
+  logger?: Logger;
 }
 
 export interface ReplayStorageOptions {
@@ -23,7 +22,7 @@ export interface StoredReplaySession {
   events: CanonicalEvent[];
 }
 
-const DEFAULT_OPTIONS: Omit<Required<FileReplayStoreOptions>, 'privacy'> = {
+const DEFAULT_OPTIONS: Omit<Required<FileReplayStoreOptions>, 'privacy' | 'logger'> = {
   sessionsDirName: 'sessions',
   eventsFileName: 'events.jsonl',
   recordFileName: 'session.json'
@@ -51,6 +50,7 @@ export class FileReplayStore {
   private readonly eventsFileName: string;
   private readonly recordFileName: string;
   private readonly privacy: TranscriptPrivacySettings;
+  private readonly logger: Logger;
 
   constructor(private readonly rootDir: string, options: FileReplayStoreOptions = {}) {
     const mergedOptions = { ...DEFAULT_OPTIONS, ...options };
@@ -58,6 +58,7 @@ export class FileReplayStore {
     this.eventsFileName = mergedOptions.eventsFileName;
     this.recordFileName = mergedOptions.recordFileName;
     this.privacy = options.privacy ?? DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS;
+    this.logger = options.logger ?? createLogger();
   }
 
   private sessionDir(sessionId: string): string {
@@ -86,7 +87,9 @@ export class FileReplayStore {
     await writeFile(this.eventsPath(sessionId), eventLog, 'utf8');
     await writeFile(this.recordPath(sessionId), `${JSON.stringify(record, null, 2)}\n`, 'utf8');
 
-    logger.info('persistence', 'persistence.replay.saved', {
+    // Log save so we can verify the persistence pipeline wrote events to disk.
+    // Missing saves = stale replay data or broken session browser.
+    this.logger.info('persistence', 'persistence.replay.saved', {
       sessionId,
       eventCount: events.length
     });
@@ -101,7 +104,7 @@ export class FileReplayStore {
   ): Promise<SessionRecord> {
     const current = await this.loadSession(sessionId).catch(() => undefined);
     const nextEvents = [...(current?.events ?? []), event];
-    logger.debug('persistence', 'persistence.replay.appended', {
+    this.logger.debug('persistence', 'persistence.replay.appended', {
       sessionId,
       kind: event.kind,
       totalEvents: nextEvents.length
@@ -110,18 +113,22 @@ export class FileReplayStore {
   }
 
   async loadSession(sessionId: string): Promise<StoredReplaySession> {
-    logger.debug('persistence', 'persistence.replay.load_started', { sessionId });
+    this.logger.debug('persistence', 'persistence.replay.load_started', { sessionId });
     try {
       const eventsText = await readFile(this.eventsPath(sessionId), 'utf8');
       const events = parseReplay(eventsText);
       const record = await this.loadRecord(sessionId, events);
-      logger.info('persistence', 'persistence.replay.loaded', {
+      // Log load completion so we can confirm the replay data reached the
+      // renderer. Missing loads = broken session browser or stale file cache.
+      this.logger.info('persistence', 'persistence.replay.loaded', {
         sessionId,
         eventCount: events.length
       });
       return { record, events };
     } catch (error) {
-      logger.error('persistence', 'persistence.replay.load_failed', { sessionId, error });
+      // Log load failures so we can diagnose corrupted or missing session
+      // files. The error is re-thrown for upstream error boundaries.
+      this.logger.error('persistence', 'persistence.replay.load_failed', { sessionId, error });
       throw error;
     }
   }
@@ -131,7 +138,7 @@ export class FileReplayStore {
   }
 
   async listSessions(): Promise<SessionRecord[]> {
-    logger.debug('persistence', 'persistence.store.list_started', { rootDir: this.rootDir });
+    this.logger.debug('persistence', 'persistence.store.list_started', { rootDir: this.rootDir });
     let entries: Array<{ name: string }> = [];
 
     try {
@@ -154,7 +161,9 @@ export class FileReplayStore {
     );
 
     const validSessions = sessions.filter((session): session is SessionRecord => Boolean(session)).sort(sortSessions);
-    logger.info('persistence', 'persistence.store.listed', { sessionCount: validSessions.length });
+    // Log session listing so we can verify the store boundary reported
+    // the final filtered count that the session browser will display.
+    this.logger.info('persistence', 'persistence.store.listed', { sessionCount: validSessions.length });
     return validSessions;
   }
 

@@ -16,11 +16,9 @@ import type {
   EventQueueCheckpoint,
   EventQueueMetrics
 } from '../shared/schema';
-import { createLogger } from '../shared/logger';
+import { createLogger, type Logger } from '../shared/logger';
 import { DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS, prepareEventsForStorage } from '../shared/privacy';
 import type { TranscriptPrivacySettings } from '../shared/schema';
-
-const logger = createLogger({ minLevel: 'info' });
 
 const DEFAULT_MEMORY_CAPACITY = 2_000;
 const DEFAULT_TOTAL_CAPACITY = 10_000;
@@ -48,6 +46,7 @@ export interface EventBufferOptions {
   criticalWatermark?: number;
   sessionId?: string;
   getPrivacy?: () => TranscriptPrivacySettings;
+  logger?: Logger;
 }
 
 export type EventSubscriber = (events: CanonicalEvent[], metrics: EventQueueMetrics) => void;
@@ -110,7 +109,7 @@ function parseEnvelope(line: string): EventEnvelope | null {
   }
 }
 
-async function readSpillFile(filePath: string): Promise<EventEnvelope[]> {
+async function readSpillFile(filePath: string, logger?: Logger): Promise<EventEnvelope[]> {
   try {
     const raw = await readFile(filePath, 'utf8');
     return raw
@@ -124,7 +123,7 @@ async function readSpillFile(filePath: string): Promise<EventEnvelope[]> {
     if (code === 'ENOENT') {
       return [];
     }
-    logger.error('capture', 'buffer.spill_read_failed', { filePath, error });
+    logger?.error('capture', 'buffer.spill_read_failed', { filePath, error });
     return [];
   }
 }
@@ -156,7 +155,7 @@ async function writeSpillFile(
   await writeFile(filePath, payload, 'utf8');
 }
 
-async function readCheckpointFile(filePath: string): Promise<Map<string, EventQueueCheckpoint>> {
+async function readCheckpointFile(filePath: string, logger?: Logger): Promise<Map<string, EventQueueCheckpoint>> {
   try {
     const raw = await readFile(filePath, 'utf8');
     const parsed = JSON.parse(raw) as SerializedCheckpointMap;
@@ -166,7 +165,7 @@ async function readCheckpointFile(filePath: string): Promise<Map<string, EventQu
     if (code === 'ENOENT') {
       return new Map();
     }
-    logger.error('capture', 'buffer.checkpoint_read_failed', { filePath, error });
+    logger?.error('capture', 'buffer.checkpoint_read_failed', { filePath, error });
     return new Map();
   }
 }
@@ -184,6 +183,7 @@ async function writeCheckpointFile(filePath: string, checkpoints: Map<string, Ev
 
 export function createEventBuffer(capacityOrOptions: number | EventBufferOptions = DEFAULT_MEMORY_CAPACITY): EventBuffer {
   const options = typeof capacityOrOptions === 'number' ? { memoryCapacity: capacityOrOptions } : capacityOrOptions;
+  const logger = options.logger ?? createLogger();
   const memoryCapacity = Math.max(1, options.memoryCapacity ?? DEFAULT_MEMORY_CAPACITY);
   const totalCapacity = Math.max(memoryCapacity, options.totalCapacity ?? DEFAULT_TOTAL_CAPACITY);
   const persistenceRoot = options.persistenceRoot ?? DEFAULT_PERSISTENCE_ROOT;
@@ -265,6 +265,9 @@ export function createEventBuffer(capacityOrOptions: number | EventBufferOptions
       return;
     }
     lastBackpressureLevel = level;
+    // Log backpressure changes so we can diagnose event loss during
+    // high-volume sessions (e.g., rapid tool calls). Threshold is 80% of
+    // buffer capacity at warnings and 90% at critical.
     logger.info('capture', 'buffer.backpressure_changed', {
       level,
       totalDepth: metrics.totalDepth,
@@ -278,6 +281,8 @@ export function createEventBuffer(capacityOrOptions: number | EventBufferOptions
       try {
         subscriber(events, metrics);
       } catch (error) {
+        // Log subscriber errors so we can catch bugs in listener code
+        // that would silently drop event delivery.
         logger.error('capture', 'buffer.subscriber_error', { error });
       }
     }
@@ -302,7 +307,7 @@ export function createEventBuffer(capacityOrOptions: number | EventBufferOptions
 
     // Lazy-load persisted checkpoints if this session already has them.
     if (checkpoints.size === 0) {
-      const persisted = await readCheckpointFile(checkpointPath());
+      const persisted = await readCheckpointFile(checkpointPath(), logger);
       for (const [id, checkpoint] of persisted.entries()) {
         checkpoints.set(id, checkpoint);
       }
@@ -328,7 +333,7 @@ export function createEventBuffer(capacityOrOptions: number | EventBufferOptions
   };
 
   const loadAllEnvelopes = async (): Promise<EventEnvelope[]> => {
-    const spilled = spilledDepth > 0 ? await readSpillFile(spillPath()) : [];
+    const spilled = spilledDepth > 0 ? await readSpillFile(spillPath(), logger) : [];
     return [...spilled, ...memory];
   };
 
@@ -376,6 +381,8 @@ export function createEventBuffer(capacityOrOptions: number | EventBufferOptions
         await rm(previousDir, { recursive: true, force: true });
         await rm(sessionDir(), { recursive: true, force: true });
         await persistCheckpoints();
+        // Log session switches so we can trace event flow end-to-end
+        // from discovery through parsing, buffering, and delivery.
         logger.info('capture', 'buffer.session_set', { sessionId: nextSessionId });
       });
     },
@@ -400,7 +407,7 @@ export function createEventBuffer(capacityOrOptions: number | EventBufferOptions
         memory.push(...acceptedEnvelopes);
 
         const overflow = Math.max(0, memory.length - memoryCapacity);
-        let spilled = overflow > 0 ? await readSpillFile(spillPath()) : [];
+        let spilled = overflow > 0 ? await readSpillFile(spillPath(), logger) : [];
         let spilledCount = 0;
         let droppedCount = 0;
 
@@ -509,6 +516,8 @@ export function createEventBuffer(capacityOrOptions: number | EventBufferOptions
         const target = all.find((entry) => entry.event.id === eventId);
 
         if (!target) {
+          // Log missing checkpoint targets so we can diagnose consumer
+          // lag issues and verify correct session scoping.
           logger.warn('capture', 'buffer.checkpoint_target_missing', {
             consumerId,
             eventId

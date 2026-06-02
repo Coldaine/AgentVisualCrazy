@@ -54,10 +54,19 @@ describe('parseModelResponse', () => {
     expect(insights).toHaveLength(0);
   });
 
-  it('handles missing optional fields gracefully', () => {
+  it('maps missing optional fields to a default-confidence phase insight', () => {
     const response = JSON.stringify({ phase: 'idle' });
-    // Should not throw, may return partial insights
-    expect(() => parseModelResponse(response)).not.toThrow();
+    const insights = parseModelResponse(response);
+
+    // This protects the tolerant parser behavior instead of only proving it avoids throwing.
+    expect(insights).toEqual([
+      expect.objectContaining({
+        kind: 'phase',
+        confidence: 0.5,
+        summary: 'Phase: idle',
+        structuredPayload: { phase: 'idle' },
+      }),
+    ]);
   });
 
   it('clamps confidence to [0, 1]', () => {
@@ -160,11 +169,11 @@ describe('buildContextPacket', () => {
 // ── prompt builder ─────────────────────────────────────────────────────────
 
 describe('buildInferenceRequest', () => {
-  it('returns systemPrompt matching SHADOW_SYSTEM_PROMPT', () => {
+  it('returns the shadow system prompt plus a populated session context message', () => {
     const state: DerivedState = {
       sessionId: 'x',
       title: 'T',
-      currentObjective: '',
+      currentObjective: 'Observe the session',
       activePhase: 'idle',
       agentNodes: [],
       timeline: [],
@@ -176,9 +185,13 @@ describe('buildInferenceRequest', () => {
     };
     const packet = buildContextPacket(state, []);
     const request = buildInferenceRequest(packet);
+
+    // The prompt smoke test should fail if context assembly disappears, not just if the type changes.
     expect(request.systemPrompt).toBe(SHADOW_SYSTEM_PROMPT);
-    expect(typeof request.userMessage).toBe('string');
-    expect(request.userMessage.length).toBeGreaterThan(0);
+    expect(request.userMessage).toContain('Session: x');
+    expect(request.userMessage).toContain('Agent: claude-code');
+    expect(request.userMessage).toContain('Phase (heuristic): idle');
+    expect(request.userMessage).toContain('Privacy mode: local-only');
   });
 
   it('is deterministic — same packet produces same output', () => {
