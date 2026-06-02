@@ -22,6 +22,7 @@ vi.mock('electron', () => ({
 }));
 
 import { createSessionManager } from '../../src/capture/session-manager';
+import { createTestLogger } from '../../src/shared/logger';
 
 const tempDirs: string[] = [];
 
@@ -83,9 +84,11 @@ describe('createSessionManager', () => {
       }
     };
 
+    const logger = createTestLogger();
     const manager = createSessionManager(() => null, {
       queuePersistenceRoot: tempRoot,
-      transport
+      transport,
+      logger
     });
 
     await manager.start();
@@ -98,6 +101,11 @@ describe('createSessionManager', () => {
     expect(snapshot?.source.path).toBe('tcp://127.0.0.1:5000');
     expect(snapshot?.state.transcript).toHaveLength(1);
     expect(snapshot?.state.transcript[0]?.text).toBe('parsed after reset');
+    // The injected logger must capture both manager and buffer events for one traceable session path.
+    expect(logger.getRecent()).toEqual(expect.arrayContaining([
+      expect.objectContaining({ event: 'session_manager.start_session' }),
+      expect.objectContaining({ event: 'buffer.session_set' })
+    ]));
 
     manager.stop();
     expect(subscriptionStopped).toBe(true);

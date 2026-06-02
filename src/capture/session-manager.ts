@@ -55,7 +55,8 @@ export function createSessionManager(
     persistenceRoot: options.queuePersistenceRoot,
     memoryCapacity: options.queueMemoryCapacity,
     totalCapacity: options.queueTotalCapacity,
-    getPrivacy
+    getPrivacy,
+    logger
   });
   let activeSession: CaptureSession | null = null;
   let activeParser = createIncrementalParser(() => undefined);
