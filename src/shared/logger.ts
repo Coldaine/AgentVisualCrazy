@@ -448,12 +448,14 @@ export function createLogger(options: LoggerOptions = {}): StructuredLogger {
 /**
  * Create a logger configured for test use.
  *
- * Console output is disabled so CI runs stay clean. The in-memory ring is
+ * Console output is disabled so CI runs stay clean. Debug logging is enabled
+ * by default so tests can assert the full instrumentation stream. The in-memory ring is
  * smaller than the production default (500 entries) to keep test memory
  * footprint low. Use `logger.getRecent()` to assert on emitted log entries.
  */
 export function createTestLogger(): StructuredLogger {
   return new StructuredLogger({
+    minLevel: 'debug',
     includeConsole: false,
     memoryCapacity: 500,
   });

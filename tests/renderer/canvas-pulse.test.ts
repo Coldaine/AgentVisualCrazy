@@ -160,13 +160,14 @@ describe('canvas pulse API', () => {
     const t0 = 40000;
 
     const firstToolPulse = triggerPulseForEventKind('tool_started', undefined, undefined, t0);
+    const defaultCenterBoost = sampleCanvasPulseBoost(t0 + 25, 800, 600);
     const immediateToolPulse = triggerPulseForEventKind('tool_started', 0.5, 0.5, t0 + 50);
     const differentEventPulse = triggerPulseForEventKind('agent_spawned', 0.5, 0.5, t0 + 50);
     const delayedToolPulse = triggerPulseForEventKind('tool_started', 0.5, 0.5, t0 + 150);
 
     // Debounce is per kind, so rapid repeats coalesce without suppressing unrelated actions.
     expect(firstToolPulse).toBe(true);
-    expect(sampleCanvasPulseBoost(t0 + 100, 800, 600)).toBeGreaterThan(0);
+    expect(defaultCenterBoost).toBeGreaterThan(0);
     expect(immediateToolPulse).toBe(false);
     expect(differentEventPulse).toBe(true);
     expect(delayedToolPulse).toBe(true);

@@ -183,7 +183,7 @@ async function writeCheckpointFile(filePath: string, checkpoints: Map<string, Ev
 
 export function createEventBuffer(capacityOrOptions: number | EventBufferOptions = DEFAULT_MEMORY_CAPACITY): EventBuffer {
   const options = typeof capacityOrOptions === 'number' ? { memoryCapacity: capacityOrOptions } : capacityOrOptions;
-  const logger = options.logger ?? createLogger({ minLevel: 'info' });
+  const logger = options.logger ?? createLogger();
   const memoryCapacity = Math.max(1, options.memoryCapacity ?? DEFAULT_MEMORY_CAPACITY);
   const totalCapacity = Math.max(memoryCapacity, options.totalCapacity ?? DEFAULT_TOTAL_CAPACITY);
   const persistenceRoot = options.persistenceRoot ?? DEFAULT_PERSISTENCE_ROOT;

@@ -1,10 +1,12 @@
 # Test Suite Audit — AgentVisualCrazy
 
-**Generated:** 2026-06-02. **Method:** 4 independent reviewer agents graded every test file across all 49 test files. Each agent read the test *and* the production source it claims to exercise, then assigned a letter grade A–F and a verdict: **REAL** / **WEAK** / **FICTION**.
+**Generated:** 2026-06-02. **Method:** 4 independent reviewer agents graded every test file across all 49 test files. Each agent read the test *and* the production source it claims to exercise, then assigned a letter grade A-F and a verdict: **REAL** / **WEAK** / **FICTION**.
 
 This audit reflects the state of `main` **after** PR #100 (`test/audit-followup-rewrites`), which addressed the prior audit's worst offenders.
 
-## Headline
+**Follow-up in this PR:** the logger redesign is now implemented for the capture/persistence/session-io paths, instrumentation tests assert against injected in-memory loggers, and the highest-noise renderer helper/pulse suites were consolidated. The current regular suite is **48 files / 381 tests**, plus **1 live file / 3 live tests**.
+
+## Post-PR #100 Headline
 
 - **49 files · 430 test cases (427 regular + 3 live).**
 - **REAL 387 (90%) · WEAK 43 (10%) · FICTION 0 (0%).**
@@ -34,17 +36,18 @@ This audit reflects the state of `main` **after** PR #100 (`test/audit-followup-
 | `tests/renderer/renderer-surface-adapter.test.ts` | D/REAL | 1 test with identity checks. Would catch deletions but not behavioral regressions. |
 | `tests/renderer/host.test.ts` | D/REAL | 1 test for static host. Missing `createBridgeHost` or populated capabilities. |
 | `tests/capture/ipc-bridge.test.ts` | D/REAL | 2 tests for `markDirty`. Missing shadow:snapshot, events-since, debounce/push flow for 145-line file. |
-| `tests/renderer/record-2d-context.test.ts` | B/WEAK | Tests the test helper itself. 33 tests validate the mock proxy, not src/ code. |
+| `tests/renderer/record-2d-context.test.ts` | B/REAL | Follow-up consolidated the helper self-tests into recorder-contract cases used by renderer assertions. |
 
-### Logging infrastructure (architectural concern)
+### Logging infrastructure (redesigned in this PR)
 
-`tests/instrumentation-sampling.test.ts` spies on `console.log` to verify log events because:
+The original audit found that `tests/instrumentation-sampling.test.ts` had to spy on `console.log` because production modules created module-scope logger singletons that tests could not inspect. This PR replaces that workaround with:
 
-1. `StructuredLogger` has **no interface** — only a concrete class. Proposes adding `interface Logger`.
-2. Modules create loggers at **module scope** (`createLogger()` at import time) — no DI injection point.
-3. The memory ring buffer (`getRecent()`) is the cleanest test surface, but test code can't reach the module-scope singleton instances.
+1. a `Logger` interface implemented by `StructuredLogger`;
+2. `createTestLogger()`, which disables console output and captures debug-through-error events in memory;
+3. logger injection for `FileReplayStore`, `session-io`, `SessionManager`, and `EventBuffer`;
+4. behavior assertions in `tests/instrumentation-sampling.test.ts` against `logger.getRecent()` instead of environment mutation or console spies.
 
-The `vi.hoisted` + `SHADOW_LOG_LEVEL=debug` + `console.log` spy is a pragmatic workaround, but a proper `Logger` interface + constructor injection would eliminate it. See `docs/plans/plan-testing-observability.md` for the proposed redesign.
+Remaining guidance: new instrumentation should accept a `Logger` or receive one from a parent subsystem, and tests should prefer `createTestLogger()` plus `getRecent()` for structured assertions. See `docs/plans/plan-testing-observability.md` for the design rationale and the capture layer for usage examples.
 
 ## Previous Audit Comparison
 

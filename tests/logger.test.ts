@@ -265,6 +265,19 @@ describe('structured logger — bounded write queue backpressure', () => {
 });
 
 describe('structured logger — child loggers', () => {
+  it('createTestLogger() captures debug events by default', () => {
+    const logger = createTestLogger();
+
+    logger.debug('capture', 'buffer.pushed', { accepted: 1 });
+
+    expect(logger.getRecent()).toContainEqual(expect.objectContaining({
+      level: 'debug',
+      domain: 'capture',
+      event: 'buffer.pushed',
+      context: expect.objectContaining({ accepted: 1 })
+    }));
+  });
+
   it('child logger inherits parent context and shares the parent memory ring', () => {
     const parent = createLogger({ minLevel: 'debug', includeConsole: false });
     const child = parent.child({ sessionId: 'abc123', source: 'claude-code' });

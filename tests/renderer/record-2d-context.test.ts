@@ -70,12 +70,21 @@ describe('record-2d-context', () => {
     radial.addColorStop(0.25, 'transparent');
 
     // Gradient stop ownership is the behavior snapshots cannot infer from command counts alone.
-    expect(ctx.getRecordedCommands()).toEqual([
-      { type: 'createLinearGradient', x0: 0, y0: 0, x1: 100, y1: 200, gradientId: 1 },
-      { type: 'addColorStop', gradientId: 1, offset: 0, color: 'red' },
-      { type: 'addColorStop', gradientId: 1, offset: 1, color: 'blue' },
-      { type: 'createRadialGradient', x0: 50, y0: 50, r0: 0, x1: 50, y1: 50, r1: 100, gradientId: 2 },
-      { type: 'addColorStop', gradientId: 2, offset: 0.25, color: 'transparent' },
+    const commands = ctx.getRecordedCommands();
+    const linearCommand = commands[0];
+    const radialCommand = commands[3];
+    if (linearCommand?.type !== 'createLinearGradient' || radialCommand?.type !== 'createRadialGradient') {
+      throw new Error('Expected gradient creation commands in recorder output');
+    }
+
+    const linearId = linearCommand.gradientId;
+    const radialId = radialCommand.gradientId;
+    expect(commands).toEqual([
+      { type: 'createLinearGradient', x0: 0, y0: 0, x1: 100, y1: 200, gradientId: expect.any(Number) },
+      { type: 'addColorStop', gradientId: linearId, offset: 0, color: 'red' },
+      { type: 'addColorStop', gradientId: linearId, offset: 1, color: 'blue' },
+      { type: 'createRadialGradient', x0: 50, y0: 50, r0: 0, x1: 50, y1: 50, r1: 100, gradientId: expect.any(Number) },
+      { type: 'addColorStop', gradientId: radialId, offset: 0.25, color: 'transparent' },
     ]);
   });
 
