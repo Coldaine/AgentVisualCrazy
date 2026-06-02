@@ -25,13 +25,14 @@ vi.mock('electron', () => ({
 
 import { createIncrementalParser } from '../../src/capture/incremental-parser';
 import { createEventBuffer } from '../../src/capture/event-buffer';
+import { createTestLogger } from '../../src/shared/logger';
 import { computeWatchDelay } from '../../src/capture/transcript-watcher';
 import { normalizeEntry } from '../../src/capture/normalizer';
 import { discoverActiveSession } from '../../src/capture/session-discovery';
 import { createIpcBridge } from '../../src/capture/ipc-bridge';
 import type { EventBuffer, EventSubscriber } from '../../src/capture/event-buffer';
-import { mkdtempSync, rmSync } from 'node:fs';
-import { readFile } from 'node:fs/promises';
+import { mkdirSync, mkdtempSync, rmSync } from 'node:fs';
+import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
@@ -418,6 +419,53 @@ describe('createEventBuffer', () => {
     expect(recent).toHaveLength(2);
     expect(recent[0].id).toBe('2');
     expect(recent[1].id).toBe('3');
+  });
+
+  it('logs unreadable spill storage while falling back to the in-memory window', async () => {
+    const root = makeTempRoot();
+    const logger = createTestLogger();
+    const buf = createEventBuffer({
+      memoryCapacity: 1,
+      totalCapacity: 4,
+      persistenceRoot: root,
+      logger
+    });
+    await buf.push([makeEvent('spilled'), makeEvent('memory')]);
+    const spillPath = join(root, 'default', 'spill.jsonl');
+    rmSync(spillPath, { force: true });
+    mkdirSync(spillPath, { recursive: true });
+
+    const all = await buf.getAll();
+
+    // Corrupt or unreadable spill storage should be observable, not silently collapsed to "no spill yet".
+    expect(all.map((event) => event.id)).toEqual(['memory']);
+    expect(logger.getRecent()).toContainEqual(expect.objectContaining({
+      level: 'error',
+      domain: 'capture',
+      event: 'buffer.spill_read_failed',
+      context: expect.objectContaining({ filePath: spillPath })
+    }));
+  });
+
+  it('logs malformed checkpoint storage before starting a fresh checkpoint map', async () => {
+    const root = makeTempRoot();
+    const logger = createTestLogger();
+    const sessionDir = join(root, 'default');
+    mkdirSync(sessionDir, { recursive: true });
+    const checkpointPath = join(sessionDir, 'checkpoints.json');
+    await writeFile(checkpointPath, 'not-json', 'utf8');
+    const buf = createEventBuffer({ persistenceRoot: root, logger });
+
+    const checkpoint = await buf.registerConsumer('renderer', { startAt: 'earliest' });
+
+    // The buffer can recover with a fresh map, but the bad persisted state must still be logged.
+    expect(checkpoint.consumerId).toBe('renderer');
+    expect(logger.getRecent()).toContainEqual(expect.objectContaining({
+      level: 'error',
+      domain: 'capture',
+      event: 'buffer.checkpoint_read_failed',
+      context: expect.objectContaining({ filePath: checkpointPath })
+    }));
   });
 
   it('getSince returns events after a given id even when older items spilled to disk', async () => {

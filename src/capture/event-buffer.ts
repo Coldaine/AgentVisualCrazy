@@ -109,7 +109,7 @@ function parseEnvelope(line: string): EventEnvelope | null {
   }
 }
 
-async function readSpillFile(filePath: string): Promise<EventEnvelope[]> {
+async function readSpillFile(filePath: string, logger?: Logger): Promise<EventEnvelope[]> {
   try {
     const raw = await readFile(filePath, 'utf8');
     return raw
@@ -123,8 +123,7 @@ async function readSpillFile(filePath: string): Promise<EventEnvelope[]> {
     if (code === 'ENOENT') {
       return [];
     }
-    // We can't use the injected logger here because this is a module-level
-    // helper. The error is surfaced through the calling closure's logger.
+    logger?.error('capture', 'buffer.spill_read_failed', { filePath, error });
     return [];
   }
 }
@@ -156,7 +155,7 @@ async function writeSpillFile(
   await writeFile(filePath, payload, 'utf8');
 }
 
-async function readCheckpointFile(filePath: string): Promise<Map<string, EventQueueCheckpoint>> {
+async function readCheckpointFile(filePath: string, logger?: Logger): Promise<Map<string, EventQueueCheckpoint>> {
   try {
     const raw = await readFile(filePath, 'utf8');
     const parsed = JSON.parse(raw) as SerializedCheckpointMap;
@@ -166,6 +165,7 @@ async function readCheckpointFile(filePath: string): Promise<Map<string, EventQu
     if (code === 'ENOENT') {
       return new Map();
     }
+    logger?.error('capture', 'buffer.checkpoint_read_failed', { filePath, error });
     return new Map();
   }
 }
@@ -307,7 +307,7 @@ export function createEventBuffer(capacityOrOptions: number | EventBufferOptions
 
     // Lazy-load persisted checkpoints if this session already has them.
     if (checkpoints.size === 0) {
-      const persisted = await readCheckpointFile(checkpointPath());
+      const persisted = await readCheckpointFile(checkpointPath(), logger);
       for (const [id, checkpoint] of persisted.entries()) {
         checkpoints.set(id, checkpoint);
       }
@@ -333,7 +333,7 @@ export function createEventBuffer(capacityOrOptions: number | EventBufferOptions
   };
 
   const loadAllEnvelopes = async (): Promise<EventEnvelope[]> => {
-    const spilled = spilledDepth > 0 ? await readSpillFile(spillPath()) : [];
+    const spilled = spilledDepth > 0 ? await readSpillFile(spillPath(), logger) : [];
     return [...spilled, ...memory];
   };
 
@@ -407,7 +407,7 @@ export function createEventBuffer(capacityOrOptions: number | EventBufferOptions
         memory.push(...acceptedEnvelopes);
 
         const overflow = Math.max(0, memory.length - memoryCapacity);
-        let spilled = overflow > 0 ? await readSpillFile(spillPath()) : [];
+        let spilled = overflow > 0 ? await readSpillFile(spillPath(), logger) : [];
         let spilledCount = 0;
         let droppedCount = 0;
 
