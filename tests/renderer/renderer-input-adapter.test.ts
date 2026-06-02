@@ -53,15 +53,17 @@ describe('canonicalEventRendererInputAdapter', () => {
     );
 
     expect(snapshot.record.title).toBe('Session Label');
-    expect(snapshot.state.currentObjective).toBe('Ship capture pipeline for [redacted-email] from [redacted-path]');
+    // Email and path now pass through unchanged (secret-only sanitize)
+    expect(snapshot.state.currentObjective).toBe('Ship capture pipeline for dev@example.com from D:\\_projects\\AgentVisualCrazy');
     expect(snapshot.state.fileAttention).toEqual([{ filePath: 'src/main.ts', touches: 1 }]);
     expect(snapshot.events[1]?.payload).toEqual({
-      text: 'Ship capture pipeline for [redacted-email] from [redacted-path]'
+      text: 'Ship capture pipeline for dev@example.com from D:\\_projects\\AgentVisualCrazy'
     });
+    // Default privacy policy is now both-on (off-host-opted-in)
     expect(snapshot.privacy).toEqual({
-      allowRawTranscriptStorage: false,
-      allowOffHostInference: false,
-      processingMode: 'local-only',
+      allowRawTranscriptStorage: true,
+      allowOffHostInference: true,
+      processingMode: 'off-host-opted-in',
       transcriptHandling: 'sanitized-by-default'
     });
   });

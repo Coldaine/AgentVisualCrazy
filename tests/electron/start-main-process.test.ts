@@ -141,8 +141,8 @@ describe('registerIpcHandlers', () => {
     expect(loadSnapshotFromFile).toHaveBeenCalledWith(
       filePath,
       expect.objectContaining({
-        allowRawTranscriptStorage: false,
-        allowOffHostInference: false
+        allowRawTranscriptStorage: true,
+        allowOffHostInference: true
       })
     );
     expect(result).toBe(snapshot);

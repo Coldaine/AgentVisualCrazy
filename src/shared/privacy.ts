@@ -8,26 +8,27 @@ export interface OffHostDeliveryOptions {
   includeRawTranscript?: boolean;
 }
 
+// Single-user personal observer: default to FULL power. The model only earns
+// its keep if it actually runs and sees real data. Restore paranoid mode with
+// SHADOW_LOCAL_ONLY=1 — the one kill switch that replaces the old gate sprawl.
 export const DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS: TranscriptPrivacySettings = {
-  allowRawTranscriptStorage: false,
-  allowOffHostInference: false
+  allowRawTranscriptStorage: true,
+  allowOffHostInference: true
 };
 
 export const TRANSCRIPT_PRIVACY_ENV_KEYS = {
   allowRawTranscriptStorage: 'SHADOW_ALLOW_RAW_TRANSCRIPT_STORAGE',
   allowOffHostInference: 'SHADOW_ALLOW_OFF_HOST_INFERENCE'
 } as const;
+/** The single kill switch: SHADOW_LOCAL_ONLY=1 forces fully-local — no off-host, no raw. */
+export const SHADOW_LOCAL_ONLY_ENV = 'SHADOW_LOCAL_ONLY';
 export const TRANSCRIPT_PRIVACY_SETTINGS_FILE = 'privacy.json';
 
-const EMAIL_PATTERN = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi;
 const BEARER_PATTERN = /\bBearer\s+[A-Z0-9._-]{12,}\b/gi;
 const KEY_VALUE_SECRET_PATTERN =
   /\b(api[_-]?key|access[_-]?token|auth[_-]?token|secret|password)\b\s*[:=]\s*["']?([^\s"',}]{4,})/gi;
 const PROVIDER_TOKEN_PATTERN =
   /\b(?:sk-[A-Z0-9]{12,}|gh[pousr]_[A-Z0-9_]{12,}|AIza[A-Z0-9_-]{20,}|AKIA[A-Z0-9]{16})\b/gi;
-const WINDOWS_PATH_PATTERN = /\b[A-Z]:\\(?:[^\s\\\r\n:*?"<>|]+\\)*[^\s\\\r\n:*?"<>|]*/gi;
-const HOME_PATH_PATTERN = /(^|[\s(])~\/[^\s)]+/g;
-const ABSOLUTE_PATH_PATTERN = /(^|[\s(])\/(?:Users|home|workspace|tmp|var|private|opt)\/[^\s)]+/g;
 
 function parseBooleanSetting(value: string | undefined): boolean | undefined {
   if (value === undefined) {
@@ -70,15 +71,19 @@ export function resolveTranscriptPrivacySettings(
   overrides: Partial<TranscriptPrivacySettings> = {},
   env: NodeJS.ProcessEnv = process.env
 ): TranscriptPrivacySettings {
+  // One kill switch. SHADOW_LOCAL_ONLY=1 → fully local; otherwise default ON.
+  // Granular env keys still override per-setting; explicit overrides win over all.
+  const baseDefault = parseBooleanSetting(env[SHADOW_LOCAL_ONLY_ENV]) === true ? false : true;
+
   const allowRawTranscriptStorage =
     overrides.allowRawTranscriptStorage ??
     parseBooleanSetting(env[TRANSCRIPT_PRIVACY_ENV_KEYS.allowRawTranscriptStorage]) ??
-    DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS.allowRawTranscriptStorage;
+    baseDefault;
 
   const allowOffHostInference =
     overrides.allowOffHostInference ??
     parseBooleanSetting(env[TRANSCRIPT_PRIVACY_ENV_KEYS.allowOffHostInference]) ??
-    DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS.allowOffHostInference;
+    baseDefault;
 
   return {
     allowRawTranscriptStorage,
@@ -133,14 +138,15 @@ export function resolvePrivacyPolicy(
 }
 
 export function sanitizeTranscriptText(input: string): string {
+  // Secret-scrub ONLY: keep live credentials out of off-host payloads and logs.
+  // We deliberately do NOT redact file paths or emails — the observer must see
+  // real paths and content to explain anything useful. Path/email redaction was
+  // overzealous (it blinded the narrator) and ineffective (regex misses real
+  // secrets), so it's gone. This is a personal tool on your own machine.
   return input
     .replace(KEY_VALUE_SECRET_PATTERN, (_match, key) => `${String(key)}=[redacted-secret]`)
     .replace(BEARER_PATTERN, 'Bearer [redacted-token]')
-    .replace(PROVIDER_TOKEN_PATTERN, '[redacted-token]')
-    .replace(EMAIL_PATTERN, '[redacted-email]')
-    .replace(WINDOWS_PATH_PATTERN, '[redacted-path]')
-    .replace(HOME_PATH_PATTERN, '$1[redacted-path]')
-    .replace(ABSOLUTE_PATH_PATTERN, '$1[redacted-path]');
+    .replace(PROVIDER_TOKEN_PATTERN, '[redacted-token]');
 }
 
 function sanitizeUnknown(value: unknown): unknown {

@@ -25,16 +25,29 @@ const packet: ShadowContextPacket = {
 };
 
 describe('prompt-builder privacy', () => {
-  it('sanitizes transcript-like content for local processing by default', () => {
+  it('sanitizes real secrets in transcript content for local delivery and leaves emails unchanged', () => {
     const message = buildUserMessage(packet);
 
+    // Local delivery always shows local-only mode regardless of privacy settings
     expect(message).toContain('Privacy mode: local-only');
-    expect(message).toContain('[redacted-email]');
+    // Token in tool history is redacted (sk-... provider token)
     expect(message).toContain('[redacted-token]');
+    // Email passes through unchanged — path/email redaction was removed
+    expect(message).toContain('dev@example.com');
+    expect(message).not.toContain('[redacted-email]');
   });
 
-  it('blocks off-host delivery until the user opts in', () => {
-    expect(() => buildUserMessage(packet, { delivery: 'off-host' })).toThrow(/disabled until the user explicitly opts in/i);
+  it('blocks off-host delivery when caller passes explicit local-only settings', () => {
+    // Default (no privacy override) now succeeds — off-host is on by default
+    expect(() => buildUserMessage(packet, { delivery: 'off-host' })).not.toThrow();
+
+    // Passing explicit local-only settings still blocks off-host delivery
+    expect(() =>
+      buildUserMessage(packet, {
+        delivery: 'off-host',
+        privacy: { allowRawTranscriptStorage: false, allowOffHostInference: false }
+      })
+    ).toThrow(/disabled until the user explicitly opts in/i);
   });
 
   it('allows raw transcript delivery only after explicit opt-in', () => {
@@ -65,12 +78,15 @@ describe('prompt-builder privacy', () => {
     ).toThrow(/raw transcript opt-in/i);
   });
 
-  it('sanitizes file-attention paths in prompt payloads by default', () => {
+  it('includes file-attention paths unredacted in prompt payloads by default', () => {
+    const filePath = 'D:\\_projects\\AgentVisualCrazy\\secret.txt';
     const message = buildUserMessage({
       ...packet,
-      fileAttention: [{ filePath: 'D:\\_projects\\AgentVisualCrazy\\secret.txt', touches: 2 }]
+      fileAttention: [{ filePath, touches: 2 }]
     });
 
-    expect(message).toContain('[redacted-path]: 2 touches');
+    // File paths now pass through unchanged — path redaction was deliberately removed
+    expect(message).toContain(`${filePath}: 2 touches`);
+    expect(message).not.toContain('[redacted-path]');
   });
 });

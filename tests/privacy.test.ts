@@ -25,21 +25,62 @@ async function createTempEnvFile(contents: string): Promise<string> {
 }
 
 describe('privacy sanitization', () => {
-  it('redacts emails, tokens, and local paths from transcript text', () => {
+  it('redacts real secrets and tokens from transcript text but leaves emails and paths unchanged', () => {
     const sanitized = sanitizeTranscriptText(
-      'Contact dev@example.com with Bearer abcdefghijklmnop and inspect D:\\_projects\\AgentVisualCrazy\\secret.txt or /Users/dev/.ssh/id_rsa'
+      'Contact dev@example.com with Bearer abcdefghijklmnop and inspect D:\\_projects\\AgentVisualCrazy\\secret.txt or /Users/dev/.ssh/id_rsa and sk-abcdefghijklmnop'
     );
 
-    expect(sanitized).toBe(
-      'Contact [redacted-email] with Bearer [redacted-token] and inspect [redacted-path] or [redacted-path]'
-    );
+    // Secrets/tokens are scrubbed
+    expect(sanitized).toContain('Bearer [redacted-token]');
+    expect(sanitized).toContain('[redacted-token]'); // provider token sk-...
+    // Emails and file paths now pass through unchanged
+    expect(sanitized).toContain('dev@example.com');
+    expect(sanitized).toContain('D:\\_projects\\AgentVisualCrazy\\secret.txt');
+    expect(sanitized).toContain('/Users/dev/.ssh/id_rsa');
+    expect(sanitized).not.toContain('[redacted-email]');
+    expect(sanitized).not.toContain('[redacted-path]');
   });
 
-  it('defaults privacy settings to local-only processing until explicitly opted in', () => {
+  it('defaults privacy settings to both-on (full power) for this single-user tool', () => {
     expect(resolveTranscriptPrivacySettings()).toEqual({
+      allowRawTranscriptStorage: true,
+      allowOffHostInference: true
+    });
+  });
+
+  it('SHADOW_LOCAL_ONLY=1 forces both settings to false as a kill switch', () => {
+    expect(resolveTranscriptPrivacySettings({}, { SHADOW_LOCAL_ONLY: '1' })).toEqual({
       allowRawTranscriptStorage: false,
       allowOffHostInference: false
     });
+
+    // Other truthy values also trigger the kill switch
+    expect(resolveTranscriptPrivacySettings({}, { SHADOW_LOCAL_ONLY: 'true' })).toEqual({
+      allowRawTranscriptStorage: false,
+      allowOffHostInference: false
+    });
+  });
+
+  it('granular env keys override the default even when SHADOW_LOCAL_ONLY is not set', () => {
+    const settings = resolveTranscriptPrivacySettings({}, {
+      SHADOW_ALLOW_RAW_TRANSCRIPT_STORAGE: '0',
+      SHADOW_ALLOW_OFF_HOST_INFERENCE: 'false'
+    });
+    expect(settings).toEqual({
+      allowRawTranscriptStorage: false,
+      allowOffHostInference: false
+    });
+  });
+
+  it('explicit overrides win over SHADOW_LOCAL_ONLY kill switch', () => {
+    const settings = resolveTranscriptPrivacySettings(
+      { allowOffHostInference: true },
+      { SHADOW_LOCAL_ONLY: '1' }
+    );
+    // overrides param beats the kill switch
+    expect(settings.allowOffHostInference).toBe(true);
+    // but the un-overridden key is still forced off by the kill switch
+    expect(settings.allowRawTranscriptStorage).toBe(false);
   });
 
   it('accepts explicit opt-in from environment-style settings', () => {
@@ -74,9 +115,10 @@ describe('privacy sanitization', () => {
     const envPath = await createTempEnvFile('SHADOW_ALLOW_OFF_HOST_INFERENCE=maybe\n');
     await rm(envPath, { force: true });
 
+    // With no env file and no process env overrides, defaults are both true
     await expect(loadTranscriptPrivacySettings({}, envPath, {})).resolves.toEqual({
-      allowRawTranscriptStorage: false,
-      allowOffHostInference: false
+      allowRawTranscriptStorage: true,
+      allowOffHostInference: true
     });
   });
 

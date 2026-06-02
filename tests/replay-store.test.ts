@@ -117,8 +117,10 @@ describe('replay-store', () => {
     expect(parsed.length).toBeGreaterThan(0);
     expect(parsed[0]?.sessionId).toBe('happy-path');
     const roundTripped = parseReplay(serializeEvents(parsed));
-    expect(roundTripped[0]?.payload).toEqual({ cwd: '[redacted-path]' });
-    expect(roundTripped).not.toEqual(parsed);
+    // cwd is a file path; path redaction was removed — it round-trips unchanged
+    expect(roundTripped[0]?.payload).toEqual({ cwd: '/workspace/myapp' });
+    // No secrets in this fixture, so sanitize is a no-op and events are equal
+    expect(roundTripped).toEqual(parsed);
   });
 
   it('parseReplay throws on corrupt-partial fixture (corrupt line)', () => {
