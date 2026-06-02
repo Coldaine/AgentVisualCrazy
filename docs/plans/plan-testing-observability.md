@@ -66,7 +66,7 @@ Several planned subsystems are naturally nondeterministic unless we create seams
 We should standardize the following test helpers:
 
 ```text
-shadow-agent/tests/
+tests/
   fixtures/
     transcripts/
     replays/
@@ -295,7 +295,7 @@ escape or when they only happen in live sessions.
 
 ### Logger Shape
 
-Create a shared structured logger, for example in `shadow-agent/src/shared/logger.ts`.
+Create a shared structured logger, for example in `src/shared/logger.ts`.
 
 Every log entry should carry:
 - timestamp
@@ -546,4 +546,3 @@ the real `StructuredLogger` instances.
 - `tests/instrumentation-sampling.test.ts` — simplified: imports `createTestLogger()`, passes
   it to `FileReplayStore`/`session-io`, asserts `logger.getRecent()`.
 - All other tests — unchanged (they don't interact with the logger).
-

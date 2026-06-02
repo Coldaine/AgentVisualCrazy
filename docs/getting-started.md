@@ -4,20 +4,15 @@ Welcome to **shadow-agent**. This guide will help you get the project running lo
 
 ## Setup
 
-The main project lives in the `shadow-agent` directory.
-
 ```bash
-cd shadow-agent
 npm install
 ```
 
 ## Test
 
-We use [Vitest](https://vitest.dev/) for unit and integration testing. Tests run
-from inside the `shadow-agent/` directory.
+We use [Vitest](https://vitest.dev/) for unit and integration testing.
 
 ```bash
-cd shadow-agent
 npm test               # run all tests
 npm run test:coverage  # run with coverage report
 npx vitest tests/derive.test.ts   # run a single file
@@ -39,7 +34,7 @@ by running `vitest run` and confirming the output contains only reporter summary
 
 CI runs the test suite and the build on every PR via the `CI`
 workflow (`.github/workflows/ci.yml`). The repo uses a pre-push Git
-hook in `.githooks/pre-push` that runs `npm test --prefix shadow-agent`
+hook in `.githooks/pre-push` that runs `npm test`
 once before pushing; `npm install` from the repo root configures
 `core.hooksPath` automatically. Run `npm test` yourself before pushing
 — the pre-push hook will also run it, but catching failures earlier
@@ -50,7 +45,6 @@ is cheaper than re-pushing.
 Build the web, renderer, and Electron bundles, then launch the desktop app:
 
 ```bash
-cd shadow-agent
 npm run build
 npm start
 ```
@@ -91,17 +85,17 @@ variables override the saved file for that run.
 
 ## Project Structure
 
-- `shadow-agent/src/electron/`: Main process code, including IPC handling, session management, and file loading.
-- `shadow-agent/src/renderer/`: React shell plus Canvas2D + D3-Force graph (`src/renderer/canvas/`), glass panels, and timeline UI.
-- `shadow-agent/src/shared/`: Code shared between the main and renderer processes (types, utilities, logging, privacy, transcript parsing, replay store).
-- `shadow-agent/src/inference/`: Shadow inference engine — OpenCode-first client with Anthropic fallback, auth, context packaging, prompt building, and trigger logic.
-- `shadow-agent/src/capture/`: Pluggable capture transports (file tail, HTTP stream, WebSocket, socket).
-- `shadow-agent/src/mcp/`: MCP server exposing shadow tools to other agents.
+- `src/electron/`: Main process code, including IPC handling, session management, and file loading.
+- `src/renderer/`: React shell plus Canvas2D + D3-Force graph (`src/renderer/canvas/`), glass panels, and timeline UI.
+- `src/shared/`: Code shared between the main and renderer processes (types, utilities, logging, privacy, transcript parsing, replay store).
+- `src/inference/`: Shadow inference engine — OpenCode-first client with Anthropic fallback, auth, context packaging, prompt building, and trigger logic.
+- `src/capture/`: Pluggable capture transports (file tail, HTTP stream, WebSocket, socket).
+- `src/mcp/`: MCP server exposing shadow tools to other agents.
 - `docs/`: Technical documentation, architecture decisions, and project plans.
 
 ## Prompt Workflow
 
-The shadow system prompt lives in `shadow-agent/src/inference/prompts.ts`
+The shadow system prompt lives in `src/inference/prompts.ts`
 as a single source of truth. The doc comment at the top contains the
 rationale, philosophy, per-section justification, evaluation plan, and
 iteration log. The template literal at the bottom is the prompt the

@@ -71,7 +71,7 @@ Examples of problems that may not exist yet:
 When unsure: write down the trigger that would create the problem, ship without
 the infrastructure, and re-evaluate when the trigger fires. See the "When to
 upgrade" sections that appear in artifact comments (e.g., the doc comment in
-`shadow-agent/src/inference/prompts.ts`).
+`src/inference/prompts.ts`).
 
 ## Principle 4: Anchor decisions on the north star
 

@@ -22,7 +22,7 @@ All patterns are ported from `third_party/sidecar/` as described in `docs/resear
 
 ## 1. Dependencies to Add
 
-Install in `shadow-agent/` as needed:
+Install in the repo root as needed:
 
 ```
 @opencode-ai/sdk@^1.1.36        # Planned OpenCode server + client SDK
@@ -34,7 +34,7 @@ Install in `shadow-agent/` as needed:
 
 ## 2. File Map
 
-All new files live under `shadow-agent/src/inference/` and `shadow-agent/src/mcp/`:
+All new files live under `src/inference/` and `src/mcp/`:
 
 | File | Purpose |
 |------|---------|

@@ -1,7 +1,7 @@
 ---
 paths:
   - "prompts/**"
-  - "shadow-agent/src/inference/prompts.ts"
+  - "src/inference/prompts.ts"
 ---
 
 # Rules for the Shadow System Prompt
@@ -11,7 +11,7 @@ configuration in shadow-agent. Treat it accordingly.
 
 ## Where it lives
 
-There is **one file**: `shadow-agent/src/inference/prompts.ts`. The prompt
+There is **one file**: `src/inference/prompts.ts`. The prompt
 itself is the `SHADOW_SYSTEM_PROMPT` template literal. The rationale,
 philosophy, per-section justification, evaluation plan, iteration log, and
 "why this lives in one file" meta-decision all live in the file-level doc

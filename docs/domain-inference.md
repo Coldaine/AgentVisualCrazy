@@ -17,7 +17,7 @@ stream and produces structured interpretations (phase, risk, predictions, confid
 Full research spec: `docs/research/shadow-inference-architecture.md`
 Sidecar source patterns: `docs/research/visual-patterns-sidecar.md`
 Implementation plan: `docs/plans/plan-inference-engine.md`
-Prompt source: `shadow-agent/src/inference/prompts.ts` (single source of truth — rationale + runtime template literal in one file)
+Prompt source: `src/inference/prompts.ts` (single source of truth — rationale + runtime template literal in one file)
 
 ## OpenCode Harness
 
@@ -65,7 +65,7 @@ phase classification, risk signals with severity and confidence, predicted next 
 factual observations, and file attention. Key constraints: read-only, terse, specific,
 honest confidence scores (not everything warrants 0.9+), JSON-only output.
 
-The prompt lives in `shadow-agent/src/inference/prompts.ts` as a single source
+The prompt lives in `src/inference/prompts.ts` as a single source
 of truth: the runtime template literal `SHADOW_SYSTEM_PROMPT` and the rationale
 doc comment (philosophy, per-section justification, evaluation plan, iteration
 log, "why one file") are co-located. No generation step. See
