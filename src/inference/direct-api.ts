@@ -7,9 +7,7 @@
  * Implements InferenceClient so it's a drop-in alternative to the OpenCode client.
  */
 import type { InferenceClient, InferenceRequest, InferenceResult } from './inference-client';
-import { createLogger } from '../shared/logger';
-
-const logger = createLogger({ minLevel: 'info' });
+import { createLogger, type Logger } from '../shared/logger';
 
 const MODEL = 'claude-sonnet-4-5';
 const MAX_TOKENS = 1024;
@@ -40,6 +38,7 @@ export interface DirectApiClientDependencies {
   model?: string;
   loadSdk?: () => Promise<{ default: AnthropicSdkConstructor }>;
   now?: () => number;
+  logger?: Logger;
 }
 
 async function loadAnthropicSdk(): Promise<{ default: AnthropicSdkConstructor }> {
@@ -53,6 +52,7 @@ async function loadAnthropicSdk(): Promise<{ default: AnthropicSdkConstructor }>
 export async function createDirectApiClient(
   deps: DirectApiClientDependencies = {}
 ): Promise<InferenceClient | null> {
+  const logger = deps.logger ?? createLogger({ minLevel: 'info' });
   const apiKey = deps.apiKey ?? process.env.ANTHROPIC_API_KEY;
   if (!apiKey) {
     logger.warn('inference', 'direct_api.no_key');

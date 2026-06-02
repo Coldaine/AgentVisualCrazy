@@ -10,7 +10,7 @@ import type {
   DerivedState,
   ShadowInsight
 } from '../shared/schema';
-import { createLogger } from '../shared/logger';
+import { createLogger, type Logger } from '../shared/logger';
 import { buildContextPacket } from './context-packager';
 import { buildInferenceRequest } from './prompt-builder';
 import { parseModelResponse } from './response-parser';
@@ -20,7 +20,6 @@ import { loadCredentials } from './auth';
 import type { InferenceClient } from './inference-client';
 import type { EventBufferLike } from './inference-client';
 
-const logger = createLogger({ minLevel: 'info' });
 const INFERENCE_CONSUMER_ID = 'inference-trigger';
 
 export type InsightCallback = (insights: ShadowInsight[]) => void;
@@ -31,6 +30,7 @@ export interface InferenceEngineOptions {
   onInsights: InsightCallback;
   triggerConfig?: Partial<TriggerConfig>;
   client?: InferenceClient;
+  logger?: Logger;
 }
 
 export interface InferenceEngine {
@@ -52,6 +52,7 @@ function isCheckpointedEventBuffer(buffer: EventBufferLike): buffer is Checkpoin
 
 export function createInferenceEngine(opts: InferenceEngineOptions): InferenceEngine {
   const { buffer, getState, onInsights } = opts;
+  const logger = opts.logger ?? createLogger({ minLevel: 'info' });
   let client: InferenceClient | null = null;
   let inflight = false;
   let pendingTrigger = false;
@@ -76,7 +77,7 @@ export function createInferenceEngine(opts: InferenceEngineOptions): InferenceEn
 
       logger.info('inference', 'engine.run_start', { eventCount: events.length });
       const inferenceResponse = await client.infer(request);
-      const insights = parseModelResponse(inferenceResponse.text);
+      const insights = parseModelResponse(inferenceResponse.text, logger);
 
       logger.info('inference', 'engine.run_done', {
         latencyMs: inferenceResponse.latencyMs,
@@ -97,7 +98,7 @@ export function createInferenceEngine(opts: InferenceEngineOptions): InferenceEn
     }
   };
 
-  const trigger = createInferenceTrigger(() => void runInference(), opts.triggerConfig);
+  const trigger = createInferenceTrigger(() => void runInference(), opts.triggerConfig, logger);
 
   const drainPendingEvents = async () => {
     if (!checkpointBuffer) {
@@ -138,9 +139,9 @@ export function createInferenceEngine(opts: InferenceEngineOptions): InferenceEn
 
   return {
     async start() {
-      await loadCredentials();
+      await loadCredentials({ logger });
 
-      client = opts.client ?? await createInferenceClient();
+      client = opts.client ?? await createInferenceClient({ logger });
 
       if (!client) {
         logger.warn('inference', 'engine.no_client', {

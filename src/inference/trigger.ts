@@ -9,9 +9,7 @@
  *   - Specific event kinds: tool_failed, agent_completed always trigger immediately
  */
 import type { CanonicalEvent, EventKind } from '../shared/schema';
-import { createLogger } from '../shared/logger';
-
-const logger = createLogger({ minLevel: 'info' });
+import { createLogger, type Logger } from '../shared/logger';
 
 const IMMEDIATE_KINDS = new Set<EventKind>(['tool_failed', 'agent_completed']);
 
@@ -37,7 +35,8 @@ export interface InferenceTrigger {
 
 export function createInferenceTrigger(
   onTrigger: TriggerCallback,
-  config: Partial<TriggerConfig> = {}
+  config: Partial<TriggerConfig> = {},
+  logger: Logger = createLogger({ minLevel: 'info' })
 ): InferenceTrigger {
   const cfg = { ...DEFAULT_CONFIG, ...config };
   let eventsSinceLastInference = 0;

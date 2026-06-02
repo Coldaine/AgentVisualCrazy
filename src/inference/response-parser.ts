@@ -10,9 +10,7 @@
  *   observations[i] → {kind: 'summary'}
  */
 import type { ShadowInsight, InsightKind } from '../shared/schema';
-import { createLogger } from '../shared/logger';
-
-const logger = createLogger({ minLevel: 'info' });
+import { createLogger, type Logger } from '../shared/logger';
 
 interface ModelResponse {
   phase?: string;
@@ -132,7 +130,10 @@ function makeInsight(
   };
 }
 
-export function parseModelResponse(text: string): ShadowInsight[] {
+export function parseModelResponse(
+  text: string,
+  logger: Logger = createLogger({ minLevel: 'info' })
+): ShadowInsight[] {
   const parsed = parseModelObject(text);
 
   if (!parsed) {

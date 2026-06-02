@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { createOpencodeClient } from '../../src/inference/opencode-client';
+import { createTestLogger } from '../../src/shared/logger';
 
 describe('createOpencodeClient', () => {
   it('returns null when the OpenCode SDK cannot be loaded', async () => {
@@ -10,6 +11,25 @@ describe('createOpencodeClient', () => {
     });
 
     expect(client).toBeNull();
+  });
+
+  it('writes SDK-load diagnostics to an injected logger', async () => {
+    const logger = createTestLogger();
+    const deps = {
+      logger,
+      loadSdk: async () => {
+        throw new Error('missing sdk');
+      }
+    };
+
+    const client = await createOpencodeClient(deps);
+
+    expect(client).toBeNull();
+    expect(logger.getRecent()).toContainEqual(expect.objectContaining({
+      domain: 'inference',
+      event: 'opencode.sdk_not_available',
+      level: 'warn',
+    }));
   });
 
   it('returns null when the OpenCode server fails to start', async () => {

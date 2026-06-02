@@ -6,6 +6,7 @@ import {
   SECURE_CREDENTIAL_STORE_FILE,
   loadCredentials,
 } from '../src/inference/auth';
+import { createTestLogger } from '../src/shared/logger';
 
 const tempRoots: string[] = [];
 
@@ -77,6 +78,34 @@ describe('loadCredentials', () => {
     expect(env.ANTHROPIC_API_KEY).toBe('sk-secure-anthropic');
     expect(env.OPENAI_API_KEY).toBe('sk-secure-openai');
     expect(env.UNUSED_SECRET).toBeUndefined();
+  });
+
+  it('writes credential readiness diagnostics to an injected logger', async () => {
+    const homeDir = await createTempHomeDir('logger');
+    const env: NodeJS.ProcessEnv = {};
+    const logger = createTestLogger();
+    const options = {
+      env,
+      homeDir,
+      safeStorage: null,
+      logger,
+    };
+
+    await loadCredentials(options);
+
+    expect(logger.getRecent()).toContainEqual(expect.objectContaining({
+      domain: 'inference',
+      event: 'auth.secure_store_unavailable',
+      level: 'info',
+    }));
+    expect(logger.getRecent()).toContainEqual(expect.objectContaining({
+      domain: 'inference',
+      event: 'auth.credentials_ready',
+      level: 'info',
+      context: expect.objectContaining({
+        providers: [],
+      }),
+    }));
   });
 
   it('does not override process env values with secure-store credentials', async () => {

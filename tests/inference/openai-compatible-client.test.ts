@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createOpenAiCompatibleClient } from '../../src/inference/openai-compatible-client';
+import { createTestLogger } from '../../src/shared/logger';
 
 function jsonResponse(body: unknown, status = 200): Response {
   return {
@@ -21,6 +22,20 @@ describe('createOpenAiCompatibleClient', () => {
   it('returns null when no base URL is configured', () => {
     const client = createOpenAiCompatibleClient({ fetchImpl: vi.fn() as unknown as typeof fetch });
     expect(client).toBeNull();
+  });
+
+  it('writes missing-base-url diagnostics to an injected logger', () => {
+    const logger = createTestLogger();
+    const deps = { fetchImpl: vi.fn() as unknown as typeof fetch, logger };
+
+    const client = createOpenAiCompatibleClient(deps);
+
+    expect(client).toBeNull();
+    expect(logger.getRecent()).toContainEqual(expect.objectContaining({
+      domain: 'inference',
+      event: 'openai_compatible.no_base_url',
+      level: 'warn',
+    }));
   });
 
   it('reports openai provider identity', () => {

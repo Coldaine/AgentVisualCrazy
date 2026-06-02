@@ -1,10 +1,25 @@
 import { describe, expect, it } from 'vitest';
 import { createDirectApiClient } from '../../src/inference/direct-api';
+import { createTestLogger } from '../../src/shared/logger';
 
 describe('createDirectApiClient', () => {
   it('returns null when no API key is available', async () => {
     const client = await createDirectApiClient({ apiKey: '' });
     expect(client).toBeNull();
+  });
+
+  it('writes no-key diagnostics to an injected logger', async () => {
+    const logger = createTestLogger();
+    const deps = { apiKey: '', logger };
+
+    const client = await createDirectApiClient(deps);
+
+    expect(client).toBeNull();
+    expect(logger.getRecent()).toContainEqual(expect.objectContaining({
+      domain: 'inference',
+      event: 'direct_api.no_key',
+      level: 'warn',
+    }));
   });
 
   it('returns null when the Anthropic SDK is unavailable', async () => {

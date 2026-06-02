@@ -13,10 +13,9 @@
 import { chmod, mkdir, readFile, writeFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
-import { createLogger } from '../shared/logger';
+import { createLogger, type Logger } from '../shared/logger';
 import { parseDotenv } from '../shared/dotenv';
 
-const logger = createLogger({ minLevel: 'info' });
 const SECURE_STORE_DIR_MODE = 0o700;
 const SECURE_STORE_FILE_MODE = 0o600;
 
@@ -48,6 +47,7 @@ export interface CredentialLoaderOptions {
   env?: NodeJS.ProcessEnv;
   homeDir?: string;
   safeStorage?: SafeStorageLike | null;
+  logger?: Logger;
 }
 
 function setIfMissing(env: NodeJS.ProcessEnv, key: string, value: string): boolean {
@@ -112,7 +112,8 @@ async function ensureSecurePath(pathToWrite: string, mode: number): Promise<void
 async function readSecureStore(
   env: NodeJS.ProcessEnv,
   secureStorePath: string,
-  safeStorage: SafeStorageLike | null
+  safeStorage: SafeStorageLike | null,
+  logger: Logger
 ): Promise<Record<string, string>> {
   if (!safeStorage || !safeStorage.isEncryptionAvailable()) {
     logger.info('inference', 'auth.secure_store_unavailable', { path: secureStorePath });
@@ -177,7 +178,8 @@ async function writeSecureStore(
 
 async function loadDotenvFile(
   env: NodeJS.ProcessEnv,
-  envPath: string
+  envPath: string,
+  logger: Logger
 ): Promise<Record<string, string>> {
   try {
     const contents = await readFile(envPath, 'utf8');
@@ -204,7 +206,8 @@ async function loadDotenvFile(
 
 async function loadOpencodeAuth(
   env: NodeJS.ProcessEnv,
-  authPath: string
+  authPath: string,
+  logger: Logger
 ): Promise<Record<string, string>> {
   try {
     const raw = await readFile(authPath, 'utf8');
@@ -236,14 +239,15 @@ async function loadOpencodeAuth(
  * Reports which provider keys are now available (without logging values).
  */
 export async function loadCredentials(options: CredentialLoaderOptions = {}): Promise<void> {
+  const logger = options.logger ?? createLogger({ minLevel: 'info' });
   const env = options.env ?? process.env;
   const homeDirPath = options.homeDir ?? homedir();
   const secureStorePath = getSecureStorePath(homeDirPath);
   const safeStorage = await getSafeStorage(options);
-  const secureStoreCredentials = await readSecureStore(env, secureStorePath, safeStorage);
+  const secureStoreCredentials = await readSecureStore(env, secureStorePath, safeStorage, logger);
 
-  const dotenvCredentials = await loadDotenvFile(env, getLegacyDotenvPath(homeDirPath));
-  const opencodeCredentials = await loadOpencodeAuth(env, getOpencodeAuthPath(homeDirPath));
+  const dotenvCredentials = await loadDotenvFile(env, getLegacyDotenvPath(homeDirPath), logger);
+  const opencodeCredentials = await loadOpencodeAuth(env, getOpencodeAuthPath(homeDirPath), logger);
   const migratedCredentials = filterSupportedCredentials({
     ...dotenvCredentials,
     ...opencodeCredentials,

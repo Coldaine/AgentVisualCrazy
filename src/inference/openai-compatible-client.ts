@@ -16,9 +16,7 @@
  * and a missing base URL / fetch returns null so the engine degrades gracefully.
  */
 import type { InferenceClient, InferenceRequest, InferenceResult } from './inference-client';
-import { createLogger } from '../shared/logger';
-
-const logger = createLogger({ minLevel: 'info' });
+import { createLogger, type Logger } from '../shared/logger';
 
 const DEFAULT_MODEL = 'gpt-4o-mini';
 const DEFAULT_TIMEOUT_MS = 60_000;
@@ -35,11 +33,13 @@ export interface OpenAiCompatibleClientDependencies {
   timeoutMs?: number;
   fetchImpl?: typeof fetch;
   now?: () => number;
+  logger?: Logger;
 }
 
 export function createOpenAiCompatibleClient(
   deps: OpenAiCompatibleClientDependencies = {}
 ): InferenceClient | null {
+  const logger = deps.logger ?? createLogger({ minLevel: 'info' });
   const baseUrl = deps.baseUrl ?? process.env.OPENAI_BASE_URL ?? process.env.SHADOW_INFERENCE_BASE_URL;
   if (!baseUrl) {
     logger.warn('inference', 'openai_compatible.no_base_url');

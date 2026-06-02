@@ -3,6 +3,7 @@ import * as directApi from '../../src/inference/direct-api';
 import * as opencodeClient from '../../src/inference/opencode-client';
 import * as openaiClient from '../../src/inference/openai-compatible-client';
 import { createInferenceClient } from '../../src/inference/inference-client-factory';
+import { createTestLogger } from '../../src/shared/logger';
 
 describe('createInferenceClient', () => {
   afterEach(() => {
@@ -24,6 +25,18 @@ describe('createInferenceClient', () => {
 
     expect(client).toBe(direct);
     expect(opencodeClient.createOpencodeClient).not.toHaveBeenCalled();
+  });
+
+  it('passes an injected logger to the selected provider factory', async () => {
+    process.env.SHADOW_INFERENCE_PROVIDER = 'anthropic';
+    const logger = createTestLogger();
+    const direct = { id: 'anthropic-direct-api', provider: 'anthropic' as const, infer: vi.fn() };
+    vi.spyOn(directApi, 'createDirectApiClient').mockResolvedValue(direct);
+
+    const client = await createInferenceClient({ logger });
+
+    expect(client).toBe(direct);
+    expect(directApi.createDirectApiClient).toHaveBeenCalledWith(expect.objectContaining({ logger }));
   });
 
   it('uses OpenCode when available and no provider override is set', async () => {

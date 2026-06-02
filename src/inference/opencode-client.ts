@@ -5,9 +5,7 @@
  * sidecar's 4096), creates a session, sends prompts, and polls for completion.
  */
 import type { InferenceClient, InferenceRequest, InferenceResult } from './inference-client';
-import { createLogger } from '../shared/logger';
-
-const logger = createLogger({ minLevel: 'info' });
+import { createLogger, type Logger } from '../shared/logger';
 
 const DEFAULT_PORT = 4097;
 const POLL_INTERVAL_MS = 1_000;
@@ -21,6 +19,7 @@ export interface OpencodeClientDependencies {
   now?: () => number;
   pollIntervalMs?: number;
   pollTimeoutMs?: number;
+  logger?: Logger;
 }
 
 interface OpencodeSdkModule {
@@ -106,6 +105,7 @@ async function pollForAssistantText(
 export async function createOpencodeClient(
   deps: OpencodeClientDependencies = {}
 ): Promise<InferenceClient | null> {
+  const logger = deps.logger ?? createLogger({ minLevel: 'info' });
   const now = deps.now ?? Date.now;
   const pollIntervalMs = deps.pollIntervalMs ?? POLL_INTERVAL_MS;
   const pollTimeoutMs = deps.pollTimeoutMs ?? POLL_TIMEOUT_MS;

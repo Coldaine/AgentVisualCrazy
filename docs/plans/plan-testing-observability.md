@@ -414,7 +414,7 @@ Additional gate for capture-heavy PRs:
 ## Immediate Next Tasks
 
 1. Expand the current happy-path tests into edge and corruption cases.
-2. Introduce the shared logger before capture and inference work lands.
+2. Keep new capture and inference instrumentation on the injected `Logger` pattern.
 3. Extract the Electron and renderer seams needed for clean tests.
 4. Create a reusable replay/transcript fixture corpus under `tests/fixtures/`.
 5. Add one temp-file watcher integration test before implementing the full session manager.
@@ -426,124 +426,55 @@ of the implementation path.
 
 ## Logging Architecture Redesign
 
-### Current state (post-PR #100)
+### Implemented state
 
-The `StructuredLogger` in `src/shared/logger.ts` is a concrete class with no interface.
-Modules create loggers at import time:
+`src/shared/logger.ts` now exposes a `Logger` interface, `StructuredLogger` implements it,
+and `createTestLogger()` provides a quiet in-memory logger for assertions. Tests no longer
+need `vi.hoisted` environment mutation or console spies to verify structured log output.
 
-```typescript
-// src/persistence/file-replay-store.ts (module scope)
-const logger = createLogger({ /* ... */ });
+The injectable logger pattern is in place for the high-value diagnostic paths:
 
-// src/electron/session-io.ts (module scope)
-const logger = createLogger();
-```
+- persistence: `FileReplayStore`
+- Electron/session IO: `createSnapshot`, `loadSnapshotFromFile`, `buildFixtureSnapshot`,
+  `saveReplayFile`
+- capture state: `SessionManager`, `EventBuffer`
+- inference: credential loading, direct Anthropic, OpenAI-compatible, OpenCode, provider
+  selection, trigger, response parser, and `createInferenceEngine`
 
-Tests cannot reach these module-scope singleton instances. To verify log output,
-`tests/instrumentation-sampling.test.ts` uses a convoluted workaround:
+Default behavior is unchanged: when no logger is supplied, these modules create the same
+real structured logger locally. Tests pass `createTestLogger()` and assert through
+`logger.getRecent()` so the observed event stream is the test surface.
 
-```typescript
-// Pin the level before any imports run (lock is at import time)
-const ORIGINAL_LOG_LEVEL = vi.hoisted(() => {
-  const prev = process.env['SHADOW_LOG_LEVEL'];
-  process.env['SHADOW_LOG_LEVEL'] = 'debug';
-  return prev;
-});
+### Remaining follow-up
 
-// Spy on console.log — the only observable side effect
-function captureStructuredConsole() {
-  return vi.spyOn(console, 'log').mockImplementation(() => undefined);
-}
-```
+Some peripheral entry surfaces still create their own logger because they are currently
+tested as startup or transport boundaries rather than shared instrumentation units:
 
-This is fragile, order-dependent, and couples tests to `console.log` format strings.
+- Electron app startup in `src/electron/start-main-process.ts`
+- capture transports and low-level parser/discovery helpers
+- MCP server startup
 
-### Design problems
+Do not churn those surfaces just to eliminate every local `createLogger()` call. Migrate them
+when a behavioral change needs a shared parent logger, a diagnostics export, or focused log
+assertions.
 
-1. **No `Logger` interface.** Only a concrete class. Every module imports `StructuredLogger`
-   directly with full knowledge of its constructor signature.
-2. **Import-time side effects.** `createLogger()` reads `SHADOW_LOG_LEVEL` from
-   `process.env` and locks the level at module load. Changing the level dynamically or
-   per-test requires `vi.hoisted` + env mutation before import.
-3. **Three output sinks, one testable.** The logger writes to a memory ring buffer
-   (`getRecent()`), `console.log`, and optionally a file. The memory ring is the ideal test
-   surface, but tests can't reach the module-scope instances.
-4. **No test double.** There is no `createTestLogger()` or `InMemoryLogger`. The
-   `FakeEventBuffer` / `FakeCheckpointBuffer` pattern used in
-   `tests/inference/shadow-inference-engine.test.ts` shows the team understands this pattern —
-   the logger just never got the same treatment.
+### Usage pattern
 
-### Proposed architecture
-
-**Step 1: Extract a `Logger` interface.**
+Production entry points either create a real logger or accept one from a parent subsystem:
 
 ```typescript
-// src/shared/logger.ts
-export interface Logger {
-  debug(domain: LogDomain, event: string, context?: Record<string, unknown>): void;
-  info(domain: LogDomain, event: string, context?: Record<string, unknown>): void;
-  warn(domain: LogDomain, event: string, context?: Record<string, unknown>): void;
-  error(domain: LogDomain, event: string, context?: Record<string, unknown>): void;
-  getRecent(limit?: number): LogEntry[];
-}
+const logger = createLogger({ minLevel: 'info' });
+const engine = createInferenceEngine({ buffer, getState, onInsights, logger });
 ```
 
-`StructuredLogger` implements `Logger`. No behavioral change.
-
-**Step 2: Add a `TestLogger` for test code.**
+Tests use the in-memory logger:
 
 ```typescript
-// src/shared/logger.ts (or tests/helpers/test-logger.ts)
-export function createTestLogger(): StructuredLogger {
-  return new StructuredLogger({
-    includeConsole: false,   // don't spam CI
-    memoryCapacity: 500,
-  });
-}
+const logger = createTestLogger();
+const store = new FileReplayStore(tmpDir, { logger });
+
+expect(logger.getRecent()).toContainEqual(expect.objectContaining({
+  domain: 'persistence',
+  event: 'persistence.replay.saved',
+}));
 ```
-
-Tests import `createTestLogger()`, pass it to the system under test, and assert via
-`logger.getRecent()`. No `vi.hoisted`, no `console.log` spy, no env mutation.
-
-**Step 3: Accept `Logger` via constructor parameter (opt-in DI).**
-
-Modules that create loggers at import time add an optional parameter:
-
-```typescript
-// src/persistence/file-replay-store.ts
-export class FileReplayStore {
-  constructor(
-    rootDir: string,
-    private readonly logger: Logger = createLogger()
-  ) {}
-}
-```
-
-Default parameter preserves backward compatibility. Tests pass `createTestLogger()`.
-
-**Step 4: Remove module-scope singleton loggers.**
-
-Once all consumers accept `Logger` via constructor, remove the module-scope `createLogger()`
-calls. The handful of top-level entry points (main process, preload, renderer) create
-the real `StructuredLogger` instances.
-
-### Migration path (least-disruptive order)
-
-| Order | Step | Breakage risk | Files touched |
-|-------|------|---------------|---------------|
-| 1 | Extract `interface Logger` | None — `StructuredLogger` already matches the shape | 1 file |
-| 2 | Add `createTestLogger()` | None — new function | 1 file |
-| 3 | Add optional `logger` param to `FileReplayStore` | None — defaults to current behavior | 1 file |
-| 4 | Add optional `logger` param to `session-io` functions | None | 1 file |
-| 5 | Rewrite `instrumentation-sampling.test.ts` to use `createTestLogger()` | None — test rewrite only | 1 file |
-| 6 | Remove `captureStructuredConsole()` and `vi.hoisted` from tests | None | 1 file |
-| 7 | Thread `Logger` through remaining modules | None — all optional params | ~5 files |
-| 8 | Remove module-scope `createLogger()` calls, pass from entry points | Minimal | ~5 files |
-
-### Impact on existing tests
-
-- `tests/logger.test.ts` — unchanged (tests `StructuredLogger` directly, which is correct).
-- `tests/instrumentation-sampling.test.ts` — simplified: imports `createTestLogger()`, passes
-  it to `FileReplayStore`/`session-io`, asserts `logger.getRecent()`.
-- All other tests — unchanged (they don't interact with the logger).
-

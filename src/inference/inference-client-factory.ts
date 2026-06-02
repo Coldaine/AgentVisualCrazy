@@ -8,27 +8,35 @@ import type { InferenceClient } from './inference-client';
 import { createDirectApiClient } from './direct-api';
 import { createOpencodeClient } from './opencode-client';
 import { createOpenAiCompatibleClient } from './openai-compatible-client';
+import type { Logger } from '../shared/logger';
 
-export async function createInferenceClient(): Promise<InferenceClient | null> {
+export interface InferenceClientFactoryDependencies {
+  logger?: Logger;
+}
+
+export async function createInferenceClient(
+  deps: InferenceClientFactoryDependencies = {}
+): Promise<InferenceClient | null> {
   const preference = process.env.SHADOW_INFERENCE_PROVIDER?.trim().toLowerCase();
+  const providerDeps = deps.logger ? { logger: deps.logger } : undefined;
 
   if (preference === 'anthropic' || preference === 'direct') {
-    return createDirectApiClient();
+    return createDirectApiClient(providerDeps);
   }
 
   if (preference === 'openai' || preference === 'openai-compatible') {
-    return createOpenAiCompatibleClient();
+    return createOpenAiCompatibleClient(providerDeps);
   }
 
   if (preference === 'opencode') {
-    const opencode = await createOpencodeClient();
-    return opencode ?? createDirectApiClient();
+    const opencode = await createOpencodeClient(providerDeps);
+    return opencode ?? createDirectApiClient(providerDeps);
   }
 
-  const opencode = await createOpencodeClient();
+  const opencode = await createOpencodeClient(providerDeps);
   if (opencode) {
     return opencode;
   }
 
-  return createDirectApiClient();
+  return createDirectApiClient(providerDeps);
 }

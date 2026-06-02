@@ -4,9 +4,12 @@
 
 This audit reflects the state of `main` **after** PR #100 (`test/audit-followup-rewrites`), which addressed the prior audit's worst offenders.
 
-**Follow-up in this PR:** the logger redesign is now implemented for the capture/persistence/session-io paths, instrumentation tests assert against injected in-memory loggers, and the highest-noise renderer helper/pulse suites were consolidated. The current regular suite is **48 files / 381 tests**, plus **1 live file / 3 live tests**.
+**Follow-up in this PR:** the logger redesign is now implemented for the capture/persistence/session-io paths and the inference auth/provider/engine path. Instrumentation and inference tests assert against injected in-memory loggers, and the highest-noise renderer helper/pulse suites were consolidated. The current regular suite is **46 files / 372 tests**, plus **2 live files / 4 live tests**.
 
-## Post-PR #100 Headline
+## Post-PR #100 Headline (Historical Baseline)
+
+These figures are the audited post-PR #100 baseline. The current follow-up branch count is
+listed above.
 
 - **49 files · 430 test cases (427 regular + 3 live).**
 - **REAL 387 (90%) · WEAK 43 (10%) · FICTION 0 (0%).**
@@ -31,7 +34,6 @@ This audit reflects the state of `main` **after** PR #100 (`test/audit-followup-
 | File | Grade | Issue |
 |------|-------|-------|
 | `tests/electron/start-main-process.test.ts` | C/WEAK | Everything mocked. No real Electron IPC exercised. Tests wiring contracts, not behavior. |
-| `tests/electron/start-main-process-privacy.test.ts` | C/WEAK | All modules mocked. Single test checks argument flow, not behavioral outcome. |
 | `tests/electron/renderer-host.test.ts` | C/WEAK | Bridge entirely hand-mocked. 14 lines of production code under test. |
 | `tests/renderer/renderer-surface-adapter.test.ts` | D/REAL | 1 test with identity checks. Would catch deletions but not behavioral regressions. |
 | `tests/renderer/host.test.ts` | D/REAL | 1 test for static host. Missing `createBridgeHost` or populated capabilities. |
@@ -44,10 +46,10 @@ The original audit found that `tests/instrumentation-sampling.test.ts` had to sp
 
 1. a `Logger` interface implemented by `StructuredLogger`;
 2. `createTestLogger()`, which disables console output and captures debug-through-error events in memory;
-3. logger injection for `FileReplayStore`, `session-io`, `SessionManager`, and `EventBuffer`;
-4. behavior assertions in `tests/instrumentation-sampling.test.ts` against `logger.getRecent()` instead of environment mutation or console spies.
+3. logger injection for `FileReplayStore`, `session-io`, `SessionManager`, `EventBuffer`, inference auth, inference providers, the provider factory, the trigger, parser, and engine;
+4. behavior assertions in `tests/instrumentation-sampling.test.ts` and focused inference/provider/auth tests against `logger.getRecent()` instead of environment mutation or console spies.
 
-Remaining guidance: new instrumentation should accept a `Logger` or receive one from a parent subsystem, and tests should prefer `createTestLogger()` plus `getRecent()` for structured assertions. See `docs/plans/plan-testing-observability.md` for the design rationale and the capture layer for usage examples.
+Remaining guidance: new instrumentation should accept a `Logger` or receive one from a parent subsystem, and tests should prefer `createTestLogger()` plus `getRecent()` for structured assertions. Peripheral entry surfaces that still create their own logger should only be migrated when their surrounding behavior changes. See `docs/plans/plan-testing-observability.md` for the design rationale and the capture/inference layers for usage examples.
 
 ## Previous Audit Comparison
 

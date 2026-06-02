@@ -7,6 +7,7 @@ import type { CanonicalEvent, DerivedState, EventQueueCheckpoint } from '../../s
 import type { ShadowInsight } from '../../src/shared/schema';
 import type { EventBufferLike } from '../../src/inference/inference-client';
 import { FakeInferenceClient } from '../helpers/fake-inference-client';
+import { createTestLogger } from '../../src/shared/logger';
 
 const FIXTURES = join(fileURLToPath(new URL('.', import.meta.url)), '../fixtures/replays');
 
@@ -169,6 +170,45 @@ describe('createInferenceEngine — orchestrator integration', () => {
     expect(insights.some((i) => i.kind === 'phase')).toBe(true);
     expect(insights.some((i) => i.kind === 'next_move')).toBe(true);
     engine.stop();
+  });
+
+  it('routes engine, trigger, and parser logs through an injected logger', async () => {
+    const logger = createTestLogger();
+    const onInsights = vi.fn();
+    const buffer = new FakeEventBuffer();
+    client.enqueue({
+      text: 'not json at all',
+      model: 'fake/1',
+      latencyMs: 5,
+    });
+
+    const engineOptions = {
+      buffer,
+      getState: async () => derivedState({ activePhase: 'debugging' }),
+      onInsights,
+      client,
+      logger,
+    };
+    const engine = createInferenceEngine(engineOptions);
+
+    await engine.start();
+    buffer.push(makeEvent('e1', 'tool_failed'));
+
+    await vi.waitFor(() => {
+      expect(client.calls.length).toBe(1);
+    });
+    engine.stop();
+
+    expect(onInsights).not.toHaveBeenCalled();
+    const eventNames = logger.getRecent(100).map((entry) => entry.event);
+    expect(eventNames).toEqual(expect.arrayContaining([
+      'engine.started',
+      'trigger.fired',
+      'engine.run_start',
+      'response_parser.json_parse_failed',
+      'engine.run_done',
+      'engine.stopped',
+    ]));
   });
 
   it('propagates inference errors gracefully and allows subsequent runs', async () => {
