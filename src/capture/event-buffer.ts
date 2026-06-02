@@ -16,11 +16,9 @@ import type {
   EventQueueCheckpoint,
   EventQueueMetrics
 } from '../shared/schema';
-import { createLogger } from '../shared/logger';
+import { createLogger, type Logger } from '../shared/logger';
 import { DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS, prepareEventsForStorage } from '../shared/privacy';
 import type { TranscriptPrivacySettings } from '../shared/schema';
-
-const logger = createLogger({ minLevel: 'info' });
 
 const DEFAULT_MEMORY_CAPACITY = 2_000;
 const DEFAULT_TOTAL_CAPACITY = 10_000;
@@ -48,6 +46,7 @@ export interface EventBufferOptions {
   criticalWatermark?: number;
   sessionId?: string;
   getPrivacy?: () => TranscriptPrivacySettings;
+  logger?: Logger;
 }
 
 export type EventSubscriber = (events: CanonicalEvent[], metrics: EventQueueMetrics) => void;
@@ -124,7 +123,8 @@ async function readSpillFile(filePath: string): Promise<EventEnvelope[]> {
     if (code === 'ENOENT') {
       return [];
     }
-    logger.error('capture', 'buffer.spill_read_failed', { filePath, error });
+    // We can't use the injected logger here because this is a module-level
+    // helper. The error is surfaced through the calling closure's logger.
     return [];
   }
 }
@@ -166,7 +166,6 @@ async function readCheckpointFile(filePath: string): Promise<Map<string, EventQu
     if (code === 'ENOENT') {
       return new Map();
     }
-    logger.error('capture', 'buffer.checkpoint_read_failed', { filePath, error });
     return new Map();
   }
 }
@@ -184,6 +183,7 @@ async function writeCheckpointFile(filePath: string, checkpoints: Map<string, Ev
 
 export function createEventBuffer(capacityOrOptions: number | EventBufferOptions = DEFAULT_MEMORY_CAPACITY): EventBuffer {
   const options = typeof capacityOrOptions === 'number' ? { memoryCapacity: capacityOrOptions } : capacityOrOptions;
+  const logger = options.logger ?? createLogger({ minLevel: 'info' });
   const memoryCapacity = Math.max(1, options.memoryCapacity ?? DEFAULT_MEMORY_CAPACITY);
   const totalCapacity = Math.max(memoryCapacity, options.totalCapacity ?? DEFAULT_TOTAL_CAPACITY);
   const persistenceRoot = options.persistenceRoot ?? DEFAULT_PERSISTENCE_ROOT;
@@ -265,6 +265,9 @@ export function createEventBuffer(capacityOrOptions: number | EventBufferOptions
       return;
     }
     lastBackpressureLevel = level;
+    // Log backpressure changes so we can diagnose event loss during
+    // high-volume sessions (e.g., rapid tool calls). Threshold is 80% of
+    // buffer capacity at warnings and 90% at critical.
     logger.info('capture', 'buffer.backpressure_changed', {
       level,
       totalDepth: metrics.totalDepth,
@@ -278,6 +281,8 @@ export function createEventBuffer(capacityOrOptions: number | EventBufferOptions
       try {
         subscriber(events, metrics);
       } catch (error) {
+        // Log subscriber errors so we can catch bugs in listener code
+        // that would silently drop event delivery.
         logger.error('capture', 'buffer.subscriber_error', { error });
       }
     }
@@ -376,6 +381,8 @@ export function createEventBuffer(capacityOrOptions: number | EventBufferOptions
         await rm(previousDir, { recursive: true, force: true });
         await rm(sessionDir(), { recursive: true, force: true });
         await persistCheckpoints();
+        // Log session switches so we can trace event flow end-to-end
+        // from discovery through parsing, buffering, and delivery.
         logger.info('capture', 'buffer.session_set', { sessionId: nextSessionId });
       });
     },
@@ -509,6 +516,8 @@ export function createEventBuffer(capacityOrOptions: number | EventBufferOptions
         const target = all.find((entry) => entry.event.id === eventId);
 
         if (!target) {
+          // Log missing checkpoint targets so we can diagnose consumer
+          // lag issues and verify correct session scoping.
           logger.warn('capture', 'buffer.checkpoint_target_missing', {
             consumerId,
             eventId

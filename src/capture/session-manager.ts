@@ -13,7 +13,7 @@ import { createIncrementalParser } from './incremental-parser';
 import { driverRegistry } from './drivers';
 import { createEventBuffer, type EventBuffer } from './event-buffer';
 import { createIpcBridge, type IpcBridge } from './ipc-bridge';
-import { createLogger } from '../shared/logger';
+import { createLogger, type Logger } from '../shared/logger';
 import type {
   CaptureSession,
   CaptureTransport,
@@ -22,7 +22,15 @@ import type {
 } from './capture-transport';
 import { createCaptureTransport } from './capture-transports';
 
-const logger = createLogger({ minLevel: 'info' });
+export interface SessionManagerOptions {
+  privacy?: TranscriptPrivacySettings;
+  getPrivacy?: () => TranscriptPrivacySettings;
+  queuePersistenceRoot?: string;
+  queueMemoryCapacity?: number;
+  queueTotalCapacity?: number;
+  transport?: CaptureTransport | CaptureTransportOptions;
+  logger?: Logger;
+}
 
 export interface SessionManager {
   start(overridePath?: string): Promise<void>;
@@ -39,15 +47,9 @@ export interface SessionManager {
 
 export function createSessionManager(
   getWebContents: () => WebContents | null,
-  options: {
-    privacy?: TranscriptPrivacySettings;
-    getPrivacy?: () => TranscriptPrivacySettings;
-    queuePersistenceRoot?: string;
-    queueMemoryCapacity?: number;
-    queueTotalCapacity?: number;
-    transport?: CaptureTransport | CaptureTransportOptions;
-  } = {}
+  options: SessionManagerOptions = {}
 ): SessionManager {
+  const logger = options.logger ?? createLogger({ minLevel: 'info' });
   const getPrivacy = options.getPrivacy ?? (() => options.privacy ?? DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS);
   const buffer = createEventBuffer({
     persistenceRoot: options.queuePersistenceRoot,
@@ -115,6 +117,8 @@ export function createSessionManager(
         return;
       }
       void buffer.push(events).catch((error) => {
+        // Log push failures so we can diagnose event loss during high-volume
+        // sessions or when a spinner/stuck parser accumulates 1M+ lines.
         logger.error('capture', 'session_manager.push_failed', {
           sessionId: session.sessionId,
           error
@@ -122,6 +126,8 @@ export function createSessionManager(
       });
     });
 
+    // Log session start so we can trace event flow end-to-end from discovery
+    // through parsing, buffering, bridge, and renderer delivery.
     logger.info('capture', 'session_manager.start_session', {
       filePath: session.path,
       sessionId: session.sessionId,
@@ -155,6 +161,9 @@ export function createSessionManager(
           if (!isNewSession) {
             return;
           }
+          // Log new session detection so we can diagnose why the watcher fires
+          // (file rotation, new transcript, rediscovery) and confirm the
+          // session switch reached the startSession pipeline.
           logger.info('capture', 'session_manager.new_session_detected', {
             sessionId: session.sessionId,
             filePath: session.path,
@@ -167,6 +176,8 @@ export function createSessionManager(
             return;
           }
           activeParser.reset();
+          // Log resets so we can diagnose truncation vs rotation vs reconnect
+          // in the transport layer. Each reason maps to a different debug path.
           logger.info('capture', 'session_manager.session_reset', {
             sessionId: session.sessionId,
             reason,
@@ -189,6 +200,8 @@ export function createSessionManager(
         bridgeCleanup = null;
       }
       bridge = null;
+      // Log stop so we can confirm clean shutdown (no hung timers, open handles)
+      // when diagnosing "session not refreshing" issues.
       logger.info('capture', 'session_manager.stopped');
     },
 
