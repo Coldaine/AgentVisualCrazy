@@ -3,13 +3,11 @@ import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { paymentRefactorSession } from '../shared/fixtures/payment-refactor-session';
 import { parseReplay, serializeEvents } from '../shared/replay-store';
-import { DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS } from '../shared/privacy';
 import type {
   CanonicalEvent,
   ExportResult,
   LoadedSource,
-  SnapshotPayload,
-  TranscriptPrivacySettings
+  SnapshotPayload
 } from '../shared/schema';
 import { buildRendererInput, inferRendererInputTitle } from '../shared/renderer-input-adapter';
 import { parseClaudeTranscriptJsonl } from '../shared/transcript-adapter';
@@ -27,13 +25,11 @@ export const inferTitle = inferRendererInputTitle;
 export function createSnapshot(
   events: CanonicalEvent[],
   source: LoadedSource,
-  privacySettings: TranscriptPrivacySettings = DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS,
   logger: Logger = createLogger()
 ): SnapshotPayload {
   const snapshot = buildRendererInput(events, {
     source,
-    fallbackTitle: source.label,
-    privacySettings
+    fallbackTitle: source.label
   });
 
   // Log snapshot creation so we can verify the IPC pipeline produced the
@@ -75,7 +71,6 @@ export function detectReplayFormat(raw: string): 'replay' | 'transcript' {
 
 export async function loadSnapshotFromFile(
   filePath: string,
-  privacySettings: TranscriptPrivacySettings = DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS,
   logger: Logger = createLogger()
 ): Promise<SnapshotPayload> {
   const raw = await readFile(filePath, 'utf8');
@@ -149,11 +144,10 @@ export async function loadSnapshotFromFile(
     kind: format,
     label: fileName,
     path: filePath
-  }, privacySettings, logger);
+  }, logger);
 }
 
 export function buildFixtureSnapshot(
-  privacySettings: TranscriptPrivacySettings = DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS,
   logger: Logger = createLogger()
 ): SnapshotPayload {
   // Log fixture build so we can verify the app boot path produced the
@@ -162,7 +156,7 @@ export function buildFixtureSnapshot(
   return createSnapshot(paymentRefactorSession, {
     kind: 'fixture',
     label: 'Built-in replay fixture'
-  }, privacySettings, logger);
+  }, logger);
 }
 
 export async function pickOpenFile(mainWindow: BrowserWindow | null): Promise<string | undefined> {
@@ -188,8 +182,6 @@ export async function saveReplayFile(
   mainWindow: BrowserWindow | null,
   events: CanonicalEvent[],
   suggestedFileName = 'shadow-agent-replay.jsonl',
-  options: { storeRawTranscript?: boolean } = {},
-  privacySettings: TranscriptPrivacySettings = DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS,
   logger: Logger = createLogger()
 ): Promise<ExportResult> {
   try {
@@ -204,7 +196,7 @@ export async function saveReplayFile(
       return { canceled: true };
     }
 
-    await writeFile(saveDialogResult.filePath, serializeEvents(events, options, privacySettings), 'utf8');
+    await writeFile(saveDialogResult.filePath, serializeEvents(events), 'utf8');
     // Log export save so we can confirm the file was written with the
     // expected event count. Missing exports = broken file dialog or disk full.
     logger.info('ipc', 'ipc.export.saved', { fileName: path.basename(saveDialogResult.filePath), eventCount: events.length });

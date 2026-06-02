@@ -3,7 +3,6 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
-  LEGACY_FILE_FALLBACK_ENV,
   SECURE_CREDENTIAL_STORE_FILE,
   loadCredentials,
 } from '../src/inference/auth';
@@ -98,8 +97,8 @@ describe('loadCredentials', () => {
     expect(env.ANTHROPIC_API_KEY).toBe('sk-from-env');
   });
 
-  it('skips legacy file-based fallbacks until consent is explicit', async () => {
-    const homeDir = await createTempHomeDir('no-consent');
+  it('loads legacy file-based fallbacks without any consent flag', async () => {
+    const homeDir = await createTempHomeDir('always-fallback');
     const shadowDir = path.join(homeDir, '.shadow-agent');
     const opencodeDir = path.join(homeDir, '.local', 'share', 'opencode');
     await mkdir(shadowDir, { recursive: true });
@@ -114,11 +113,11 @@ describe('loadCredentials', () => {
       safeStorage: null,
     });
 
-    expect(env.ANTHROPIC_API_KEY).toBeUndefined();
-    expect(env.OPENAI_API_KEY).toBeUndefined();
+    expect(env.ANTHROPIC_API_KEY).toBe('sk-legacy-anthropic');
+    expect(env.OPENAI_API_KEY).toBe('sk-legacy-openai');
   });
 
-  it('migrates consented legacy file credentials into the encrypted store', async () => {
+  it('migrates legacy file credentials into the encrypted store', async () => {
     const homeDir = await createTempHomeDir('migrate');
     const shadowDir = path.join(homeDir, '.shadow-agent');
     const opencodeDir = path.join(homeDir, '.local', 'share', 'opencode');
@@ -128,9 +127,7 @@ describe('loadCredentials', () => {
     await writeFile(path.join(shadowDir, '.env'), 'ANTHROPIC_API_KEY=sk-legacy-anthropic\n', 'utf8');
     await writeFile(path.join(opencodeDir, 'auth.json'), JSON.stringify({ openai: { key: 'sk-legacy-openai' } }), 'utf8');
 
-    const env: NodeJS.ProcessEnv = {
-      [LEGACY_FILE_FALLBACK_ENV]: '1',
-    };
+    const env: NodeJS.ProcessEnv = {};
     await loadCredentials({
       env,
       homeDir,
@@ -177,9 +174,7 @@ describe('loadCredentials', () => {
       'utf8'
     );
 
-    const env: NodeJS.ProcessEnv = {
-      [LEGACY_FILE_FALLBACK_ENV]: '1',
-    };
+    const env: NodeJS.ProcessEnv = {};
     await loadCredentials({
       env,
       homeDir,

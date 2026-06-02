@@ -3,11 +3,9 @@ import { startTransition, useEffect, useMemo, useReducer, useRef } from 'react';
 import type {
   CanonicalEvent,
   DerivedState,
-  PrivacyPolicy,
   ShadowAgentBridge,
   SnapshotPayload,
-  TimelineItem,
-  TranscriptPrivacySettings
+  TimelineItem
 } from '../shared/schema';
 import { appReducer, initialAppState } from './app-state';
 import { triggerPulsesForEvents } from './canvas/canvas-pulse';
@@ -128,67 +126,6 @@ function FileAttentionView({ files }: { files: DerivedState['fileAttention'] }) 
           </article>
         );
       })}
-    </div>
-  );
-}
-
-function PrivacyPanel({
-  privacy,
-  interactive,
-  busy,
-  onToggle
-}: {
-  privacy: PrivacyPolicy;
-  interactive: boolean;
-  busy: boolean;
-  onToggle: (updates: Partial<TranscriptPrivacySettings>) => void;
-}) {
-  return (
-    <div className="privacy-panel">
-      <div className="timeline-item">
-        <div className="timeline-item__topline">
-          <span className="timeline-item__label">Processing mode</span>
-          <Badge tone={privacy.processingMode === 'local-only' ? 'accent' : 'danger'}>
-            {privacy.processingMode === 'local-only' ? 'Local only' : 'Off-host opted in'}
-          </Badge>
-        </div>
-        <p className="privacy-note">
-          Transcript content is sanitized before render, export, persistence, and prompt delivery unless you explicitly
-          allow a narrower exception below.
-        </p>
-      </div>
-
-      <label className="toggle">
-        <input
-          type="checkbox"
-          checked={privacy.allowOffHostInference}
-          disabled={!interactive || busy}
-          onChange={(event) => onToggle({ allowOffHostInference: event.currentTarget.checked })}
-        />
-        <div>
-          <strong>Allow off-host shadow inference</strong>
-          <p className="privacy-note">
-            Disabled by default. Turning this on allows sanitized inference payloads to leave the machine.
-          </p>
-        </div>
-      </label>
-
-      <label className="toggle">
-        <input
-          type="checkbox"
-          checked={privacy.allowRawTranscriptStorage}
-          disabled={!interactive || busy}
-          onChange={(event) => onToggle({ allowRawTranscriptStorage: event.currentTarget.checked })}
-        />
-        <div>
-          <strong>Allow raw transcript storage/export</strong>
-          <p className="privacy-note">
-            Disabled by default. This enables explicit raw replay export and similar raw storage paths.
-          </p>
-        </div>
-      </label>
-
-      {!interactive ? <p className="privacy-note">This host can report privacy policy but cannot change it.</p> : null}
     </div>
   );
 }
@@ -323,12 +260,6 @@ export default function App({ host }: ShadowAgentAppProps) {
     }
     return `${safeFileName(snapshot.record.title)}.jsonl`;
   }, [snapshot]);
-  const privacyPolicy: PrivacyPolicy = snapshot?.privacy ?? {
-    allowRawTranscriptStorage: false,
-    allowOffHostInference: false,
-    processingMode: 'local-only',
-    transcriptHandling: 'sanitized-by-default'
-  };
 
   const loadReplay = async () => {
     if (!host.openReplayFile) {
@@ -365,14 +296,14 @@ export default function App({ host }: ShadowAgentAppProps) {
     }
   };
 
-  const exportReplay = async (options?: { storeRawTranscript?: boolean }) => {
+  const exportReplay = async () => {
     if (!snapshot || !host.exportReplayJsonl) {
       return;
     }
 
     dispatch({ type: 'EXPORT_START' });
     try {
-      const exportOutcome = await host.exportReplayJsonl(snapshot.events, exportName, options);
+      const exportOutcome = await host.exportReplayJsonl(snapshot.events, exportName);
       if (exportOutcome.error) {
         dispatch({ type: 'EXPORT_ERROR', message: exportOutcome.error });
       } else {
@@ -380,23 +311,6 @@ export default function App({ host }: ShadowAgentAppProps) {
       }
     } catch (err) {
       dispatch({ type: 'EXPORT_ERROR', message: err instanceof Error ? err.message : 'Unable to export replay JSONL.' });
-    }
-  };
-
-  const updatePrivacySettings = async (updates: Partial<TranscriptPrivacySettings>) => {
-    if (!host.updatePrivacySettings) {
-      return;
-    }
-
-    dispatch({ type: 'PRIVACY_UPDATE_START' });
-    try {
-      const nextPolicy = await host.updatePrivacySettings(updates);
-      dispatch({ type: 'PRIVACY_UPDATE_SUCCESS', privacy: nextPolicy });
-    } catch (err) {
-      dispatch({
-        type: 'PRIVACY_UPDATE_ERROR',
-        message: err instanceof Error ? err.message : 'Unable to update privacy settings.'
-      });
     }
   };
 
@@ -444,17 +358,7 @@ export default function App({ host }: ShadowAgentAppProps) {
               onClick={() => void exportReplay()}
               disabled={!snapshot || busy !== null}
             >
-              Export sanitized replay
-            </button>
-          ) : null}
-          {capabilities.canExportReplayJsonl ? (
-            <button
-              type="button"
-              className="button button--ghost"
-              onClick={() => void exportReplay({ storeRawTranscript: true })}
-              disabled={!snapshot || busy !== null || !privacyPolicy.allowRawTranscriptStorage}
-            >
-              Export raw replay
+              Export replay
             </button>
           ) : null}
         </div>
@@ -503,14 +407,6 @@ export default function App({ host }: ShadowAgentAppProps) {
 
           <div className="panels__left-bottom">
             <TimelineSurface timeline={snapshot?.state.timeline ?? []} />
-            <Panel title="Privacy" eyebrow="Consent gates">
-              <PrivacyPanel
-                privacy={privacyPolicy}
-                interactive={capabilities.canManagePrivacy}
-                busy={busy === 'privacy'}
-                onToggle={(updates) => void updatePrivacySettings(updates)}
-              />
-            </Panel>
             <Panel title="Timeline" eyebrow="Activity stream">
               <TimelineView timeline={snapshot?.state.timeline ?? []} />
             </Panel>

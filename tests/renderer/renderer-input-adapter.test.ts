@@ -35,7 +35,7 @@ describe('canonicalEventRendererInputAdapter', () => {
     ).toBe('Ship the typed adapter contracts');
   });
 
-  it('builds renderer input with derived state and default privacy policy', () => {
+  it('builds renderer input with derived state and raw events', () => {
     const snapshot = buildRendererInput(
       [
         event({ kind: 'session_started', payload: { label: 'Session Label' } }),
@@ -53,18 +53,11 @@ describe('canonicalEventRendererInputAdapter', () => {
     );
 
     expect(snapshot.record.title).toBe('Session Label');
-    // Email and path now pass through unchanged (secret-only sanitize)
+    // Events flow raw — nothing is scrubbed.
     expect(snapshot.state.currentObjective).toBe('Ship capture pipeline for dev@example.com from D:\\_projects\\AgentVisualCrazy');
     expect(snapshot.state.fileAttention).toEqual([{ filePath: 'src/main.ts', touches: 1 }]);
     expect(snapshot.events[1]?.payload).toEqual({
       text: 'Ship capture pipeline for dev@example.com from D:\\_projects\\AgentVisualCrazy'
-    });
-    // Default privacy policy is now both-on (off-host-opted-in)
-    expect(snapshot.privacy).toEqual({
-      allowRawTranscriptStorage: true,
-      allowOffHostInference: true,
-      processingMode: 'off-host-opted-in',
-      transcriptHandling: 'sanitized-by-default'
     });
   });
 });

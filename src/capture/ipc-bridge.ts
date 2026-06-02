@@ -12,8 +12,7 @@
  */
 import { ipcMain } from 'electron';
 import type { WebContents } from 'electron';
-import { DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS, prepareEventsForStorage } from '../shared/privacy';
-import type { SnapshotPayload, TranscriptPrivacySettings } from '../shared/schema';
+import type { SnapshotPayload } from '../shared/schema';
 import type { EventBuffer } from './event-buffer';
 import { createLogger } from '../shared/logger';
 
@@ -26,8 +25,6 @@ export interface IpcBridgeOptions {
   buffer: EventBuffer;
   getWebContents: () => WebContents | null;
   buildSnapshot: () => Promise<SnapshotPayload | null>;
-  privacy?: TranscriptPrivacySettings;
-  getPrivacy?: () => TranscriptPrivacySettings;
 }
 
 export interface IpcBridge {
@@ -38,7 +35,6 @@ export interface IpcBridge {
 
 export function createIpcBridge(opts: IpcBridgeOptions): IpcBridge {
   const { buffer, getWebContents, buildSnapshot } = opts;
-  const getPrivacy = opts.getPrivacy ?? (() => opts.privacy ?? DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS);
 
   let debounceTimer: ReturnType<typeof setTimeout> | null = null;
   let flushInFlight = false;
@@ -80,12 +76,11 @@ export function createIpcBridge(opts: IpcBridgeOptions): IpcBridge {
         return;
       }
 
-      const rendererBatch = prepareEventsForStorage(pending.events, getPrivacy());
       logger.debug('ipc', 'snapshot.sent', {
-        eventCount: rendererBatch.length,
+        eventCount: pending.events.length,
         truncated: pending.truncated
       });
-      wc.send('shadow:events', rendererBatch);
+      wc.send('shadow:events', pending.events);
       await buffer.commitCheckpoint(RENDERER_CONSUMER_ID, pending.events.at(-1)!.id);
     } finally {
       flushInFlight = false;

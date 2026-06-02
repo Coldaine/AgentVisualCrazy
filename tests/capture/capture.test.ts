@@ -371,16 +371,15 @@ describe('createEventBuffer', () => {
     expect(buf.getMetrics().spilledDepth).toBe(1);
   });
 
-  it('spills events raw by default (allowRawTranscriptStorage=true) and sanitizes secrets when raw storage is disabled', async () => {
-    // Default buffer: allowRawTranscriptStorage=true → spills raw content including secrets
-    const defaultRoot = makeTempRoot();
-    const defaultBuf = createEventBuffer({
+  it('spills events raw, including secret-like content', async () => {
+    const root = makeTempRoot();
+    const buf = createEventBuffer({
       memoryCapacity: 1,
       totalCapacity: 4,
-      persistenceRoot: defaultRoot
+      persistenceRoot: root
     });
 
-    await defaultBuf.push([
+    await buf.push([
       {
         ...makeEvent('secret'),
         payload: { text: 'Email dev@example.com with token Bearer abcdef0123456789' }
@@ -388,34 +387,11 @@ describe('createEventBuffer', () => {
       makeEvent('next')
     ]);
 
-    const defaultSpill = await readFile(join(defaultRoot, 'default', 'spill.jsonl'), 'utf8');
-    // Raw storage is on by default: everything passes through unchanged
-    expect(defaultSpill).toContain('dev@example.com');
-    expect(defaultSpill).toContain('Bearer abcdef0123456789');
-    expect(defaultSpill).not.toContain('[redacted-token]');
-
-    // Restricted buffer: allowRawTranscriptStorage=false → spill is sanitized, secrets scrubbed
-    const restrictedRoot = makeTempRoot();
-    const restrictedBuf = createEventBuffer({
-      memoryCapacity: 1,
-      totalCapacity: 4,
-      persistenceRoot: restrictedRoot,
-      getPrivacy: () => ({ allowRawTranscriptStorage: false, allowOffHostInference: false })
-    });
-
-    await restrictedBuf.push([
-      {
-        ...makeEvent('secret2'),
-        payload: { text: 'Email dev@example.com with token Bearer abcdef0123456789' }
-      },
-      makeEvent('next2')
-    ]);
-
-    const restrictedSpill = await readFile(join(restrictedRoot, 'default', 'spill.jsonl'), 'utf8');
-    // Sanitized: secret token is scrubbed; email passes through (only secrets are redacted)
-    expect(restrictedSpill).toContain('Bearer [redacted-token]');
-    expect(restrictedSpill).not.toContain('Bearer abcdef0123456789');
-    expect(restrictedSpill).toContain('dev@example.com');
+    const spill = await readFile(join(root, 'default', 'spill.jsonl'), 'utf8');
+    // Everything passes through unchanged — no scrubbing.
+    expect(spill).toContain('dev@example.com');
+    expect(spill).toContain('Bearer abcdef0123456789');
+    expect(spill).not.toContain('[redacted-token]');
   });
 
   it('drops the oldest spilled events once the total queue capacity is exceeded', async () => {

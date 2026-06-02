@@ -47,13 +47,7 @@ function makeSnapshot(overrides: {
       nextMoves: [],
       shadowInsights: []
     },
-    events: [],
-    privacy: {
-      allowRawTranscriptStorage: false,
-      allowOffHostInference: false,
-      processingMode: 'local-only',
-      transcriptHandling: 'sanitized-by-default'
-    }
+    events: []
   };
 }
 

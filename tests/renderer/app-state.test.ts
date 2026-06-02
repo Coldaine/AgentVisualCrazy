@@ -38,12 +38,6 @@ function makeSnapshot(overrides: Partial<SnapshotPayload> = {}): SnapshotPayload
       shadowInsights: []
     },
     events: [],
-    privacy: {
-      allowRawTranscriptStorage: false,
-      allowOffHostInference: false,
-      processingMode: 'local-only',
-      transcriptHandling: 'sanitized-by-default'
-    },
     ...overrides
   };
 }
@@ -184,25 +178,6 @@ describe('appReducer — export flow', () => {
     expect(next.busy).toBeNull();
     expect(next.error).toBe('disk full');
     expect(next.snapshot).toBe(snapshot); // preserved
-  });
-
-  it('PRIVACY_UPDATE_SUCCESS updates snapshot privacy and clears busy', () => {
-    const snapshot = makeSnapshot();
-    const prior: AppState = { busy: 'privacy', error: null, snapshot };
-    const next = appReducer(prior, {
-      type: 'PRIVACY_UPDATE_SUCCESS',
-      privacy: {
-        allowRawTranscriptStorage: true,
-        allowOffHostInference: true,
-        processingMode: 'off-host-opted-in',
-        transcriptHandling: 'sanitized-by-default'
-      }
-    });
-
-    expect(next.busy).toBeNull();
-    expect(next.error).toBeNull();
-    expect(next.snapshot?.privacy.processingMode).toBe('off-host-opted-in');
-    expect(next.snapshot?.privacy.allowRawTranscriptStorage).toBe(true);
   });
 });
 

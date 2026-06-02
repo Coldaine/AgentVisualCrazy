@@ -51,10 +51,7 @@ beforeAll(async () => {
 
   const state = deriveState(events, 'live');
   const packet = buildContextPacket(state, events);
-  const request = buildInferenceRequest(packet, {
-    delivery: 'off-host',
-    privacy: { allowRawTranscriptStorage: false, allowOffHostInference: true },
-  });
+  const request = buildInferenceRequest(packet);
 
   const res = await client.infer(request);
   model = res.model;

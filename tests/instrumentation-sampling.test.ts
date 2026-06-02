@@ -139,7 +139,7 @@ describe('instrumentation sampling — ipc / session-io', () => {
     const events = parseReplay(raw);
     const source: LoadedSource = { kind: 'replay', label: 'test.jsonl', path: '/test.jsonl' };
 
-    const snapshot = createSnapshot(events, source, undefined, logger);
+    const snapshot = createSnapshot(events, source, logger);
 
     const logs = logger.getRecent();
     expect(logs).toContainEqual(expect.objectContaining({
@@ -158,7 +158,7 @@ describe('instrumentation sampling — ipc / session-io', () => {
 
   it('emits ipc.snapshot.fixture_built when buildFixtureSnapshot uses the bundled fixture', () => {
     const logger = createTestLogger();
-    const snapshot = buildFixtureSnapshot(undefined, logger);
+    const snapshot = buildFixtureSnapshot(logger);
 
     const logs = logger.getRecent();
     expect(logs).toContainEqual(expect.objectContaining({
@@ -177,7 +177,7 @@ describe('instrumentation sampling — ipc / session-io', () => {
   it('emits ipc.snapshot.loaded when loadSnapshotFromFile reads a replay file', async () => {
     const logger = createTestLogger();
     const filePath = join(REPLAY_FIXTURES, 'happy-path.replay.jsonl');
-    const snapshot = await loadSnapshotFromFile(filePath, undefined, logger);
+    const snapshot = await loadSnapshotFromFile(filePath, logger);
 
     const logs = logger.getRecent();
     expect(logs).toContainEqual(expect.objectContaining({
@@ -197,7 +197,7 @@ describe('instrumentation sampling — ipc / session-io', () => {
   it('emits ipc.snapshot.loaded for a transcript fixture', async () => {
     const logger = createTestLogger();
     const filePath = join(import.meta.dirname, 'fixtures/transcripts/happy-path.jsonl');
-    const snapshot = await loadSnapshotFromFile(filePath, undefined, logger);
+    const snapshot = await loadSnapshotFromFile(filePath, logger);
 
     const logs = logger.getRecent();
     expect(logs).toContainEqual(expect.objectContaining({
@@ -220,7 +220,7 @@ describe('instrumentation sampling — ipc / session-io', () => {
     const { writeFile } = await import('node:fs/promises');
     await writeFile(emptyFile, '', 'utf8');
 
-    await expect(loadSnapshotFromFile(emptyFile, undefined, logger)).rejects.toThrow(/No events/);
+    await expect(loadSnapshotFromFile(emptyFile, logger)).rejects.toThrow(/No events/);
 
     const logs = logger.getRecent();
     expect(logs).toContainEqual(expect.objectContaining({

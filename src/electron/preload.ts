@@ -10,10 +10,8 @@ const bridge: ShadowAgentBridge = {
   },
   getLiveSnapshot: () => ipcRenderer.invoke('shadow:snapshot') as Promise<SnapshotPayload | null>,
   openReplayFile: () => ipcRenderer.invoke('shadow-agent:open-replay-file') as Promise<SnapshotPayload | null>,
-  getPrivacyPolicy: () => ipcRenderer.invoke('shadow-agent:get-privacy-policy'),
-  updatePrivacySettings: (updates) => ipcRenderer.invoke('shadow-agent:update-privacy-settings', updates),
-  exportReplayJsonl: (events: CanonicalEvent[], suggestedFileName?: string, options?: { storeRawTranscript?: boolean }) =>
-    ipcRenderer.invoke('shadow-agent:export-replay-jsonl', events, suggestedFileName, options) as Promise<ExportResult>
+  exportReplayJsonl: (events: CanonicalEvent[], suggestedFileName?: string) =>
+    ipcRenderer.invoke('shadow-agent:export-replay-jsonl', events, suggestedFileName) as Promise<ExportResult>
 };
 
 contextBridge.exposeInMainWorld('shadowAgent', bridge);

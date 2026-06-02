@@ -41,12 +41,6 @@ function makeSnapshot(overrides: Partial<SnapshotPayload> = {}): SnapshotPayload
       shadowInsights: []
     },
     events: [],
-    privacy: {
-      allowRawTranscriptStorage: false,
-      allowOffHostInference: false,
-      processingMode: 'local-only',
-      transcriptHandling: 'sanitized-by-default'
-    },
     ...overrides
   };
 }
@@ -76,8 +70,7 @@ describe('App integration', () => {
             id: 'tr-1',
             actor: 'User',
             text: 'Please implement the feature',
-            timestamp: '2026-01-01T00:00:00.000Z',
-            redacted: false
+            timestamp: '2026-01-01T00:00:00.000Z'
           }
         ],
         fileAttention: [{ filePath: 'src/app.ts', touches: 5 }]

@@ -72,10 +72,9 @@
  * metadata, recent events, tool history, transcript turns, file attention,
  * heuristic risk signals.
  *
- * Delivery is local-only by default. Transcript-like fields are sanitized
- * before rendering or off-host inclusion. Off-host delivery requires
- * explicit runtime opt-in; raw transcript delivery requires a separate
- * explicit opt-in.
+ * The packet carries raw observed context — this is a single-user personal
+ * observer running on the user's own machine, so transcript-like fields are
+ * passed through unmodified.
  *
  * The packet is plain text, not JSON, because the model reads it as context
  * to scan — not as structured input to transform. JSON is the *output*

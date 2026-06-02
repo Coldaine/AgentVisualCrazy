@@ -1,26 +1,19 @@
 import { deriveState } from './derive';
-import {
-  DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS,
-  prepareEventsForStorage,
-  resolvePrivacyPolicy
-} from './privacy';
 import { buildSessionRecord } from './replay-store';
 import type {
   CanonicalEvent,
   LoadedSource,
-  RendererInput,
-  TranscriptPrivacySettings
+  RendererInput
 } from './schema';
 
 export interface RendererInputBuildOptions {
   source: LoadedSource;
   fallbackTitle?: string;
-  privacySettings?: TranscriptPrivacySettings;
 }
 
 /**
  * Concrete renderer-input adapters must ship with focused unit tests that
- * exercise title resolution, privacy defaults, and derived-state assembly.
+ * exercise title resolution and derived-state assembly.
  */
 export interface RendererInputAdapter<TInput = CanonicalEvent[]> {
   readonly id: string;
@@ -60,14 +53,12 @@ export const canonicalEventRendererInputAdapter: RendererInputAdapter<CanonicalE
   build(events, options) {
     const title = inferRendererInputTitle(events, options.fallbackTitle ?? options.source.label);
     const record = buildSessionRecord(events, title);
-    const privacySettings = options.privacySettings ?? DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS;
 
     return {
       source: options.source,
       record,
       state: deriveState(events, record.title),
-      events: prepareEventsForStorage(events, privacySettings),
-      privacy: resolvePrivacyPolicy(privacySettings)
+      events
     };
   }
 };

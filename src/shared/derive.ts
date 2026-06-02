@@ -1,5 +1,4 @@
 import { CanonicalEvent, DerivedState, ShadowInsight } from './schema';
-import { sanitizeTranscriptText } from './privacy';
 import { driverRegistry } from '../capture/drivers';
 import type { HarnessCapabilities } from '../capture/drivers/harness-driver';
 
@@ -227,16 +226,15 @@ export function deriveState(events: CanonicalEvent[], title = 'Observed session'
     });
 
     if (event.kind === 'message' && typeof event.payload.text === 'string') {
-      const sanitizedText = sanitizeTranscriptText(event.payload.text);
+      const text = event.payload.text;
       transcript.push({
         id: event.id,
         actor: event.actor,
-        text: sanitizedText,
-        timestamp: event.timestamp,
-        redacted: sanitizedText !== event.payload.text
+        text,
+        timestamp: event.timestamp
       });
       if (event.actor === 'user' && currentObjective === title) {
-        currentObjective = sanitizedText;
+        currentObjective = text;
       }
     }
 

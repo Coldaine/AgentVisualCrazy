@@ -117,7 +117,7 @@ describe('buildContextPacket', () => {
     agentNodes: [],
     timeline: [],
     transcript: [
-      { id: 't1', actor: 'user', text: 'Do the thing', timestamp: '2024-01-01T00:00:00Z', redacted: false },
+      { id: 't1', actor: 'user', text: 'Do the thing', timestamp: '2024-01-01T00:00:00Z' },
     ],
     fileAttention: [{ filePath: 'src/foo.ts', touches: 3 }],
     riskSignals: ['Tool failed twice'],
@@ -191,7 +191,6 @@ describe('buildInferenceRequest', () => {
     expect(request.userMessage).toContain('Session: x');
     expect(request.userMessage).toContain('Agent: claude-code');
     expect(request.userMessage).toContain('Phase (heuristic): idle');
-    expect(request.userMessage).toContain('Privacy mode: local-only');
   });
 
   it('is deterministic — same packet produces same output', () => {

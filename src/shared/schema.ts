@@ -134,16 +134,6 @@ export interface EventQueueMetrics {
   backpressure: EventQueueBackpressureState;
 }
 
-export interface TranscriptPrivacySettings {
-  allowRawTranscriptStorage: boolean;
-  allowOffHostInference: boolean;
-}
-
-export interface PrivacyPolicy extends TranscriptPrivacySettings {
-  processingMode: 'local-only' | 'off-host-opted-in';
-  transcriptHandling: 'sanitized-by-default';
-}
-
 export interface LoadedSource {
   kind: 'fixture' | 'replay' | 'transcript';
   label: string;
@@ -155,7 +145,6 @@ export interface RendererInput {
   record: SessionRecord;
   state: DerivedState;
   events: CanonicalEvent[];
-  privacy: PrivacyPolicy;
 }
 
 export interface SnapshotPayload extends RendererInput {
@@ -173,12 +162,9 @@ export interface ShadowAgentBridge {
   onLiveEvents: (callback: (events: CanonicalEvent[]) => void) => () => void;
   getLiveSnapshot: () => Promise<SnapshotPayload | null>;
   openReplayFile: () => Promise<SnapshotPayload | null>;
-  getPrivacyPolicy: () => Promise<PrivacyPolicy>;
-  updatePrivacySettings: (updates: Partial<TranscriptPrivacySettings>) => Promise<PrivacyPolicy>;
   exportReplayJsonl: (
     events: CanonicalEvent[],
-    suggestedFileName?: string,
-    options?: { storeRawTranscript?: boolean }
+    suggestedFileName?: string
   ) => Promise<ExportResult>;
 }
 
@@ -210,7 +196,7 @@ export interface DerivedState {
   activePhase: string;
   agentNodes: AgentNode[];
   timeline: TimelineItem[];
-  transcript: Array<{ id: string; actor: string; text: string; timestamp: string; redacted: boolean }>;
+  transcript: Array<{ id: string; actor: string; text: string; timestamp: string }>;
   fileAttention: Array<{ filePath: string; touches: number }>;
   riskSignals: string[];
   nextMoves: string[];

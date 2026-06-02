@@ -64,70 +64,18 @@ describe('FileReplayStore', () => {
       eventCount: 2
     });
     expect(loaded.record).toEqual(record);
-    // Email and path now pass through unchanged (secret-only sanitize); the raw text is preserved
+    // Events are stored and reloaded raw — nothing is scrubbed.
     expect(loaded.events[1].payload).toEqual({
       text: 'Working through the payment gateway refactor for dev@example.com in D:\\workspace.'
     });
     expect(rawEvents.trim().split(/\r?\n/)).toHaveLength(2);
   });
 
-  it('stores raw transcripts by default and rejects when caller explicitly disables raw storage', async () => {
-    // Default store (both settings true) now accepts raw transcript storage
-    const defaultRootDir = mkdtempSync(join(tmpdir(), 'shadow-agent-persistence-'));
-    tempRoots.push(defaultRootDir);
-    const defaultStore = new FileReplayStore(defaultRootDir);
-
-    await expect(
-      defaultStore.saveSession(
-        'raw-session-default',
-        [
-          makeEvent({
-            id: 'evt-1',
-            sessionId: 'raw-session-default',
-            timestamp: '2026-03-26T10:00:00.000Z',
-            kind: 'message',
-            payload: { text: 'secret sk-abcdefghijklmnop' }
-          })
-        ],
-        'Raw Session Default',
-        { storeRawTranscript: true }
-      )
-    ).resolves.toBeDefined();
-
-    // A store explicitly configured with allowRawTranscriptStorage: false still rejects
-    const restrictedRootDir = mkdtempSync(join(tmpdir(), 'shadow-agent-persistence-'));
-    tempRoots.push(restrictedRootDir);
-    const restrictedStore = new FileReplayStore(restrictedRootDir, {
-      privacy: { allowRawTranscriptStorage: false, allowOffHostInference: false }
-    });
-
-    await expect(
-      restrictedStore.saveSession(
-        'raw-session-blocked',
-        [
-          makeEvent({
-            id: 'evt-1',
-            sessionId: 'raw-session-blocked',
-            timestamp: '2026-03-26T10:00:00.000Z',
-            kind: 'message',
-            payload: { text: 'secret sk-abcdefghijklmnop' }
-          })
-        ],
-        'Raw Session Blocked',
-        { storeRawTranscript: true }
-      )
-    ).rejects.toThrow(/explicit opt-in/i);
-  });
-
-  it('stores raw transcripts when the store is configured with opt-in', async () => {
+  it('stores transcripts raw, including secret-like content', async () => {
     const rootDir = mkdtempSync(join(tmpdir(), 'shadow-agent-persistence-'));
-    const store = new FileReplayStore(rootDir, {
-      privacy: {
-        allowRawTranscriptStorage: true,
-        allowOffHostInference: false
-      }
-    });
-    const sessionId = 'raw-opt-in';
+    tempRoots.push(rootDir);
+    const store = new FileReplayStore(rootDir);
+    const sessionId = 'raw-session';
     const rawText = 'secret sk-abcdefghijklmnop';
 
     await store.saveSession(
@@ -141,8 +89,7 @@ describe('FileReplayStore', () => {
           payload: { text: rawText }
         })
       ],
-      'Raw Opt In',
-      { storeRawTranscript: true }
+      'Raw Session'
     );
 
     const loaded = await store.loadEvents(sessionId);

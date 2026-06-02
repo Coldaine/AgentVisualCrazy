@@ -569,31 +569,6 @@ button {
   margin: 8px 0 6px;
 }
 
-.privacy-panel {
-  display: grid;
-  gap: 12px;
-}
-
-.toggle {
-  display: flex;
-  gap: 12px;
-  align-items: center;
-  padding: 12px 14px;
-  border-radius: 18px;
-  border: 1px solid rgba(131, 154, 186, 0.15);
-  background: rgba(5, 12, 22, 0.42);
-}
-
-.toggle input {
-  width: 18px;
-  height: 18px;
-}
-
-.privacy-note {
-  margin: 0;
-  color: var(--muted);
-}
-
 .list {
   margin: 0;
   padding: 0;

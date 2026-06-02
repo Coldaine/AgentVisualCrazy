@@ -1,20 +1,14 @@
 import { mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS } from '../shared/privacy';
 import { buildSessionRecord, parseReplay, serializeEvents } from '../shared/replay-store';
-import type { CanonicalEvent, SessionRecord, TranscriptPrivacySettings } from '../shared/schema';
+import type { CanonicalEvent, SessionRecord } from '../shared/schema';
 import { createLogger, type Logger } from '../shared/logger';
 
 export interface FileReplayStoreOptions {
   sessionsDirName?: string;
   eventsFileName?: string;
   recordFileName?: string;
-  privacy?: TranscriptPrivacySettings;
   logger?: Logger;
-}
-
-export interface ReplayStorageOptions {
-  storeRawTranscript?: boolean;
 }
 
 export interface StoredReplaySession {
@@ -22,7 +16,7 @@ export interface StoredReplaySession {
   events: CanonicalEvent[];
 }
 
-const DEFAULT_OPTIONS: Omit<Required<FileReplayStoreOptions>, 'privacy' | 'logger'> = {
+const DEFAULT_OPTIONS: Omit<Required<FileReplayStoreOptions>, 'logger'> = {
   sessionsDirName: 'sessions',
   eventsFileName: 'events.jsonl',
   recordFileName: 'session.json'
@@ -49,7 +43,6 @@ export class FileReplayStore {
   private readonly sessionsDir: string;
   private readonly eventsFileName: string;
   private readonly recordFileName: string;
-  private readonly privacy: TranscriptPrivacySettings;
   private readonly logger: Logger;
 
   constructor(private readonly rootDir: string, options: FileReplayStoreOptions = {}) {
@@ -57,7 +50,6 @@ export class FileReplayStore {
     this.sessionsDir = join(rootDir, mergedOptions.sessionsDirName);
     this.eventsFileName = mergedOptions.eventsFileName;
     this.recordFileName = mergedOptions.recordFileName;
-    this.privacy = options.privacy ?? DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS;
     this.logger = options.logger ?? createLogger();
   }
 
@@ -76,14 +68,13 @@ export class FileReplayStore {
   async saveSession(
     sessionId: string,
     events: CanonicalEvent[],
-    title?: string,
-    options: ReplayStorageOptions = {}
+    title?: string
   ): Promise<SessionRecord> {
     const sessionDir = this.sessionDir(sessionId);
     await mkdir(sessionDir, { recursive: true });
 
     const record = buildSessionRecord(events, title);
-    const eventLog = `${serializeEvents(events, options, this.privacy)}${events.length > 0 ? '\n' : ''}`;
+    const eventLog = `${serializeEvents(events)}${events.length > 0 ? '\n' : ''}`;
     await writeFile(this.eventsPath(sessionId), eventLog, 'utf8');
     await writeFile(this.recordPath(sessionId), `${JSON.stringify(record, null, 2)}\n`, 'utf8');
 
@@ -99,8 +90,7 @@ export class FileReplayStore {
   async appendEvent(
     sessionId: string,
     event: CanonicalEvent,
-    title?: string,
-    options: ReplayStorageOptions = {}
+    title?: string
   ): Promise<SessionRecord> {
     const current = await this.loadSession(sessionId).catch(() => undefined);
     const nextEvents = [...(current?.events ?? []), event];
@@ -109,7 +99,7 @@ export class FileReplayStore {
       kind: event.kind,
       totalEvents: nextEvents.length
     });
-    return this.saveSession(sessionId, nextEvents, title ?? current?.record.title, options);
+    return this.saveSession(sessionId, nextEvents, title ?? current?.record.title);
   }
 
   async loadSession(sessionId: string): Promise<StoredReplaySession> {

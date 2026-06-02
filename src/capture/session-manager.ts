@@ -6,8 +6,7 @@
  * WebSocket, socket) and when sessions rotate or reconnect.
  */
 import type { WebContents } from 'electron';
-import { DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS } from '../shared/privacy';
-import type { SnapshotPayload, LoadedSource, TranscriptPrivacySettings, ShadowInsight } from '../shared/schema';
+import type { SnapshotPayload, LoadedSource, ShadowInsight } from '../shared/schema';
 import { buildRendererInput } from '../shared/renderer-input-adapter';
 import { createIncrementalParser } from './incremental-parser';
 import { driverRegistry } from './drivers';
@@ -23,8 +22,6 @@ import type {
 import { createCaptureTransport } from './capture-transports';
 
 export interface SessionManagerOptions {
-  privacy?: TranscriptPrivacySettings;
-  getPrivacy?: () => TranscriptPrivacySettings;
   queuePersistenceRoot?: string;
   queueMemoryCapacity?: number;
   queueTotalCapacity?: number;
@@ -50,12 +47,10 @@ export function createSessionManager(
   options: SessionManagerOptions = {}
 ): SessionManager {
   const logger = options.logger ?? createLogger({ minLevel: 'info' });
-  const getPrivacy = options.getPrivacy ?? (() => options.privacy ?? DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS);
   const buffer = createEventBuffer({
     persistenceRoot: options.queuePersistenceRoot,
     memoryCapacity: options.queueMemoryCapacity,
     totalCapacity: options.queueTotalCapacity,
-    getPrivacy,
     logger
   });
   let activeSession: CaptureSession | null = null;
@@ -80,8 +75,7 @@ export function createSessionManager(
 
     const rendererInput = buildRendererInput(events, {
       source,
-      fallbackTitle: sessionTitle,
-      privacySettings: getPrivacy()
+      fallbackTitle: sessionTitle
     });
 
     // Quarantine: when the model has produced insights, render those ONLY.
@@ -143,7 +137,6 @@ export function createSessionManager(
         buffer,
         getWebContents,
         buildSnapshot,
-        getPrivacy,
       });
       bridgeCleanup = bridge.start();
 

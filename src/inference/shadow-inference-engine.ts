@@ -8,11 +8,9 @@
  */
 import type {
   DerivedState,
-  ShadowInsight,
-  TranscriptPrivacySettings
+  ShadowInsight
 } from '../shared/schema';
 import { createLogger } from '../shared/logger';
-import { DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS } from '../shared/privacy';
 import { buildContextPacket } from './context-packager';
 import { buildInferenceRequest } from './prompt-builder';
 import { parseModelResponse } from './response-parser';
@@ -32,7 +30,6 @@ export interface InferenceEngineOptions {
   getState: () => DerivedState | Promise<DerivedState>;
   onInsights: InsightCallback;
   triggerConfig?: Partial<TriggerConfig>;
-  privacy?: TranscriptPrivacySettings;
   client?: InferenceClient;
 }
 
@@ -55,7 +52,6 @@ function isCheckpointedEventBuffer(buffer: EventBufferLike): buffer is Checkpoin
 
 export function createInferenceEngine(opts: InferenceEngineOptions): InferenceEngine {
   const { buffer, getState, onInsights } = opts;
-  const privacy = opts.privacy ?? DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS;
   let client: InferenceClient | null = null;
   let inflight = false;
   let pendingTrigger = false;
@@ -76,10 +72,7 @@ export function createInferenceEngine(opts: InferenceEngineOptions): InferenceEn
       const state = await getState();
       const events = await buffer.getAll();
       const packet = buildContextPacket(state, events);
-      const request = buildInferenceRequest(packet, {
-        delivery: 'off-host',
-        privacy
-      });
+      const request = buildInferenceRequest(packet);
 
       logger.info('inference', 'engine.run_start', { eventCount: events.length });
       const inferenceResponse = await client.infer(request);
@@ -146,13 +139,6 @@ export function createInferenceEngine(opts: InferenceEngineOptions): InferenceEn
   return {
     async start() {
       await loadCredentials();
-
-      if (!privacy.allowOffHostInference) {
-        logger.info('inference', 'engine.local_only_mode', {
-          message: 'Off-host inference is disabled until the user explicitly opts in.'
-        });
-        return;
-      }
 
       client = opts.client ?? await createInferenceClient();
 

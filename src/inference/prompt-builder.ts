@@ -11,12 +11,6 @@ import { SHADOW_SYSTEM_PROMPT } from './prompts';
 export { SHADOW_SYSTEM_PROMPT } from './prompts';
 import type { InferenceRequest } from './inference-client';
 import type { CanonicalEvent } from '../shared/schema';
-import {
-  assertOffHostInferenceAllowed,
-  DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS,
-  sanitizeTranscriptText
-} from '../shared/privacy';
-import type { TranscriptPrivacySettings } from '../shared/schema';
 
 export interface ShadowContextPacket {
   sessionId: string;
@@ -30,66 +24,31 @@ export interface ShadowContextPacket {
   riskSignals: Array<{ signal: string; severity: string }>;
 }
 
-export interface BuildUserMessageOptions {
-  delivery?: 'local' | 'off-host';
-  includeRawTranscript?: boolean;
-  privacy?: TranscriptPrivacySettings;
-}
-
-export function buildUserMessage(
-  packet: ShadowContextPacket,
-  options: BuildUserMessageOptions = {}
-): string {
-  const delivery = options.delivery ?? 'local';
-  const privacy = options.privacy ?? DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS;
-
-  if (delivery === 'off-host') {
-    assertOffHostInferenceAllowed(privacy, {
-      includeRawTranscript: options.includeRawTranscript
-    });
-  }
-
-  const allowRawTranscript =
-    delivery === 'off-host' &&
-    options.includeRawTranscript === true &&
-    privacy.allowRawTranscriptStorage;
-
-  const sanitize = (text: string): string => {
-    if (allowRawTranscript) {
-      return text;
-    }
-    return sanitizeTranscriptText(text);
-  };
-
-  const privacyMode = delivery === 'off-host' && privacy.allowOffHostInference
-    ? 'off-host-opted-in'
-    : 'local-only';
-
+export function buildUserMessage(packet: ShadowContextPacket): string {
   const lines: string[] = [
     `Session: ${packet.sessionId}`,
     `Agent: ${packet.observedAgent}`,
     `Duration: ${packet.sessionDuration}s`,
     `Phase (heuristic): ${packet.currentPhase}`,
-    `Privacy mode: ${privacyMode}`,
     '',
     `--- Recent Events (${packet.recentEvents.length}) ---`,
     ...packet.recentEvents.map((e) =>
-      `${e.timestamp} [${e.kind}] ${e.actor}: ${sanitize(JSON.stringify(e.payload)).slice(0, 120)}`
+      `${e.timestamp} [${e.kind}] ${e.actor}: ${JSON.stringify(e.payload).slice(0, 120)}`
     ),
     '',
     `--- Tool History (${packet.toolHistory.length}) ---`,
     ...packet.toolHistory.map((t) =>
-      `${t.tool} (${t.result}): ${sanitize(t.argsSummary)}`
+      `${t.tool} (${t.result}): ${t.argsSummary}`
     ),
     '',
     `--- Recent Transcript (${packet.recentTranscript.length} turns) ---`,
     ...packet.recentTranscript.map((t) =>
-      `[${t.actor}] ${sanitize(t.text)}`
+      `[${t.actor}] ${t.text}`
     ),
     '',
     `--- File Attention ---`,
     ...packet.fileAttention.map((f) =>
-      `${sanitize(f.filePath)}: ${f.touches} touches`
+      `${f.filePath}: ${f.touches} touches`
     ),
     '',
     `--- Risk Signals (heuristic) ---`,
@@ -101,12 +60,9 @@ export function buildUserMessage(
   return lines.join('\n');
 }
 
-export function buildInferenceRequest(
-  packet: ShadowContextPacket,
-  options: BuildUserMessageOptions = {}
-): InferenceRequest {
+export function buildInferenceRequest(packet: ShadowContextPacket): InferenceRequest {
   return {
     systemPrompt: SHADOW_SYSTEM_PROMPT,
-    userMessage: buildUserMessage(packet, options),
+    userMessage: buildUserMessage(packet),
   };
 }

@@ -30,7 +30,7 @@ const events: CanonicalEvent[] = [
 ];
 
 describe('replay-store', () => {
-  it('sanitizes replay JSONL by default and ignores blank lines', () => {
+  it('serializes replay JSONL raw and ignores blank lines on parse', () => {
     const serialized = serializeEvents(events);
     const parsed = parseReplay(`\n${serialized}\n\n`);
 
@@ -38,7 +38,7 @@ describe('replay-store', () => {
     expect(parsed[1]).toEqual(events[1]);
   });
 
-  it('preserves raw replay JSONL only when explicitly opted in', () => {
+  it('preserves secret-like content in replay JSONL — events are stored raw', () => {
     const sensitiveEvents: CanonicalEvent[] = [
       {
         id: 'evt-sensitive',
@@ -51,10 +51,7 @@ describe('replay-store', () => {
       }
     ];
 
-    const serialized = serializeEvents(sensitiveEvents, { storeRawTranscript: true }, {
-      allowRawTranscriptStorage: true,
-      allowOffHostInference: false
-    });
+    const serialized = serializeEvents(sensitiveEvents);
     const [parsed] = parseReplay(serialized);
 
     expect(parsed.payload).toEqual(sensitiveEvents[0].payload);

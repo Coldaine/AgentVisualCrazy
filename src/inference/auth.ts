@@ -4,8 +4,8 @@
  * Priority chain:
  *  1. Already set in process.env (skip — already done)
  *  2. ~/.shadow-agent/credentials.enc.json (Electron safeStorage encrypted store)
- *  3. ~/.shadow-agent/.env (legacy file fallback, requires explicit consent)
- *  4. ~/.local/share/opencode/auth.json (legacy OpenCode auth store, requires explicit consent)
+ *  3. ~/.shadow-agent/.env (legacy file fallback)
+ *  4. ~/.local/share/opencode/auth.json (legacy OpenCode auth store)
  *
  * Sets process.env variables so downstream code can use them transparently.
  * Safe to call multiple times — no-ops if the key is already set.
@@ -19,9 +19,7 @@ import { parseDotenv } from '../shared/dotenv';
 const logger = createLogger({ minLevel: 'info' });
 const SECURE_STORE_DIR_MODE = 0o700;
 const SECURE_STORE_FILE_MODE = 0o600;
-const TRUE_VALUES = new Set(['1', 'true', 'yes', 'on']);
 
-export const LEGACY_FILE_FALLBACK_ENV = 'SHADOW_ALLOW_FILE_CREDENTIAL_FALLBACK';
 export const SECURE_CREDENTIAL_STORE_FILE = 'credentials.enc.json';
 
 /** Maps OpenCode provider name → env variable name */
@@ -49,7 +47,6 @@ interface SecureCredentialStoreFile {
 export interface CredentialLoaderOptions {
   env?: NodeJS.ProcessEnv;
   homeDir?: string;
-  allowFileFallback?: boolean;
   safeStorage?: SafeStorageLike | null;
 }
 
@@ -57,10 +54,6 @@ function setIfMissing(env: NodeJS.ProcessEnv, key: string, value: string): boole
   if (env[key]) return false;
   env[key] = value;
   return true;
-}
-
-function isTrueish(value: string | undefined): boolean {
-  return typeof value === 'string' && TRUE_VALUES.has(value.trim().toLowerCase());
 }
 
 function isEnoent(error: unknown): error is NodeJS.ErrnoException {
@@ -246,36 +239,28 @@ export async function loadCredentials(options: CredentialLoaderOptions = {}): Pr
   const env = options.env ?? process.env;
   const homeDirPath = options.homeDir ?? homedir();
   const secureStorePath = getSecureStorePath(homeDirPath);
-  const allowFileFallback = options.allowFileFallback ?? isTrueish(env[LEGACY_FILE_FALLBACK_ENV]);
   const safeStorage = await getSafeStorage(options);
   const secureStoreCredentials = await readSecureStore(env, secureStorePath, safeStorage);
 
-  if (allowFileFallback) {
-    const dotenvCredentials = await loadDotenvFile(env, getLegacyDotenvPath(homeDirPath));
-    const opencodeCredentials = await loadOpencodeAuth(env, getOpencodeAuthPath(homeDirPath));
-    const migratedCredentials = filterSupportedCredentials({
-      ...dotenvCredentials,
-      ...opencodeCredentials,
-      ...secureStoreCredentials,
-    });
-    if (Object.keys(migratedCredentials).length > 0) {
-      try {
-        const wroteSecureStore = await writeSecureStore(secureStorePath, homeDirPath, migratedCredentials, safeStorage);
-        if (wroteSecureStore && (Object.keys(dotenvCredentials).length > 0 || Object.keys(opencodeCredentials).length > 0)) {
-          logger.info('inference', 'auth.legacy_credentials_migrated', {
-            path: secureStorePath,
-            keys: Object.keys(dotenvCredentials).length + Object.keys(opencodeCredentials).length,
-          });
-        }
-      } catch (error) {
-        logger.warn('inference', 'auth.secure_store_write_failed', { path: secureStorePath, error });
+  const dotenvCredentials = await loadDotenvFile(env, getLegacyDotenvPath(homeDirPath));
+  const opencodeCredentials = await loadOpencodeAuth(env, getOpencodeAuthPath(homeDirPath));
+  const migratedCredentials = filterSupportedCredentials({
+    ...dotenvCredentials,
+    ...opencodeCredentials,
+    ...secureStoreCredentials,
+  });
+  if (Object.keys(migratedCredentials).length > 0) {
+    try {
+      const wroteSecureStore = await writeSecureStore(secureStorePath, homeDirPath, migratedCredentials, safeStorage);
+      if (wroteSecureStore && (Object.keys(dotenvCredentials).length > 0 || Object.keys(opencodeCredentials).length > 0)) {
+        logger.info('inference', 'auth.legacy_credentials_migrated', {
+          path: secureStorePath,
+          keys: Object.keys(dotenvCredentials).length + Object.keys(opencodeCredentials).length,
+        });
       }
+    } catch (error) {
+      logger.warn('inference', 'auth.secure_store_write_failed', { path: secureStorePath, error });
     }
-  } else {
-    logger.info('inference', 'auth.file_fallback_skipped', {
-      consentEnv: LEGACY_FILE_FALLBACK_ENV,
-      secureStorePath,
-    });
   }
 
   const available = Object.values(PROVIDER_ENV_MAP).filter((k) => !!env[k]);

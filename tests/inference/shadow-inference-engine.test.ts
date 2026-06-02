@@ -9,7 +9,6 @@ import type { EventBufferLike } from '../../src/inference/inference-client';
 import { FakeInferenceClient } from '../helpers/fake-inference-client';
 
 const FIXTURES = join(fileURLToPath(new URL('.', import.meta.url)), '../fixtures/replays');
-const ALLOWED_PRIVACY = { allowOffHostInference: true, allowRawTranscriptStorage: false };
 
 function derivedState(overrides: Partial<DerivedState> = {}): DerivedState {
   return {
@@ -141,44 +140,6 @@ describe('createInferenceEngine — orchestrator integration', () => {
     vi.useRealTimers();
   });
 
-  it('no-op when off-host inference is disabled', async () => {
-    const onInsights = vi.fn();
-    const buffer = new FakeEventBuffer();
-    const engine = createInferenceEngine({
-      buffer,
-      getState: async () => derivedState(),
-      onInsights,
-      client,
-      privacy: { allowOffHostInference: false, allowRawTranscriptStorage: false },
-    });
-
-    await engine.start();
-    // Client should never be called even with events
-    buffer.push(makeEvent('e1', 'tool_failed'));
-    await vi.runAllTimersAsync();
-    expect(client.calls).toHaveLength(0);
-    expect(onInsights).not.toHaveBeenCalled();
-    engine.stop();
-  });
-
-  it('no-op when privacy allowOffHostInference is false', async () => {
-    const onInsights = vi.fn();
-    const buffer = new FakeEventBuffer();
-    const engine = createInferenceEngine({
-      buffer,
-      getState: async () => derivedState(),
-      onInsights,
-      client,
-      privacy: { allowOffHostInference: false, allowRawTranscriptStorage: false },
-    });
-
-    await engine.start();
-    buffer.push(makeEvent('e1', 'tool_failed'));
-    await vi.runAllTimersAsync();
-    expect(client.calls).toHaveLength(0);
-    engine.stop();
-  });
-
   it('triggers inference on tool_failed event and delivers insights', async () => {
     const onInsights = vi.fn();
     const buffer = new FakeEventBuffer();
@@ -193,7 +154,6 @@ describe('createInferenceEngine — orchestrator integration', () => {
       getState: async () => derivedState({ activePhase: 'debugging' }),
       onInsights,
       client,
-      privacy: ALLOWED_PRIVACY,
     });
 
     await engine.start();
@@ -226,7 +186,6 @@ describe('createInferenceEngine — orchestrator integration', () => {
       getState: async () => derivedState(),
       onInsights,
       client,
-      privacy: ALLOWED_PRIVACY,
     });
 
     await engine.start();
@@ -273,7 +232,6 @@ describe('createInferenceEngine — orchestrator integration', () => {
       getState: async () => derivedState(),
       onInsights,
       client,
-      privacy: ALLOWED_PRIVACY,
     });
 
     await engine.start();
@@ -322,7 +280,6 @@ describe('createInferenceEngine — orchestrator integration', () => {
       getState: async () => derivedState({ sessionId: 'happy-path' }),
       onInsights,
       client,
-      privacy: ALLOWED_PRIVACY,
     });
 
     await engine.start();
@@ -351,7 +308,6 @@ describe('createInferenceEngine — orchestrator integration', () => {
       getState: async () => derivedState(),
       onInsights,
       client,
-      privacy: ALLOWED_PRIVACY,
     });
 
     await engine.start();
