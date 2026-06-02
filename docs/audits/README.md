@@ -1,60 +1,57 @@
 # Test Suite Audit — AgentVisualCrazy
 
-**Generated:** 2026-05-30. **Method:** 6 parallel reviewer agents graded **every test case** across all 49 test files. Each agent read the test *and* the production source it claims to exercise, then assigned:
+**Generated:** 2026-06-02. **Method:** 4 independent reviewer agents graded every test file across all 49 test files. Each agent read the test *and* the production source it claims to exercise, then assigned a letter grade A–F and a verdict: **REAL** / **WEAK** / **FICTION**.
 
-- a **letter grade** A–F, and
-- a **verdict**: **REAL** (drives real code; fails if the code breaks) · **WEAK** (real but shallow / over-mocked / asserts little) · **FICTION** (tautological, tests a mock/constant/test-helper, mislabeled, or would still pass if the implementation were deleted).
+This audit reflects the state of `main` **after** PR #100 (`test/audit-followup-rewrites`), which addressed the prior audit's worst offenders.
 
 ## Headline
 
-- **49 files · ~351 test cases.**
-- **REAL 189 (54%) · WEAK 124 (35%) · FICTION 38 (11%).**
-- **Roughly half the suite is weak or fiction.** 11 outright **F**, 30 **D**.
-- The audit **independently rediscovered the exact gap behind today's bug fix**: the live `src/capture/drivers/claude-code/normalizer.ts` had **zero test coverage**, so `deriveState`'s `payload.args` file-path branch was never exercised — "false confidence from legacy-adapter-only tests" (core-shared report). Now fixed and guarded by `tests/live/`.
+- **49 files · 430 test cases (427 regular + 3 live).**
+- **REAL 387 (90%) · WEAK 43 (10%) · FICTION 0 (0%).**
+- **No FICTION tests remain.** All F/D cases from the prior audit were deleted or rewritten in PR #100.
+- The prior audit's claim that "normalizer.ts has zero direct coverage" is **false** — `capture.test.ts`, `normalizer-derive-seam.test.ts`, `e2e-jsonl-to-state.test.ts`, and `harness-driver.test.ts` all directly exercise the normalizer.
+- The prior audit's claim that "deriveState payload.args file-path branch never exercised" is **false** — `normalizer-derive-seam.test.ts:12-33` and `e2e-jsonl-to-state.test.ts` both test this path.
 
-## By area
+## Grade Distribution
 
-| Area | Files | Cases | A | B | C | D | F | REAL | WEAK | FICTION | Report |
-|------|------:|------:|--:|--:|--:|--:|--:|-----:|-----:|--------:|--------|
-| capture | 7 | 62 | 17 | 27 | 12 | 4 | 2 | 33 | 24 | 5 | [capture.md](capture.md) |
-| inference | 9 | 67 | 28 | 18 | 12 | 6 | 3 | 38 | 22 | 7 | [inference.md](inference.md) |
-| renderer A | 8 | 58 | 22 | 18 | 8 | 1 | 1 | 28 | 23 | 7 | [renderer-a.md](renderer-a.md) |
-| renderer B | 8 | 54 | 22 | 11 | 12 | 7 | 2 | 31 | 17 | 6 | [renderer-b.md](renderer-b.md) |
-| core/shared | 8 | 66 | 18 | 19 | 17 | 7 | 0 | 37 | 22 | 7 | [core-shared.md](core-shared.md) |
-| electron/integration/live | 9 | 44 | 14 | 12 | 10 | 5 | 3 | 22 | 16 | 6 | [electron-integration-live.md](electron-integration-live.md) |
-| **Total** | **49** | **351** | **121** | **105** | **71** | **30** | **11** | **189** | **124** | **38** | |
+| Grade | Files | Description |
+|-------|------:|-------------|
+| A (Excellent) | 14 | Excellent coverage, meaningful failure modes, edge cases |
+| B (Good) | 20 | Good main-path coverage + some edge cases |
+| C (Adequate) | 10 | Main paths covered, missing edge cases or shallow assertions |
+| D (Minimal) | 4 | Minimal wiring checks, would catch deletions but not regressions |
+| F (Broken) | 0 | None |
 
-*(renderer-A and core/shared grouped a few multi-case blocks in their letter tally, so the letter columns sum to 338 vs 351 cases; verdict columns sum to 351.)*
+## Remaining Weak Points
 
-## Systemic patterns (the recurring fiction)
+### Grade D/WEAK files (need strengthening)
 
-1. **Tests of test-helpers (self-referential).** `record-2d-context.test.ts`, `canvas-draw.test.ts` (`createRecordedContext`), and `inference-contract.test.ts` (`FakeInferenceClient`) grade the test infrastructure, not production code.
-2. **Tautologies / asserting constants.** `schema.test.ts` builds an object literal then asserts it has the value it just set; `canvas-draw.test.ts:9` asserts `'#66ccff' === '#66ccff'`; `inference.test.ts` asserts `SHADOW_SYSTEM_PROMPT === SHADOW_SYSTEM_PROMPT`; `renderer-surface-adapter.test.ts` asserts `typeof X === 'function'` (already enforced by TS).
-3. **Inline stub instead of production code.** `inference-contract.test.ts:281` calls a *locally defined* `parseInferenceResponse` — deleting the real `response-parser.ts` leaves every assertion green.
-4. **Negative/weak assertions that can't meaningfully fail.** `ipc-bridge.test.ts` (`markDirty` no-op) and the 9 `canvas-pulse.test.ts` kind→pulse tests (only assert `boost > 0`, never distinguish burst vs ripple).
-5. **Mislabeled — claims X, tests Y.** `discoverActiveSession` "no JSONL files" actually tests an ENOENT; a `start-main-process` test actually tests `renderer-host`; instrumentation "fires after save" tests never observe the logger.
-6. **Duplication as coverage.** `phase1-integration.test.ts:110` "all fixtures don't throw" re-smoke-tests the three fixtures already covered by the three preceding tests.
-7. **Snapshots without invariants.** `scene-snapshots.test.ts` freezes a *corrupted* command log (the local recorder merges the live `props` bag into every record) — encodes no domain invariant.
+| File | Grade | Issue |
+|------|-------|-------|
+| `tests/electron/start-main-process.test.ts` | C/WEAK | Everything mocked. No real Electron IPC exercised. Tests wiring contracts, not behavior. |
+| `tests/electron/start-main-process-privacy.test.ts` | C/WEAK | All modules mocked. Single test checks argument flow, not behavioral outcome. |
+| `tests/electron/renderer-host.test.ts` | C/WEAK | Bridge entirely hand-mocked. 14 lines of production code under test. |
+| `tests/renderer/renderer-surface-adapter.test.ts` | D/REAL | 1 test with identity checks. Would catch deletions but not behavioral regressions. |
+| `tests/renderer/host.test.ts` | D/REAL | 1 test for static host. Missing `createBridgeHost` or populated capabilities. |
+| `tests/capture/ipc-bridge.test.ts` | D/REAL | 2 tests for `markDirty`. Missing shadow:snapshot, events-since, debounce/push flow for 145-line file. |
+| `tests/renderer/record-2d-context.test.ts` | B/WEAK | Tests the test helper itself. 33 tests validate the mock proxy, not src/ code. |
 
-## Worst offenders (hall of shame)
+### Logging infrastructure (architectural concern)
 
-- `inference-contract.test.ts:281–343` — F — tests an inline stub parser, not production `parseModelResponse`.
-- `phase1-integration.test.ts:110` — F — duplicate "doesn't throw" of already-covered fixtures.
-- `canvas-draw.test.ts:9` & `:13` — F — constant tautology + tests the recording helper.
-- `record-2d-context.test.ts:241` — F — asserts an assignment to `.length` succeeded.
-- `start-main-process.test.ts:228` — D/FICTION — asserts the shape of its own injected bridge literal; mislabeled.
-- `renderer-host.test.ts:43` — D/FICTION — structural tautology (`host.x !== bridge.y` always true); never exercises delegation.
-- `schema.test.ts:34–95` — D — object-literal assignment passed off as schema validation.
-- `instrumentation-sampling.test.ts:40–89, 161` — D/FICTION — "fires"/"naming pattern" tests assert strings the test authored.
+`tests/instrumentation-sampling.test.ts` spies on `console.log` to verify log events because:
 
-## Coverage gaps (missing tests, not bad tests)
+1. `StructuredLogger` has **no interface** — only a concrete class. Proposes adding `interface Logger`.
+2. Modules create loggers at **module scope** (`createLogger()` at import time) — no DI injection point.
+3. The memory ring buffer (`getRecent()`) is the cleanest test surface, but test code can't reach the module-scope singleton instances.
 
-- **`claude-code/normalizer.ts`** — the *live* parser — had zero direct coverage (now addressed by `tests/live/` + `tests/capture/normalizer-derive-seam.test.ts`).
-- **`view-model.ts`** — `formatClock`, `toLabel`, `safeFileName`, `buildGraphLayout` (incl. cycle detection), `deriveRiskLevel` have no direct unit tests.
-- **Live-refresh** — asserts a mock was called, not that the snapshot was dispatched into App state.
+The `vi.hoisted` + `SHADOW_LOG_LEVEL=debug` + `console.log` spy is a pragmatic workaround, but a proper `Logger` interface + constructor injection would eliminate it. See `docs/plans/plan-testing-observability.md` for the proposed redesign.
 
-## Recommendation
+## Previous Audit Comparison
 
-1. **Delete or rewrite the FICTION cases** — they cost maintenance and manufacture false confidence (a green suite that proves little).
-2. **Adopt the live-test rule** (`tests/live/`, pre-push, real data) to close the real-path gaps — the normalizer gap proves synthetic fixtures missed what production actually does.
-3. **Re-aim the WEAK cases** at behavior (assert *what* rendered/derived, not merely *that a function ran*).
+| Metric | Pre-PR #100 | Post-PR #100 | Delta |
+|--------|-------------|--------------|-------|
+| FICTION tests | 38 (11%) | 0 (0%) | -38 |
+| WEAK tests | 124 (35%) | 43 (10%) | -81 |
+| D-grade files | 30 | 4 | -26 |
+| F-grade files | 11 | 0 | -11 |
+| Snapshot size (scene-snapshots) | 19,313 lines | ~5,000 lines | -14,000 |

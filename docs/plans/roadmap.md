@@ -64,3 +64,11 @@ Visual fidelity is priority #1 (per the north star).
   AgentVisualCrazy product name. This is a behavior-affecting refactor (credential paths, env
   vars) — deliberate, not casual. Deferred until someone decides it's worth the churn.
 - **CI green check.** Confirm the flattened `.github/workflows/ci.yml` passes on the first push.
+- **Logger interface + DI redesign.** `StructuredLogger` has no interface and module-scope
+  singletons force tests to spy on `console.log` with `vi.hoisted` hacks. Extract `interface
+  Logger`, thread it via constructor parameters, add `createTestLogger()` for in-memory
+  assertion. See `docs/plans/plan-testing-observability.md#logging-architecture-redesign`.
+- **Remaining weak test cleanup.** After PR #100 eliminated all FICTION tests, 4 D-grade and
+  3 WEAK files remain (see `docs/audits/README.md`). Strengthen: IPC bridge (2 tests for 145
+  lines), host.ts (1 test), renderer-surface-adapter (1 test), record-2d-context (tests the
+  helper, not production code).
