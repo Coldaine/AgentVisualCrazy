@@ -11,6 +11,7 @@ export default mergeConfig(
   defineConfig({
     test: {
       include: ['tests/live/**/*.test.ts'],
+      setupFiles: ['./tests/live/setup-inference-env.ts'],
       reporters: [['default', { summary: false }]],
     },
   })

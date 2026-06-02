@@ -13,6 +13,7 @@
     "start": "electron dist-electron/main.cjs",
     "test": "tsc --noEmit && vitest run",
     "test:live": "vitest run --config vitest.live.config.ts",
+    "test:live:infer": "doppler run -p ai-models -c dev -- npm run test:live",
     "test:coverage": "vitest run --coverage",
     "hooks:install": "node scripts/install-git-hooks.mjs",
     "prepare": "npm run hooks:install"

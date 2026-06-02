@@ -4,8 +4,14 @@ set -e
 # Unit + integration suite (this is also the CI gate).
 npm test
 
-# Live tests: run the REAL read pipeline against a real ~/.claude session.
-# Intentionally NOT in CI (no real session data there) — pre-push, on a
-# developer machine, is the right place. They SKIP (not fail) when no real
-# session exists, so a fresh checkout still pushes cleanly.
-npm run test:live
+# Live tests: REAL read pipeline + REAL model inference (DeepSeek via Doppler)
+# against a real ~/.claude session. Intentionally NOT in CI (no real session or
+# secrets there) — pre-push, on a developer machine, is the right place. They
+# SKIP (not fail) when no real session / no inference key exists, so a fresh
+# checkout still pushes cleanly. With Doppler present, DEEPSEEK_API_KEY is
+# injected and the inference test runs for real.
+if command -v doppler >/dev/null 2>&1; then
+  doppler run -p ai-models -c dev -- npm run test:live || npm run test:live
+else
+  npm run test:live
+fi

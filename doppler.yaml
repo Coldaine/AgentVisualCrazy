@@ -1,0 +1,6 @@
+# Pins this repo to the Doppler project/config holding DEEPSEEK_API_KEY so that
+# `doppler run -- npm run test:live` injects the key for live model inference.
+# Only project/config NAMES live here — never secret values. Safe to commit.
+setup:
+  project: ai-models
+  config: dev
