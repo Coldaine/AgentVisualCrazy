@@ -144,6 +144,21 @@ describe('parseClaudeTranscriptJsonl', () => {
     expect(events.at(-1)?.actor).toBe('system');
   });
 
+  it('keeps timestamps unique after more than sixty transcript events', () => {
+    const raw = Array.from({ length: 70 }, (_, index) =>
+      JSON.stringify({
+        sessionId: 's1',
+        message: { role: 'user', content: `line-${index}` }
+      })
+    ).join('\n');
+
+    const events = parseClaudeTranscriptJsonl(raw);
+    const timestamps = events.map((event) => event.timestamp);
+
+    expect(new Set(timestamps).size).toBe(events.length);
+    expect(timestamps[60]).toBe('2026-01-01T00:01:00.000Z');
+  });
+
   it('captures sessionId changes across lines', () => {
     const raw = [
       JSON.stringify({ sessionId: 'first-session', message: { role: 'user', content: 'hello' } }),

@@ -77,12 +77,21 @@ describe('createOpenAiCompatibleClient', () => {
   });
 
   it('throws a typed error on a non-2xx response', async () => {
-    const fetchImpl = vi.fn(async () => jsonResponse({ error: 'bad' }, 500));
+    const fetchImpl = vi.fn(async () => jsonResponse({
+      error: 'bad',
+      detail: '****** /home/demo/secret.txt'
+    }, 500));
     const client = createOpenAiCompatibleClient({
       baseUrl: 'http://x/v1',
       fetchImpl: fetchImpl as unknown as typeof fetch
     });
     await expect(client!.infer({ systemPrompt: 's', userMessage: 'u' })).rejects.toThrow(/returned 500/);
+
+    await client!.infer({ systemPrompt: 's', userMessage: 'u' }).catch((error: unknown) => {
+      const message = error instanceof Error ? error.message : String(error);
+      expect(message).toContain('[redacted-path]');
+      expect(message).not.toContain('/home/demo/secret.txt');
+    });
   });
 
   it('throws a typed error when a 2xx body is not valid JSON', async () => {

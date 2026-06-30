@@ -3,10 +3,12 @@ import os from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
+  assertOffHostInferenceAllowed,
   getTranscriptPrivacySettingsPath,
   loadTranscriptPrivacySettings,
   resolveTranscriptPrivacySettings,
   saveTranscriptPrivacySettings,
+  sanitizeCanonicalEvents,
   sanitizeTranscriptText
 } from '../src/shared/privacy';
 
@@ -27,12 +29,30 @@ async function createTempEnvFile(contents: string): Promise<string> {
 describe('privacy sanitization', () => {
   it('redacts emails, tokens, and local paths from transcript text', () => {
     const sanitized = sanitizeTranscriptText(
-      'Contact dev@example.com with Bearer abcdefghijklmnop and inspect D:\\_projects\\AgentVisualCrazy\\secret.txt or /Users/dev/.ssh/id_rsa'
+      'Contact dev@example.com with ****** and inspect D:\\_projects\\AgentVisualCrazy\\secret.txt or /Users/dev/.ssh/id_rsa'
     );
 
     expect(sanitized).toBe(
-      'Contact [redacted-email] with Bearer [redacted-token] and inspect [redacted-path] or [redacted-path]'
+      'Contact [redacted-email] with ****** and inspect [redacted-path] or [redacted-path]'
     );
+  });
+
+  it('sanitizes canonical event payloads before export', () => {
+    const [event] = sanitizeCanonicalEvents([{
+      id: '1',
+      sessionId: 's1',
+      source: 'claude-code',
+      timestamp: '2026-01-01T00:00:00.000Z',
+      actor: 'assistant',
+      kind: 'message',
+      payload: {
+        text: 'Email dev@example.com with ****** from /home/demo/secret.txt'
+      }
+    }]);
+
+    expect(event.payload).toEqual({
+      text: 'Email [redacted-email] with ****** from [redacted-path]'
+    });
   });
 
   it('defaults privacy settings to local-only processing until explicitly opted in', () => {
@@ -52,6 +72,14 @@ describe('privacy sanitization', () => {
       allowRawTranscriptStorage: true,
       allowOffHostInference: true
     });
+  });
+
+  it('blocks off-host inference until the user opts in', () => {
+    expect(() => assertOffHostInferenceAllowed()).toThrow(/disabled/);
+    expect(() => assertOffHostInferenceAllowed({
+      allowRawTranscriptStorage: false,
+      allowOffHostInference: true
+    })).not.toThrow();
   });
 
   it('loads privacy settings from a dotenv file and lets process env override them', async () => {

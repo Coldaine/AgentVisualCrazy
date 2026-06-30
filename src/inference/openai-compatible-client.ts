@@ -17,6 +17,7 @@
  */
 import type { InferenceClient, InferenceRequest, InferenceResult } from './inference-client';
 import { createLogger } from '../shared/logger';
+import { sanitizeTranscriptText } from '../shared/privacy';
 
 const logger = createLogger({ minLevel: 'info' });
 
@@ -101,7 +102,7 @@ export function createOpenAiCompatibleClient(
       if (!response.ok) {
         const bodyText = await safeReadText(response);
         logger.warn('inference', 'openai_compatible.non_2xx', { status: response.status });
-        throw new Error(`OpenAI-compatible endpoint returned ${response.status}: ${bodyText.slice(0, 200)}`);
+        throw new Error(`OpenAI-compatible endpoint returned ${response.status}: ${sanitizeResponsePreview(bodyText)}`);
       }
 
       const bodyText = await safeReadText(response);
@@ -110,7 +111,7 @@ export function createOpenAiCompatibleClient(
         json = JSON.parse(bodyText) as ChatCompletionResponse;
       } catch {
         logger.warn('inference', 'openai_compatible.invalid_json', { status: response.status });
-        throw new Error(`OpenAI-compatible endpoint returned invalid JSON: ${bodyText.slice(0, 200)}`);
+        throw new Error(`OpenAI-compatible endpoint returned invalid JSON: ${sanitizeResponsePreview(bodyText)}`);
       }
       const text = json.choices?.[0]?.message?.content ?? '';
       const latencyMs = now() - start;
@@ -128,4 +129,8 @@ async function safeReadText(response: Response): Promise<string> {
   } catch {
     return '';
   }
+}
+
+function sanitizeResponsePreview(bodyText: string): string {
+  return sanitizeTranscriptText(bodyText).slice(0, 200);
 }

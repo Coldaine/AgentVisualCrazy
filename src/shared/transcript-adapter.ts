@@ -16,7 +16,7 @@ function makeId(index: number, suffix: string): string {
 }
 
 function makeTimestamp(eventIndex: number): string {
-  return new Date(Date.UTC(2026, 0, 1, 0, 0, eventIndex)).toISOString();
+  return new Date(Date.UTC(2026, 0, 1, 0, 0, 0, eventIndex * 1000)).toISOString();
 }
 
 function parseTranscript(raw: string): CanonicalEvent[] {

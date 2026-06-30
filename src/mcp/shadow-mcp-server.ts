@@ -9,17 +9,23 @@
  * Uses @modelcontextprotocol/sdk. If the SDK is not installed, the function
  * returns null gracefully.
  */
-import type { DerivedState, ShadowInsight } from '../shared/schema';
+import type { DerivedState, ShadowInsight, TranscriptPrivacySettings } from '../shared/schema';
 import { createLogger } from '../shared/logger';
 import type { EventBufferLike } from '../inference/inference-client';
 import type { InferenceClient, InferenceRequest } from '../inference/inference-client';
 import { SHADOW_SYSTEM_PROMPT } from '../inference/prompt-builder';
+import {
+  assertOffHostInferenceAllowed,
+  DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS,
+  sanitizeCanonicalEvents,
+} from '../shared/privacy';
 
 const logger = createLogger({ minLevel: 'info' });
 
 export interface McpServerOptions {
   buffer: EventBufferLike;
   getState: () => DerivedState;
+  getPrivacy?: () => TranscriptPrivacySettings;
   inferenceClient: InferenceClient | null;
   port?: number;
 }
@@ -103,11 +109,12 @@ export async function createShadowMcpServer(
     async (args: { count?: number }) => {
       const n = Math.min(Math.max(1, args.count ?? 20), 200);
       const events = await opts.buffer.getRecent(n);
+      const sanitizedEvents = sanitizeCanonicalEvents(events);
       return {
         content: [
           {
             type: 'text' as const,
-            text: JSON.stringify(events, null, 2),
+            text: JSON.stringify(sanitizedEvents, null, 2),
           },
         ],
       };
@@ -136,6 +143,8 @@ export async function createShadowMcpServer(
         };
       }
 
+      const privacy = opts.getPrivacy?.() ?? DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS;
+      assertOffHostInferenceAllowed(privacy);
       const state = opts.getState();
       const userMessage = `${args.question}\n\nCurrent session state:\n${JSON.stringify(
         { phase: state.activePhase, objective: state.currentObjective, riskSignals: state.riskSignals },

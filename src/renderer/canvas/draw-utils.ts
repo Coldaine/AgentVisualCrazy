@@ -36,10 +36,15 @@ export function toRgba(hex: string, alpha: number): string {
         .map((part) => `${part}${part}`)
         .join('')
     : normalized;
-  const r = parseInt(value.slice(0, 2), 16);
-  const g = parseInt(value.slice(2, 4), 16);
-  const b = parseInt(value.slice(4, 6), 16);
+  const r = parseHexChannel(value, 0);
+  const g = parseHexChannel(value, 2);
+  const b = parseHexChannel(value, 4);
   return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
+
+function parseHexChannel(value: string, start: number): number {
+  const parsed = Number.parseInt(value.slice(start, start + 2), 16);
+  return Number.isNaN(parsed) ? 0 : parsed;
 }
 
 export function getQuadraticControlPoint(sx: number, sy: number, tx: number, ty: number) {

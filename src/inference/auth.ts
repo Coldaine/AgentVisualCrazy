@@ -251,6 +251,10 @@ export async function loadCredentials(options: CredentialLoaderOptions = {}): Pr
   const secureStoreCredentials = await readSecureStore(env, secureStorePath, safeStorage);
 
   if (allowFileFallback) {
+    logger.warn('inference', 'auth.legacy_file_fallback_enabled', {
+      consentEnv: LEGACY_FILE_FALLBACK_ENV,
+      secureStorePath,
+    });
     const dotenvCredentials = await loadDotenvFile(env, getLegacyDotenvPath(homeDirPath));
     const opencodeCredentials = await loadOpencodeAuth(env, getOpencodeAuthPath(homeDirPath));
     const migratedCredentials = filterSupportedCredentials({
@@ -284,5 +288,11 @@ export async function loadCredentials(options: CredentialLoaderOptions = {}): Pr
 
 /** Returns true if any inference provider key is set. */
 export function hasAnyCredential(): boolean {
-  return Object.values(PROVIDER_ENV_MAP).some((k) => !!process.env[k]);
+  return (
+    !!process.env.ANTHROPIC_API_KEY ||
+    !!process.env.OPENAI_API_KEY ||
+    !!process.env.OPENROUTER_API_KEY ||
+    !!process.env.GOOGLE_API_KEY ||
+    !!process.env.DEEPSEEK_API_KEY
+  );
 }

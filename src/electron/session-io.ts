@@ -1,4 +1,4 @@
-import { dialog, type BrowserWindow } from 'electron';
+import type { BrowserWindow } from 'electron';
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { paymentRefactorSession } from '../shared/fixtures/payment-refactor-session';
@@ -23,6 +23,11 @@ function formatErrorMessage(error: unknown): string {
 }
 
 export const inferTitle = inferRendererInputTitle;
+
+async function getDialog() {
+  const electron = await import('electron');
+  return electron.dialog;
+}
 
 export function createSnapshot(
   events: CanonicalEvent[],
@@ -166,6 +171,7 @@ export function buildFixtureSnapshot(
 }
 
 export async function pickOpenFile(mainWindow: BrowserWindow | null): Promise<string | undefined> {
+  const dialog = await getDialog();
   const openDialogResult = await dialog.showOpenDialog(mainWindow ?? null!, {
     title: 'Open transcript or replay file',
     properties: ['openFile'],
@@ -193,6 +199,7 @@ export async function saveReplayFile(
   logger: Logger = createLogger()
 ): Promise<ExportResult> {
   try {
+    const dialog = await getDialog();
     const saveDialogResult = await dialog.showSaveDialog(mainWindow ?? null!, {
       title: 'Export replay JSONL',
       defaultPath: suggestedFileName.endsWith('.jsonl') ? suggestedFileName : `${suggestedFileName}.jsonl`,

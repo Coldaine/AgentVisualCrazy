@@ -1,7 +1,7 @@
 import '../helpers/path2d-polyfill';
 import { describe, expect, it } from 'vitest';
 import { createRecordedContext, type CanvasCommand } from '../helpers/record-2d-context';
-import { drawAgentNode, drawPredictionTrail, drawShadowNode } from '../../src/renderer/canvas/draw-utils';
+import { drawAgentNode, drawPredictionTrail, drawShadowNode, toRgba } from '../../src/renderer/canvas/draw-utils';
 
 function commandsOfType<T extends CanvasCommand['type']>(
   commands: readonly CanvasCommand[],
@@ -14,6 +14,11 @@ function commandsOfType<T extends CanvasCommand['type']>(
 // live CanvasRenderer invokes (draw-utils.ts), proving the holographic shadow
 // node + prediction trail actually render from a model insight.
 describe('brain-visual render path (model insight reaches the canvas)', () => {
+  it('falls back to black when toRgba receives invalid hex input', () => {
+    expect(toRgba('#zzzzzz', 0.4)).toBe('rgba(0, 0, 0, 0.4)');
+    expect(toRgba('#abc', 0.5)).toBe('rgba(170, 187, 204, 0.5)');
+  });
+
   it('drawShadowNode renders the holographic shadow node (dashed connector + hexagon + glyph)', () => {
     const ctx = createRecordedContext();
     drawShadowNode(

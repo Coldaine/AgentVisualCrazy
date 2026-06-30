@@ -1,12 +1,13 @@
 import { mkdir, mkdtemp, readFile, rm, stat, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   LEGACY_FILE_FALLBACK_ENV,
   SECURE_CREDENTIAL_STORE_FILE,
   loadCredentials,
 } from '../src/inference/auth';
+import { StructuredLogger } from '../src/shared/logger';
 
 const tempRoots: string[] = [];
 
@@ -14,6 +15,10 @@ afterEach(async () => {
   await Promise.all(
     tempRoots.splice(0).map((rootDir) => rm(rootDir, { recursive: true, force: true }))
   );
+});
+
+beforeEach(() => {
+  vi.restoreAllMocks();
 });
 
 function registerTempRoot(rootDir: string): string {
@@ -161,6 +166,30 @@ describe('loadCredentials', () => {
       expect(dirStats.mode & 0o777).toBe(0o700);
       expect(fileStats.mode & 0o777).toBe(0o600);
     }
+  });
+
+  it('logs when legacy file fallback is explicitly enabled', async () => {
+    const warnSpy = vi.spyOn(StructuredLogger.prototype, 'warn');
+    const homeDir = await createTempHomeDir('legacy-log');
+    const shadowDir = path.join(homeDir, '.shadow-agent');
+    await mkdir(shadowDir, { recursive: true });
+    await writeFile(path.join(shadowDir, '.env'), 'OPENAI_API_KEY=sk-legacy-openai\n', 'utf8');
+
+    await loadCredentials({
+      env: {
+        [LEGACY_FILE_FALLBACK_ENV]: '1',
+      },
+      homeDir,
+      safeStorage: createFakeSafeStorage(),
+    });
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      'inference',
+      'auth.legacy_file_fallback_enabled',
+      expect.objectContaining({
+        consentEnv: LEGACY_FILE_FALLBACK_ENV,
+      })
+    );
   });
 
   it('preserves secure-store credentials when legacy fallback contains overlapping keys', async () => {
