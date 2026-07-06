@@ -4,23 +4,33 @@ import type {
   EventQueueMetrics
 } from '../shared/schema';
 
+export interface ToolDefinition {
+  name: string;
+  description: string;
+  parameters: Record<string, unknown>;
+}
+
+export interface ToolCall {
+  id: string;
+  name: string;
+  arguments: Record<string, unknown>;
+}
+
 export interface InferenceRequest {
   systemPrompt: string;
   userMessage: string;
+  tools?: ToolDefinition[];
 }
 
 export interface InferenceResult {
   text: string;
   model: string;
   latencyMs: number;
+  toolCalls?: ToolCall[];
 }
 
-export type Provider = 'opencode' | 'anthropic' | 'openai' | 'fake';
+export type Provider = 'opencode' | 'anthropic' | 'openai' | 'fake' | 'deepseek';
 
-/**
- * Concrete inference adapters must ship with focused unit tests that exercise
- * provider identity, request forwarding, and response normalization.
- */
 export interface InferenceAdapter {
   readonly id: string;
   readonly provider: Provider;
@@ -29,11 +39,6 @@ export interface InferenceAdapter {
 
 export type InferenceClient = InferenceAdapter;
 
-/**
- * Structural interface for the event buffer.
- * The concrete implementation lives in src/capture/event-buffer.ts.
- * Defined here so inference code can depend on the shape without a cross-module import.
- */
 export interface EventBufferLike {
   getAll(): Promise<CanonicalEvent[]>;
   getRecent(n: number): Promise<CanonicalEvent[]>;

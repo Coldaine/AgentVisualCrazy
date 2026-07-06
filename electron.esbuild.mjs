@@ -7,7 +7,7 @@ await build({
   platform: 'node',
   format: 'cjs',
   target: 'node20',
-  external: ['electron'],
+  external: ['electron', 'better-sqlite3'],
   sourcemap: true,
   outExtension: { '.js': '.cjs' }
 });

@@ -19,6 +19,7 @@ scripts/*.d.mts
 .claude/agents/
 .gemini/agents/
 
+.kilo/
 # External tooling state (entire) — re-injects locally; keep it out of the repo
 .entire/
 .githooks/commit-msg

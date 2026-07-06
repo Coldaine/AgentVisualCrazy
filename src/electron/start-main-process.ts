@@ -7,6 +7,10 @@ import { createSessionManager } from '../capture/session-manager';
 import { resolveCaptureTransportOptionsFromEnv } from '../capture/capture-transports';
 import { createInferenceEngine, type InferenceEngine } from '../inference/shadow-inference-engine';
 import { deriveState } from '../shared/derive';
+import { createDatabase, type ShadowDatabase } from '../db/database';
+import { DatabaseReplayStore } from '../persistence/database-replay-store';
+import { getPresentationState, applyMutations } from '../presentation/presentation-state';
+import { seedCraftedPatterns } from '../patterns/seeds';
 
 const APP_TITLE = 'Shadow Agent';
 const logger = createLogger({ minLevel: 'info' });
@@ -53,7 +57,8 @@ function createWindow(): BrowserWindow {
 }
 
 export function registerIpcHandlers(
-  getMainWindow: () => BrowserWindow | null
+  getMainWindow: () => BrowserWindow | null,
+  db?: ShadowDatabase
 ): void {
   ipcMain.removeHandler('shadow-agent:bootstrap');
   ipcMain.handle('shadow-agent:bootstrap', () => {
@@ -104,28 +109,46 @@ export function registerIpcHandlers(
     }
     }
   );
+
+  if (db) {
+    ipcMain.removeHandler('shadow-agent:get-presentation-state');
+    ipcMain.handle('shadow-agent:get-presentation-state', async (_event, sessionId: string) => {
+      return getPresentationState(db, sessionId);
+    });
+
+    ipcMain.removeHandler('shadow-agent:apply-mutations');
+    ipcMain.handle('shadow-agent:apply-mutations', async (_event, sessionId: string, mutations: unknown[]) => {
+      return applyMutations(db, sessionId, mutations);
+    });
+  }
 }
 
 export function startMainProcess(): void {
   let mainWindow: BrowserWindow | null = null;
   let sessionManager: ReturnType<typeof createSessionManager> | null = null;
   let inferenceEngine: InferenceEngine | null = null;
+  let database: ShadowDatabase | null = null;
 
   app
     .whenReady()
     .then(async () => {
+      database = createDatabase(path.join(app.getPath('userData'), 'shadow-agent.sqlite'));
+      logger.info('app', 'database_initialized', { dbPath: database.dbPath });
+      seedCraftedPatterns(database);
+
+      const replayStore = new DatabaseReplayStore(database);
+
       const currentSessionManager = createSessionManager(() => mainWindow?.webContents ?? null, {
         queuePersistenceRoot: path.join(app.getPath('userData'), 'capture-queue'),
         transport: resolveCaptureTransportOptionsFromEnv()
       });
       sessionManager = currentSessionManager;
-      registerIpcHandlers(() => mainWindow);
+      registerIpcHandlers(() => mainWindow, database);
       try {
         mainWindow = createWindow();
         mainWindow.on('closed', () => {
           mainWindow = null;
         });
-        // Start live transcript capture (non-blocking; falls back gracefully if no session found)
         void currentSessionManager.start();
         inferenceEngine = createInferenceEngine({
           buffer: currentSessionManager.getBuffer(),
@@ -135,12 +158,17 @@ export function startMainProcess(): void {
           },
           onInsights: (insights) => {
             logger.info('inference', 'insights_received', { count: insights.length });
-            // Forward the model's insights to the renderer unless explicitly
-            // disabled.
             if (process.env.SHADOW_DISABLE_INSIGHT_RENDER !== '1') {
               currentSessionManager.setModelInsights(insights);
             }
-          }
+            if (database) {
+              currentSessionManager.getBuffer().getAll().then((events: { sessionId?: string }[]) => {
+                const sid = events[0]?.sessionId;
+                if (sid && database) database.insertInterpretations(sid, insights);
+              });
+            }
+          },
+          db: database ?? undefined,
         });
         await inferenceEngine.start();
         logger.info('app', 'ready');
@@ -175,6 +203,7 @@ export function startMainProcess(): void {
       inferenceEngine?.stop();
       inferenceEngine = null;
       sessionManager?.stop();
+      database?.close();
       app.quit();
     }
   });
