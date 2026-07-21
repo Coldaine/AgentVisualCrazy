@@ -18,7 +18,7 @@ at it and understand the session without reading a line of transcript.
 Capture the observed agent's activity in real time and normalize every tool call, message,
 subagent dispatch, and lifecycle event into one canonical event stream. Read-only is a hard
 constraint — we never write files or act on the observed agent's behalf. *(This works today:
-the app live-tails Claude Code JSONL transcripts.)*
+Claude Code JSONL file-tail, plus Cursor via local hook-receiver / `.cursor/hooks.json`.)*
 
 ### 2. Interpret
 A separate AI model — the "shadow" — consumes the event stream and produces structured

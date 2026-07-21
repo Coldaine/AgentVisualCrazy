@@ -6,7 +6,12 @@ import { mkdtempSync, mkdirSync, writeFileSync, rmSync, chmodSync } from 'node:f
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
-import { cursorDriver, createCursorDiscovery, normalizeCursorEntry } from '../../../src/capture/drivers/cursor';
+import {
+  cursorDriver,
+  cursorToolNameMap,
+  createCursorDiscovery,
+  normalizeCursorEntry,
+} from '../../../src/capture/drivers/cursor';
 import { driverRegistry } from '../../../src/capture/drivers';
 import { createHookReceiverCaptureTransport } from '../../../src/capture/hook-receiver-transport';
 import { createIncrementalParser } from '../../../src/capture/incremental-parser';
@@ -35,6 +40,45 @@ async function waitFor(
   }
   throw new Error(`waitFor timed out after ${timeoutMs}ms`);
 }
+
+describe('cursorToolNameMap', () => {
+  it('maps Cursor tools onto Claude-like names for derive phase/risk', () => {
+    expect(cursorToolNameMap('Shell')).toBe('Bash');
+    expect(cursorToolNameMap('shell:npm')).toBe('Bash');
+    expect(cursorToolNameMap('Write')).toBe('Edit');
+    expect(cursorToolNameMap('Delete')).toBe('Edit');
+    expect(cursorToolNameMap('Read')).toBe('Read');
+    expect(cursorToolNameMap('Grep')).toBe('Read');
+    expect(cursorToolNameMap('Task')).toBe('Task');
+    expect(cursorToolNameMap('MCP:search')).toBe('search');
+    expect(cursorToolNameMap('Custom')).toBe('Custom');
+  });
+
+  it('round-trips through derive phase detection (Shell → validation)', () => {
+    const events = [
+      ...normalizeCursorEntry(
+        {
+          hook_event_name: 'preToolUse',
+          tool_name: 'Shell',
+          tool_use_id: 's1',
+          tool_input: { command: 'npm test' },
+        },
+        'sess'
+      ),
+      ...normalizeCursorEntry(
+        {
+          hook_event_name: 'postToolUse',
+          tool_name: 'Shell',
+          tool_use_id: 's1',
+          tool_output: 'ok',
+        },
+        'sess'
+      ),
+    ];
+    const state = deriveState(events);
+    expect(state.activePhase).toBe('validation');
+  });
+});
 
 describe('cursor driver — registry', () => {
   it('is registered for cursor-hook and cursor-agent-trace sources', () => {
@@ -144,6 +188,59 @@ describe('cursor driver — normalizeEntry', () => {
     expect(
       normalizeCursorEntry({ hook_event_name: 'workspaceOpen' }, SESSION)
     ).toEqual([]);
+  });
+
+  it('maps beforeShellExecution / beforeSubmitPrompt / sessionEnd / stop', () => {
+    const shell = normalizeCursorEntry(
+      {
+        hook_event_name: 'beforeShellExecution',
+        command: 'ls',
+        cwd: '/repo',
+      },
+      SESSION
+    );
+    expect(shell[0]?.kind).toBe('tool_started');
+    expect(shell[0]?.payload).toMatchObject({
+      toolName: 'Shell',
+      args: { command: 'ls', cwd: '/repo' },
+    });
+
+    const prompt = normalizeCursorEntry(
+      { hook_event_name: 'beforeSubmitPrompt', prompt: 'do the thing' },
+      SESSION
+    );
+    expect(prompt[0]).toMatchObject({
+      kind: 'message',
+      actor: 'user',
+      payload: { text: 'do the thing' },
+    });
+
+    const ended = normalizeCursorEntry(
+      { hook_event_name: 'sessionEnd', reason: 'completed', duration_ms: 9 },
+      SESSION
+    );
+    expect(ended[0]?.kind).toBe('session_ended');
+
+    const idle = normalizeCursorEntry(
+      { hook_event_name: 'stop', status: 'completed' },
+      SESSION
+    );
+    expect(idle[0]?.kind).toBe('agent_idle');
+  });
+
+  it('accepts agent-trace style entries without hook_event_name', () => {
+    const events = normalizeCursorEntry(
+      { role: 'assistant', content: 'trace text' },
+      SESSION,
+      'cursor-agent-trace'
+    );
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({
+      kind: 'message',
+      actor: 'assistant',
+      source: 'cursor-agent-trace',
+      payload: { text: 'trace text' },
+    });
   });
 });
 

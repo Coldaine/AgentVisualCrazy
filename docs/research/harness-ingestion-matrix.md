@@ -45,6 +45,7 @@ Classification: **native** = first-class, documented, stable. **partial** = exis
 - **Primary ingestion:** Cursor hooks (`.cursor/hooks.json`) emitting per-event JSON to a small command that forwards to our local IPC. The `afterAgentResponse`, `afterAgentThought`, `preToolUse`/`postToolUse`, and `beforeShellExecution`/`afterShellExecution` events together cover the same surface area as Claude Code's hooks.
 - **Fallback:** the `cursor/agent-trace` JSONL convention (`.agent-trace/traces.jsonl`) if hooks are not installed — but this only exists when the user has opted into the spec, so treat it as a nice-to-have, not a base case.
 - **Blockers:** command-only hook delivery; no HTTP. No public way to *subscribe* to Cursor without modifying the workspace's `.cursor/hooks.json`, which means installation needs to be a deliberate setup step, not zero-config discovery.
+- **Implemented in-tree (2026-07-21):** `src/capture/drivers/cursor/` + `hook-receiver-transport.ts` + `scripts/hooks/forward-to-shadow.{sh,ps1}`. Default app transport is `auto` (Claude file-tail + Cursor receiver). See `scripts/hooks/README.md` and `docs/domain-events.md` (Harness Driver Contract).
 
 ### VS Code + GitHub Copilot
 - **Primary ingestion:** OTLP. Point Copilot at our local OTLP collector (`OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:<port>`, `COPILOT_OTEL_ENABLED=true`, `github.copilot.chat.otel.captureContent=true`). Receive `invoke_agent`/`chat`/`execute_tool` spans and `copilot_chat.*` events.
@@ -93,7 +94,7 @@ OpenCode and Cline are then covered by SSE/SDK-callback adapters that reuse the 
 
 ## Last updated
 
-**2026-05-20.**
+**2026-07-21** (Cursor in-tree driver note). Prior matrix research pass: 2026-05-20.
 
 To verify entries: re-fetch each cited URL and confirm the hook event list / OTel env vars / file paths still match. For Claude Code specifically, cross-check against `shadow-agent/src/capture/` — that directory is the source of truth for what we actually observe in practice. When in doubt, prefer the canonical doc over this matrix and update this matrix to match.
 

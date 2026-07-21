@@ -67,7 +67,8 @@ export function resolveCaptureTransportOptionsFromEnv(
     case 'file-tail':
       return {
         kind: 'file-tail',
-        overridePath: env.SHADOW_CAPTURE_FILE?.trim() || undefined
+        overridePath: env.SHADOW_CAPTURE_FILE?.trim() || undefined,
+        overrideSource: env.SHADOW_CAPTURE_SOURCE?.trim() || undefined
       };
     case 'http':
     case 'http-stream':
@@ -79,7 +80,8 @@ export function resolveCaptureTransportOptionsFromEnv(
         ),
         reconnectDelayMs: parseReconnectDelayMs(env.SHADOW_CAPTURE_RECONNECT_MS),
         sessionId: env.SHADOW_CAPTURE_SESSION_ID?.trim() || undefined,
-        sessionLabel: env.SHADOW_CAPTURE_SESSION_LABEL?.trim() || undefined
+        sessionLabel: env.SHADOW_CAPTURE_SESSION_LABEL?.trim() || undefined,
+        source: env.SHADOW_CAPTURE_SOURCE?.trim() || undefined
       } satisfies HttpStreamCaptureTransportOptions;
     case 'ws':
     case 'websocket':
@@ -91,7 +93,8 @@ export function resolveCaptureTransportOptionsFromEnv(
         ),
         reconnectDelayMs: parseReconnectDelayMs(env.SHADOW_CAPTURE_RECONNECT_MS),
         sessionId: env.SHADOW_CAPTURE_SESSION_ID?.trim() || undefined,
-        sessionLabel: env.SHADOW_CAPTURE_SESSION_LABEL?.trim() || undefined
+        sessionLabel: env.SHADOW_CAPTURE_SESSION_LABEL?.trim() || undefined,
+        source: env.SHADOW_CAPTURE_SOURCE?.trim() || undefined
       } satisfies WebSocketCaptureTransportOptions;
     case 'socket':
       return {
@@ -100,7 +103,8 @@ export function resolveCaptureTransportOptionsFromEnv(
         port: parsePort(env.SHADOW_CAPTURE_SOCKET_PORT, 'SHADOW_CAPTURE_SOCKET_PORT'),
         reconnectDelayMs: parseReconnectDelayMs(env.SHADOW_CAPTURE_RECONNECT_MS),
         sessionId: env.SHADOW_CAPTURE_SESSION_ID?.trim() || undefined,
-        sessionLabel: env.SHADOW_CAPTURE_SESSION_LABEL?.trim() || undefined
+        sessionLabel: env.SHADOW_CAPTURE_SESSION_LABEL?.trim() || undefined,
+        source: env.SHADOW_CAPTURE_SOURCE?.trim() || undefined
       } satisfies SocketCaptureTransportOptions;
     case 'hook-receiver':
     case 'hooks':
@@ -120,6 +124,7 @@ export function resolveCaptureTransportOptionsFromEnv(
       return {
         kind: 'auto',
         overridePath: env.SHADOW_CAPTURE_FILE?.trim() || undefined,
+        overrideSource: env.SHADOW_CAPTURE_SOURCE?.trim() || undefined,
         hookHost: env.SHADOW_HOOK_RECEIVER_HOST?.trim() || DEFAULT_HOOK_RECEIVER_HOST,
         hookPort: parseOptionalPort(env.SHADOW_HOOK_RECEIVER_PORT, DEFAULT_HOOK_RECEIVER_PORT),
         unixSocketPath: env.SHADOW_HOOK_RECEIVER_SOCKET?.trim() || undefined,

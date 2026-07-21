@@ -42,6 +42,12 @@ export interface CaptureTransport {
 export interface FileTailCaptureTransportOptions {
   kind: 'file-tail';
   overridePath?: string;
+  /**
+   * Source stamped when `overridePath` short-circuits discovery.
+   * Defaults to `claude-transcript` for legacy CLI pointers; pass
+   * `cursor-agent-trace` (etc.) when the override file is non-Claude JSONL.
+   */
+  overrideSource?: EventSource;
   discoveryIntervalMs?: number;
   fingerprintBytes?: number;
 }
@@ -53,6 +59,8 @@ export interface HttpStreamCaptureTransportOptions {
   reconnectDelayMs?: number;
   sessionId?: string;
   sessionLabel?: string;
+  /** EventSource stamped on the CaptureSession (default `claude-hook`). */
+  source?: EventSource;
 }
 
 export interface WebSocketCaptureTransportOptions {
@@ -62,6 +70,8 @@ export interface WebSocketCaptureTransportOptions {
   reconnectDelayMs?: number;
   sessionId?: string;
   sessionLabel?: string;
+  /** EventSource stamped on the CaptureSession (default `claude-hook`). */
+  source?: EventSource;
 }
 
 export interface SocketCaptureTransportOptions {
@@ -71,6 +81,8 @@ export interface SocketCaptureTransportOptions {
   reconnectDelayMs?: number;
   sessionId?: string;
   sessionLabel?: string;
+  /** EventSource stamped on the CaptureSession (default `claude-hook`). */
+  source?: EventSource;
 }
 
 export interface HookReceiverCaptureTransportOptions {
@@ -93,6 +105,7 @@ export interface AutoCaptureTransportOptions {
   kind: 'auto';
   /** Forwarded to the file-tail leg. */
   overridePath?: string;
+  overrideSource?: EventSource;
   discoveryIntervalMs?: number;
   fingerprintBytes?: number;
   /** Forwarded to the hook-receiver leg. */

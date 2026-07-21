@@ -12,6 +12,48 @@ Agent-flow event patterns: [`docs/research/visual-patterns-agent-flow.md`](resea
 Sidecar session patterns: [`docs/research/visual-patterns-sidecar.md`](research/visual-patterns-sidecar.md) — sections 5 (Session Management) and 6 (Context Building)
 Implementation plan: [`docs/plans/plan-event-capture.md`](plans/plan-event-capture.md)
 
+## Harness Driver Contract
+
+Capture is harness-pluggable. Each observed agent is a `HarnessDriver` under
+`src/capture/drivers/` that owns:
+
+| Piece | Responsibility |
+|-------|----------------|
+| `id` | Stable `harnessId` stamped on every `CanonicalEvent` (`claude-code`, `cursor`, …) |
+| `sources` | `EventSource` strings this driver owns (`claude-transcript`, `cursor-hook`, …) |
+| `normalizeEntry` | Raw JSONL / hook JSON → zero or more `CanonicalEvent`s |
+| `discovery?` | Optional filesystem scan returning `DriverDiscoveredSession[]` (with `source`) |
+| `capabilities` | Flags `derive.ts` consults (file-attention mode, tool-name map, risk heuristics, subagents) |
+
+The singleton `driverRegistry` (`drivers/index.ts`) looks up drivers by source.
+`session-manager` resolves `driverRegistry.getForSource(session.source)` before
+normalizing. Unknown sources fall back to the default driver (`claude-code`).
+
+**In-tree drivers**
+
+| Driver | Sources | Ingestion |
+|--------|---------|-----------|
+| `claude-code` | `claude-transcript`, `claude-hook` | JSONL file-tail under `~/.claude/projects/` |
+| `cursor` | `cursor-hook`, `cursor-agent-trace` | Hook-receiver POSTs (+ optional `.agent-trace/traces.jsonl` tail) |
+
+Cursor install surface: [`scripts/hooks/README.md`](../scripts/hooks/README.md).
+Multi-harness plan: [`docs/plans/plan-multi-harness-mvp.md`](plans/plan-multi-harness-mvp.md).
+
+### Cursor hook → CanonicalEvent map
+
+| Cursor `hook_event_name` | Canonical `kind` |
+|--------------------------|------------------|
+| `sessionStart` | `session_started` |
+| `sessionEnd` | `session_ended` |
+| `beforeSubmitPrompt` | `message` (`actor: user`) |
+| `afterAgentResponse` / `afterAgentThought` | `message` (`actor: assistant`; thought sets `thinking: true`) |
+| `preToolUse` / `beforeShellExecution` / `beforeMCPExecution` / `beforeReadFile` | `tool_started` |
+| `postToolUse` / `afterShellExecution` / `afterMCPExecution` | `tool_completed` |
+| `afterFileEdit` | synthetic `tool_started` + `tool_completed` (Write) |
+| `postToolUseFailure` | `tool_failed` |
+| `subagentStart` / `subagentStop` | `agent_spawned` / `agent_completed` |
+| `stop` | `agent_idle` |
+
 ## Transcript Watcher
 
 We watch Claude Code's JSONL transcript files via Node.js `fs.watch`. Claude Code writes
@@ -20,23 +62,24 @@ byte offset (not line count) to handle partial writes, reads new bytes on change
 debounces file change events to 100ms to batch reads during heavy tool-calling phases.
 
 The watcher handles edge cases: file truncation (reset offset to 0), file rotation (close
-old watcher, open new), and incomplete lines (buffered until newline arrives).
+old watcher, open new), and incomplete lines (buffered until newline arrives). Session
+`source` comes from the discovering driver (or `overrideSource` when a path is forced).
 
 ## Canonical Event Schema
 
-All events from any source get normalized into `CanonicalEvent` objects. The schema maps
-Claude Code's JSONL structure to a uniform format:
+All events from any source get normalized into `CanonicalEvent` objects. Per-harness
+normalizers map raw shapes into the same kinds:
 
-| Claude Code field | CanonicalEvent |
-|-------------------|----------------|
-| `user` / `assistant` entry | `kind: 'message'`, `actor: 'user'` or `'assistant'` |
-| Tool use block | `kind: 'tool_started'`, `payload: { toolName, args }` |
-| Tool result block | `kind: 'tool_completed'` or `'tool_failed'` |
-| Subagent spawn | `kind: 'subagent_dispatched'` |
-| Session start marker | `kind: 'session_started'` |
+| Raw signal (examples) | CanonicalEvent |
+|-----------------------|----------------|
+| User / assistant text | `kind: 'message'`, `actor: 'user'` or `'assistant'` |
+| Tool start | `kind: 'tool_started'`, `payload: { toolName, args }` |
+| Tool result / failure | `kind: 'tool_completed'` or `'tool_failed'` |
+| Subagent spawn / finish | `kind: 'agent_spawned'` / `'agent_completed'` |
+| Session start / end | `kind: 'session_started'` / `'session_ended'` |
 
-Each event gets: a generated UUID, session ID from discovery metadata, `source:
-'claude-transcript'`, and timestamp (from entry or file modification time as fallback).
+Each event gets: a generated UUID, session ID, `source` (e.g. `claude-transcript` or
+`cursor-hook`), optional `harnessId`, and a timestamp.
 
 ## Incremental JSONL Parser
 
@@ -47,9 +90,12 @@ lines during a crash.
 
 ## Session Discovery
 
-On startup and every 30 seconds, we scan `~/.claude/projects/` for `.jsonl` files, sorted
-by modification time. The most recently modified file is the "active session." The user can
-also specify a path explicitly (setup wizard or CLI arg).
+On startup and every 30 seconds, the generic dispatcher in `session-discovery.ts` asks
+every registered driver with a `DiscoveryStrategy` for candidates and picks the most
+recently modified. Claude scans `~/.claude/projects/`; Cursor optionally surfaces
+`.agent-trace/traces.jsonl`. Hook-driven Cursor sessions do not need discovery — they
+appear when the hook-receiver accepts a POST. An explicit override path short-circuits
+dispatch (default source `claude-transcript`, overridable via `SHADOW_CAPTURE_SOURCE`).
 
 When a new session is detected, the old pipeline tears down and a new one starts. When no
 writes arrive for 5 minutes, we emit `session_ended`.

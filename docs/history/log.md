@@ -115,6 +115,16 @@
 - PR #33 merged: finish-line coordination plans and architecture assessment landed on main
 - Main now carries the full Phase 2 foundation; remaining work is provider depth, optional visual atmosphere, and follow-up polish
 
+## 2026-07-21 — Cursor harness via hook receiver (PR #111)
+
+- Added `cursor` `HarnessDriver` (`normalizeEntry`, capabilities, agent-trace discovery)
+- Added loopback hook-receiver transport + `auto` composite (Claude file-tail + Cursor hooks)
+- Stock forwarders: `scripts/hooks/forward-to-shadow.{sh,ps1}`, example `hooks.json`, hooks README
+- File-tail preserves discovering driver `source` / `overrideSource`
+- Stream transports accept configurable `source` (no longer hard-locked to `claude-hook` only)
+- Docs: driver contract in `domain-events.md`, README / getting-started / north-star / matrix updates
+- Tests: cursor driver, hook-receiver HTTP+Unix, auto transport, env resolution, file-tail source, e2e fixture→derive
+
 ## 2026-05-20 — Wire canvas pulse to EventKind milestones
 
 - Added `triggerPulseForEventKind` and `triggerPulsesForEvents` to `canvas-pulse.ts` mapping canonical EventKind values (tool_started, tool_completed, tool_failed, subagent_dispatched, subagent_returned, agent_spawned, agent_completed, session_started, permission_requested) to burst/ripple pulse types with per-kind debounce (100ms)

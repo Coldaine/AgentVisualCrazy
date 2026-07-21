@@ -1,30 +1,27 @@
 # Getting Started
 
-Welcome to **shadow-agent**. This guide will help you get the project running locally for development and testing.
+Welcome to **AgentVisualCrazy** (internal package name: `shadow-agent`). This guide
+will help you get the project running locally for development and testing.
 
 ## Setup
 
-The main project lives in the `shadow-agent` directory.
+The app lives at the repo root (flat Electron layout — no `shadow-agent/` subdirectory).
 
 ```bash
-cd shadow-agent
 npm install
 ```
 
 ## Test
 
-We use [Vitest](https://vitest.dev/) for unit and integration testing. Tests run
-from inside the `shadow-agent/` directory.
+We use [Vitest](https://vitest.dev/) for unit and integration testing from the repo root.
 
 ```bash
-cd shadow-agent
 npm test               # run all tests
 npm run test:coverage  # run with coverage report
 npx vitest tests/derive.test.ts   # run a single file
 ```
 
-All tests on `main` pass as of the Phase 2 landing (258 tests, 2026-05-19). If you
-check out an older commit, `npm test` may fail — update to current `main` or skip
+If you check out an older commit, `npm test` may fail — update to current `main` or skip
 failing suites when bisecting history.
 
 ### Test Logging Policy
@@ -39,18 +36,16 @@ by running `vitest run` and confirming the output contains only reporter summary
 
 CI runs the test suite and the build on every PR via the `CI`
 workflow (`.github/workflows/ci.yml`). The repo uses a pre-push Git
-hook in `.githooks/pre-push` that runs `npm test --prefix shadow-agent`
-once before pushing; `npm install` from the repo root configures
-`core.hooksPath` automatically. Run `npm test` yourself before pushing
-— the pre-push hook will also run it, but catching failures earlier
-is cheaper than re-pushing.
+hook in `.githooks/pre-push` that runs `npm test` once before pushing;
+`npm install` from the repo root configures `core.hooksPath` automatically.
+Run `npm test` yourself before pushing — the pre-push hook will also run it,
+but catching failures earlier is cheaper than re-pushing.
 
 ## Run
 
 Build the web, renderer, and Electron bundles, then launch the desktop app:
 
 ```bash
-cd shadow-agent
 npm run build
 npm start
 ```
@@ -63,24 +58,23 @@ By default the app uses the `auto` capture transport: Claude Code JSONL file-tai
 
 ### Watch a Cursor agent
 
+Full install notes live in [`scripts/hooks/README.md`](../scripts/hooks/README.md). Short version:
+
 1. Start AgentVisualCrazy (`npm run build && npm start`).
-2. Install the hook forwarder in the workspace you want to observe — copy
-   [`scripts/hooks/cursor-hooks.example.json`](../scripts/hooks/cursor-hooks.example.json)
-   to `.cursor/hooks.json` (project) or merge its `hooks` entries into
-   `~/.cursor/hooks.json` (user-global). Point each command at
-   `scripts/hooks/forward-to-shadow.sh` (POSIX) or
-   `scripts/hooks/forward-to-shadow.ps1` (Windows), using a path that resolves
-   from the hooks working directory.
-3. Make the forwarder executable: `chmod +x scripts/hooks/forward-to-shadow.sh`.
-4. Run a Cursor Agent turn in that workspace. Hook events POST to the local
-   receiver and show up in the live graph.
+2. Copy/merge [`scripts/hooks/cursor-hooks.example.json`](../scripts/hooks/cursor-hooks.example.json)
+   into `.cursor/hooks.json` (project) or `~/.cursor/hooks.json` (user-global).
+3. Point each command at `scripts/hooks/forward-to-shadow.sh` (POSIX) or
+   `scripts/hooks/forward-to-shadow.ps1` (Windows); `chmod +x` the shell script.
+4. Run a Cursor Agent turn — hook events POST to the local receiver and show in the graph.
 
 Optional env vars:
 
 | Variable | Default | Purpose |
 |----------|---------|---------|
 | `SHADOW_CAPTURE_TRANSPORT` | `auto` | `auto` / `file-tail` / `hook-receiver` (`cursor`) |
+| `SHADOW_CAPTURE_SOURCE` | _(unset)_ | Override `EventSource` for file-tail / stream transports |
 | `SHADOW_HOOK_RECEIVER_PORT` | `9477` | Loopback port for the hook receiver |
+| `SHADOW_HOOK_RECEIVER_SOCKET` | _(unset)_ | Optional Unix socket path for the receiver |
 | `SHADOW_HOOK_TOKEN` | _(unset)_ | Shared token required via `X-Shadow-Token` |
 | `SHADOW_HOOK_URL` | `http://127.0.0.1:9477/hook` | Forwarder target (set in the Cursor environment if non-default) |
 
@@ -117,17 +111,18 @@ variables override the saved file for that run.
 
 ## Project Structure
 
-- `shadow-agent/src/electron/`: Main process code, including IPC handling, session management, and file loading.
-- `shadow-agent/src/renderer/`: React shell plus Canvas2D + D3-Force graph (`src/renderer/canvas/`), glass panels, and timeline UI.
-- `shadow-agent/src/shared/`: Code shared between the main and renderer processes (types, utilities, logging, privacy, transcript parsing, replay store).
-- `shadow-agent/src/inference/`: Shadow inference engine — OpenCode-first client with Anthropic fallback, auth, context packaging, prompt building, and trigger logic.
-- `shadow-agent/src/capture/`: Pluggable capture transports (file tail, HTTP stream, WebSocket, socket).
-- `shadow-agent/src/mcp/`: MCP server exposing shadow tools to other agents.
+- `src/electron/`: Main process code, including IPC handling, session management, and file loading.
+- `src/renderer/`: React shell plus Canvas2D + D3-Force graph (`src/renderer/canvas/`), glass panels, and timeline UI.
+- `src/shared/`: Code shared between the main and renderer processes (types, utilities, logging, privacy, transcript parsing, replay store).
+- `src/inference/`: Shadow inference engine — OpenCode-first client with Anthropic fallback, auth, context packaging, prompt building, and trigger logic.
+- `src/capture/`: Pluggable capture transports + harness drivers (`drivers/claude-code`, `drivers/cursor`).
+- `src/mcp/`: MCP server exposing shadow tools to other agents.
+- `scripts/hooks/`: Cursor hook forwarders and example `hooks.json`.
 - `docs/`: Technical documentation, architecture decisions, and project plans.
 
 ## Prompt Workflow
 
-The shadow system prompt lives in `shadow-agent/src/inference/prompts.ts`
+The shadow system prompt lives in `src/inference/prompts.ts`
 as a single source of truth. The doc comment at the top contains the
 rationale, philosophy, per-section justification, evaluation plan, and
 iteration log. The template literal at the bottom is the prompt the

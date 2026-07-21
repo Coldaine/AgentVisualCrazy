@@ -34,6 +34,7 @@ export function createAutoCaptureTransport(
       const fileTailOptions: FileTailCaptureTransportOptions = {
         kind: 'file-tail',
         overridePath: options.overridePath,
+        overrideSource: options.overrideSource,
         discoveryIntervalMs: options.discoveryIntervalMs,
         fingerprintBytes: options.fingerprintBytes
       };

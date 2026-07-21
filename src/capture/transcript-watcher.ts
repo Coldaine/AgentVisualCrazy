@@ -295,7 +295,9 @@ export function createFileTailCaptureTransport(
       };
 
       const runDiscovery = async () => {
-        const discovered = await discoverActiveSession(options.overridePath);
+        const discovered = await discoverActiveSession(options.overridePath, {
+          overrideSource: options.overrideSource
+        });
         if (!discovered) {
           return;
         }

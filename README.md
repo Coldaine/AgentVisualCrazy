@@ -1,8 +1,9 @@
 # AgentVisualCrazy
 
 A passive visual observer for AI coding agents. It watches an agent's session (Claude Code
-today), interprets what the agent is doing via a separate "shadow" model, and renders it as a
-live, glassy visualization you can glance at instead of reading the transcript.
+or Cursor today), interprets what the agent is doing via a separate "shadow" model, and
+renders it as a live, glassy visualization you can glance at instead of reading the
+transcript.
 
 Read [`docs/north-star.md`](docs/north-star.md) for the vision and
 [`docs/plans/roadmap.md`](docs/plans/roadmap.md) for what's next.
@@ -11,7 +12,9 @@ Read [`docs/north-star.md`](docs/north-star.md) for the vision and
 
 ## What it does today
 
-- Live-tails Claude Code JSONL transcripts, normalizing them into one canonical event stream
+- Live-tails Claude Code JSONL transcripts **and** receives Cursor agent hooks on a local
+  loopback endpoint (default transport: `auto`)
+- Normalizes both into one canonical event stream with per-harness drivers
 - Runs a separate model (local-only by default) that interprets the session
 - Renders a Canvas2D + D3-Force graph and a glass-panel dashboard (timeline, transcript, file
   attention, insights) with a LIVE source badge
@@ -23,10 +26,19 @@ It is **read-only** — it never writes files or acts on behalf of the observed 
 
 ```bash
 npm install      # also installs the shared .githooks (via the prepare script)
-npm test         # tsc --noEmit + vitest (47 files / 427 tests)
+npm test         # tsc --noEmit + vitest
 npm run build    # web + renderer + electron bundles
 npm start        # launch the Electron app
 ```
+
+### Watch Cursor
+
+1. Start the app (`npm start` after build). Hook-receiver listens on `127.0.0.1:9477`.
+2. Install project or user hooks — see [`scripts/hooks/README.md`](scripts/hooks/README.md)
+   and `scripts/hooks/cursor-hooks.example.json`.
+3. Run a Cursor Agent turn; events should appear in the live graph.
+
+More detail: [`docs/getting-started.md`](docs/getting-started.md).
 
 ## Privacy defaults
 
@@ -48,6 +60,7 @@ Inference credentials prefer secure sources: `process.env` →
 ```
 src/             — the app: capture / inference / renderer / electron / shared / mcp
 tests/           — vitest suite + fixtures
+scripts/hooks/   — Cursor (and reusable) hook forwarders
 docs/            — north-star, architecture, roadmap, domain docs
   ideas/repoviz/ — preserved RepoViz UI idea bank (the visual ambition)
 ```
@@ -55,4 +68,5 @@ docs/            — north-star, architecture, roadmap, domain docs
 ## More
 
 - [`docs/architecture.md`](docs/architecture.md) — technical decisions, domain map
+- [`docs/domain-events.md`](docs/domain-events.md) — capture pipeline + harness driver contract
 - [`AGENTS.md`](AGENTS.md) — rules for AI agents working in this repo

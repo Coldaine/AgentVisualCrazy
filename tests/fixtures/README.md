@@ -17,15 +17,16 @@ files are canonical `CanonicalEvent` objects serialized one-per-line. To update 
 
 ## Transcript Fixtures (`transcripts/`)
 
-These use the raw Claude Code transcript format as produced by `~/.claude/projects/.../*.jsonl`.
-Each line is a JSON object with `sessionId`, optional `cwd`, and `message.{role, content}`.
+These use the raw observed-agent wire format (Claude Code JSONL or Cursor hook JSON),
+one JSON object per line.
 
-| File | Description | Key events |
-|------|-------------|------------|
-| `happy-path.jsonl` | Small clean session (~6 transcript lines) | Read + Write + success; phase = implementation |
-| `tool-heavy.jsonl` | Dense tool session | Many Bash + Read calls; triggers bash-churn risk |
-| `risk-escalation.jsonl` | Session with failures | Multiple `tool_result` errors; triggers failed-tool risk |
-| `subagent-flow.jsonl` | Sub-agent delegation pattern | user→assistant→tool delegation messages |
+| File | Harness | Description | Key events |
+|------|---------|-------------|------------|
+| `happy-path.jsonl` | Claude Code | Small clean session (~6 transcript lines) | Read + Write + success; phase = implementation |
+| `tool-heavy.jsonl` | Claude Code | Dense tool session | Many Bash + Read calls; triggers bash-churn risk |
+| `risk-escalation.jsonl` | Claude Code | Session with failures | Multiple `tool_result` errors; triggers failed-tool risk |
+| `subagent-flow.jsonl` | Claude Code | Sub-agent delegation pattern | user→assistant→tool delegation messages |
+| `cursor-hooks.jsonl` | Cursor | Hook-receiver payloads (`hook_event_name`) | sessionStart, tools, afterFileEdit, subagent, stop |
 
 ---
 
