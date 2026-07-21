@@ -16,6 +16,16 @@ TOKEN="${SHADOW_HOOK_TOKEN:-}"
 SOURCE="${SHADOW_HOOK_SOURCE:-cursor-hook}"
 
 BODY="$(cat || true)"
+
+# Optional debug tee so live self-hook experiments can prove Cursor invoked us
+# even when the receiver is down. Never fails the hook.
+if [ -n "${SHADOW_HOOK_DEBUG_LOG:-}" ]; then
+  {
+    printf '--- %s ---\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+    printf '%s\n' "${BODY}"
+  } >>"${SHADOW_HOOK_DEBUG_LOG}" 2>/dev/null || true
+fi
+
 if [ -z "${BODY}" ]; then
   printf '%s\n' '{}'
   exit 0

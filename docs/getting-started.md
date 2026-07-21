@@ -67,6 +67,14 @@ Full install notes live in [`scripts/hooks/README.md`](../scripts/hooks/README.m
    `scripts/hooks/forward-to-shadow.ps1` (Windows); `chmod +x` the shell script.
 4. Run a Cursor Agent turn — hook events POST to the local receiver and show in the graph.
 
+Live smoke (no Electron UI required):
+
+```bash
+npx tsx scripts/hooks/live-capture-server.mjs --port 9477 --out /tmp/shadow-live-capture.jsonl
+# other terminal:
+npm run test:live -- tests/live/cursor-hooks-live.test.ts
+```
+
 Optional env vars:
 
 | Variable | Default | Purpose |

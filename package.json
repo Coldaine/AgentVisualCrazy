@@ -13,6 +13,7 @@
     "start": "electron dist-electron/main.cjs",
     "test": "tsc --noEmit && vitest run",
     "test:live": "vitest run --config vitest.live.config.ts",
+    "capture:live": "npx --yes tsx scripts/hooks/live-capture-server.mjs",
     "test:coverage": "vitest run --coverage",
     "hooks:install": "node scripts/install-git-hooks.mjs",
     "prepare": "npm run hooks:install"

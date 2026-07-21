@@ -41,6 +41,27 @@ not `~/.cursor/hooks.json`.
 Forwarders **fail open**: if the observer is offline they still exit `0` with
 `{}` so Cursor never blocks the agent loop.
 
+## Live verification
+
+```bash
+# Terminal A — capture server (same transport the Electron app uses)
+npx tsx scripts/hooks/live-capture-server.mjs --port 9477 --out /tmp/shadow-live-capture.jsonl
+
+# Terminal B — drive the forwarder the way Cursor would
+npm run test:live -- tests/live/cursor-hooks-live.test.ts
+```
+
+Or install `.cursor/hooks.json` (committed in this repo for dogfooding), start the
+capture server / app, and run a Cursor Agent turn in a harness that actually
+invokes project hooks (desktop Cursor or a cloud agent that loads hooks at
+session start).
+
+**Note (2026-07-21):** the Cursor Background Agent VM used for PR #111 did
+**not** spawn `.cursor/hooks.json` commands for its own tool calls (debug
+invocation log stayed empty). The forwarder → receiver → normalizer path was
+still proven live via `tests/live/cursor-hooks-live.test.ts` and
+`live-capture-server.mjs`.
+
 ## Read-only
 
 These scripts only POST observation events. They never modify tool input,
