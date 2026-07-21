@@ -56,11 +56,23 @@ capture server / app, and run a Cursor Agent turn in a harness that actually
 invokes project hooks (desktop Cursor or a cloud agent that loads hooks at
 session start).
 
-**Note (2026-07-21):** the Cursor Background Agent VM used for PR #111 did
-**not** spawn `.cursor/hooks.json` commands for its own tool calls (debug
-invocation log stayed empty). The forwarder → receiver → normalizer path was
-still proven live via `tests/live/cursor-hooks-live.test.ts` and
-`live-capture-server.mjs`.
+### Mid-session reload (cloud / background agent VMs)
+
+The exec-daemon loads `.cursor/hooks.json` at startup. If you add or change
+project hooks **after** the daemon is already running, call:
+
+```bash
+scripts/hooks/reload-exec-daemon-hooks.sh
+```
+
+That hits `agent.v1.ControlService/ReloadAgentSkills`, which also reloads hook
+config. After reload, subsequent Shell / tool calls in **this** agent session
+fire `beforeShellExecution` / `preToolUse` / etc. into the forwarder.
+
+**Dogfood proof (2026-07-21, bc-019f84ed…):** before reload → 0 self-hook
+events; after reload → live capture received real events with
+`sessionId=bc-019f84ed-85e2-7e08-acd0-7c76971f5f4c` and `harnessId=cursor`
+(`tool_started` / `tool_completed` for Shell).
 
 ## Read-only
 

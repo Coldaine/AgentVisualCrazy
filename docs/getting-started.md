@@ -75,6 +75,15 @@ npx tsx scripts/hooks/live-capture-server.mjs --port 9477 --out /tmp/shadow-live
 npm run test:live -- tests/live/cursor-hooks-live.test.ts
 ```
 
+If you added/changed `.cursor/hooks.json` **after** this cloud agent VM started,
+reload hook config so the exec-daemon picks it up:
+
+```bash
+scripts/hooks/reload-exec-daemon-hooks.sh
+```
+
+Then run any Shell tool — events should appear with your `bc-…` conversation id.
+
 Optional env vars:
 
 | Variable | Default | Purpose |
