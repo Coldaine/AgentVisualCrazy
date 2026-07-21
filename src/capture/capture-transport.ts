@@ -1,6 +1,12 @@
 import type { EventQueueBackpressureState, EventSource } from '../shared/schema';
 
-export type CaptureTransportKind = 'file-tail' | 'http-stream' | 'websocket' | 'socket';
+export type CaptureTransportKind =
+  | 'file-tail'
+  | 'http-stream'
+  | 'websocket'
+  | 'socket'
+  | 'hook-receiver'
+  | 'auto';
 export type CaptureTransportResetReason = 'rotation' | 'truncation' | 'reconnect';
 
 export interface CaptureSession {
@@ -67,9 +73,43 @@ export interface SocketCaptureTransportOptions {
   sessionLabel?: string;
 }
 
+export interface HookReceiverCaptureTransportOptions {
+  kind: 'hook-receiver';
+  /** Loopback bind host. Defaults to 127.0.0.1. */
+  host?: string;
+  /** TCP port. Defaults to 9477. */
+  port?: number;
+  /** Optional Unix domain socket path (in addition to TCP). */
+  unixSocketPath?: string;
+  /** When set, require `X-Shadow-Token` (or Bearer) on each POST. */
+  sharedToken?: string;
+  /** EventSource stamped on sessions (default `cursor-hook`). */
+  defaultSource?: EventSource;
+  sessionId?: string;
+  sessionLabel?: string;
+}
+
+export interface AutoCaptureTransportOptions {
+  kind: 'auto';
+  /** Forwarded to the file-tail leg. */
+  overridePath?: string;
+  discoveryIntervalMs?: number;
+  fingerprintBytes?: number;
+  /** Forwarded to the hook-receiver leg. */
+  hookHost?: string;
+  hookPort?: number;
+  unixSocketPath?: string;
+  sharedToken?: string;
+  defaultSource?: EventSource;
+  sessionId?: string;
+  sessionLabel?: string;
+}
+
 export type CaptureTransportOptions =
   | FileTailCaptureTransportOptions
   | HttpStreamCaptureTransportOptions
   | WebSocketCaptureTransportOptions
-  | SocketCaptureTransportOptions;
+  | SocketCaptureTransportOptions
+  | HookReceiverCaptureTransportOptions
+  | AutoCaptureTransportOptions;
 

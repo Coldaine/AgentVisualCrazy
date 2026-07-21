@@ -13,6 +13,8 @@
 export const KnownEventSources = {
   claudeHook: 'claude-hook',
   claudeTranscript: 'claude-transcript',
+  cursorHook: 'cursor-hook',
+  cursorAgentTrace: 'cursor-agent-trace',
   replay: 'replay',
   shadowRuntime: 'shadow-runtime',
 } as const;

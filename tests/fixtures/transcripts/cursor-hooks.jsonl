@@ -1,0 +1,12 @@
+{"hook_event_name":"sessionStart","conversation_id":"conv-cursor-1","session_id":"conv-cursor-1","workspace_roots":["/tmp/demo-project"],"composer_mode":"agent","model":"claude-opus-4","timestamp":"2026-05-20T12:00:00.000Z"}
+{"hook_event_name":"beforeSubmitPrompt","conversation_id":"conv-cursor-1","prompt":"Add auth middleware","timestamp":"2026-05-20T12:00:01.000Z"}
+{"hook_event_name":"preToolUse","conversation_id":"conv-cursor-1","tool_name":"Read","tool_use_id":"tu-1","tool_input":{"path":"/tmp/demo-project/src/auth.ts"},"timestamp":"2026-05-20T12:00:02.000Z"}
+{"hook_event_name":"postToolUse","conversation_id":"conv-cursor-1","tool_name":"Read","tool_use_id":"tu-1","tool_output":"{\"ok\":true}","duration":12,"timestamp":"2026-05-20T12:00:03.000Z"}
+{"hook_event_name":"preToolUse","conversation_id":"conv-cursor-1","tool_name":"Shell","tool_use_id":"tu-2","tool_input":{"command":"npm test","working_directory":"/tmp/demo-project"},"timestamp":"2026-05-20T12:00:04.000Z"}
+{"hook_event_name":"postToolUseFailure","conversation_id":"conv-cursor-1","tool_name":"Shell","tool_use_id":"tu-2","error_message":"tests failed","failure_type":"error","timestamp":"2026-05-20T12:00:05.000Z"}
+{"hook_event_name":"afterFileEdit","conversation_id":"conv-cursor-1","file_path":"/tmp/demo-project/src/auth.ts","edits":[{"old_string":"a","new_string":"b"}],"timestamp":"2026-05-20T12:00:06.000Z"}
+{"hook_event_name":"subagentStart","conversation_id":"conv-cursor-1","subagent_id":"sa-1","subagent_type":"explore","task":"Find auth entrypoints","timestamp":"2026-05-20T12:00:07.000Z"}
+{"hook_event_name":"subagentStop","conversation_id":"conv-cursor-1","subagent_type":"explore","status":"completed","summary":"Found middleware.ts","modified_files":["/tmp/demo-project/src/middleware.ts"],"duration_ms":1200,"timestamp":"2026-05-20T12:00:08.000Z"}
+{"hook_event_name":"afterAgentThought","conversation_id":"conv-cursor-1","text":"Need to wire the middleware into the router.","duration_ms":400,"timestamp":"2026-05-20T12:00:09.000Z"}
+{"hook_event_name":"afterAgentResponse","conversation_id":"conv-cursor-1","text":"Auth middleware added.","timestamp":"2026-05-20T12:00:10.000Z"}
+{"hook_event_name":"stop","conversation_id":"conv-cursor-1","status":"completed","loop_count":0,"timestamp":"2026-05-20T12:00:11.000Z"}

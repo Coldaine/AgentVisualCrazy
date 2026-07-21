@@ -58,6 +58,32 @@ npm start
 There is no separate Vite dev-server script; `npm start` runs the built Electron
 entry (`dist-electron/main.cjs`).
 
+By default the app uses the `auto` capture transport: Claude Code JSONL file-tail
+**and** a local Cursor hook-receiver on `127.0.0.1:9477`.
+
+### Watch a Cursor agent
+
+1. Start AgentVisualCrazy (`npm run build && npm start`).
+2. Install the hook forwarder in the workspace you want to observe — copy
+   [`scripts/hooks/cursor-hooks.example.json`](../scripts/hooks/cursor-hooks.example.json)
+   to `.cursor/hooks.json` (project) or merge its `hooks` entries into
+   `~/.cursor/hooks.json` (user-global). Point each command at
+   `scripts/hooks/forward-to-shadow.sh` (POSIX) or
+   `scripts/hooks/forward-to-shadow.ps1` (Windows), using a path that resolves
+   from the hooks working directory.
+3. Make the forwarder executable: `chmod +x scripts/hooks/forward-to-shadow.sh`.
+4. Run a Cursor Agent turn in that workspace. Hook events POST to the local
+   receiver and show up in the live graph.
+
+Optional env vars:
+
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| `SHADOW_CAPTURE_TRANSPORT` | `auto` | `auto` / `file-tail` / `hook-receiver` (`cursor`) |
+| `SHADOW_HOOK_RECEIVER_PORT` | `9477` | Loopback port for the hook receiver |
+| `SHADOW_HOOK_TOKEN` | _(unset)_ | Shared token required via `X-Shadow-Token` |
+| `SHADOW_HOOK_URL` | `http://127.0.0.1:9477/hook` | Forwarder target (set in the Cursor environment if non-default) |
+
 ## Credential Setup
 
 Inference credentials now prefer secure sources:

@@ -53,6 +53,9 @@ Visual fidelity is priority #1 (per the north star).
 ### M4 — Reach
 - Multi-harness capture beyond Claude Code via the existing `HarnessDriver` registry +
   a hook-receiver transport (Codex, Cursor, Gemini all expose `transcript_path` in hooks).
+  **Cursor landed:** `cursor` driver + `hook-receiver` / `auto` transports +
+  `scripts/hooks/forward-to-shadow.{sh,ps1}` (see `docs/getting-started.md`).
+  Remaining: Codex / Gemini drivers on the same receiver.
 - Embed surfaces (the `build:web` bundle / custom element) if wanted.
 
 ## Housekeeping (do alongside, not blocking)

@@ -87,29 +87,35 @@ Canvas redraws are governed by requestAnimationFrame (max 60fps, natural throttl
 The architecture is transport-agnostic. The buffer and IPC bridge don't care where events
 come from, and the live runtime now supports multiple capture transports:
 
-- **File-tail**: Watches Claude Code JSONL files, tracks byte offsets, fingerprints the
-  head of the file, and resets cleanly on truncation or rotation.
-- **Streaming HTTP**: Connects to a long-lived HTTP response body and reads incremental
-  NDJSON chunks with reconnect handling.
-- **WebSocket**: Consumes framed messages, normalizes them into parser-friendly chunks,
-  and reconnects after disconnects.
-- **Socket**: Reads raw TCP streams, applies light backpressure-aware pausing, and
-  reconnects after disconnects.
+- **File-tail**: Watches Claude Code JSONL (and optional Cursor `.agent-trace`) files,
+  tracks byte offsets, fingerprints the head of the file, and resets cleanly on
+  truncation or rotation. Session source comes from the discovering harness driver.
+- **Hook-receiver**: Loopback HTTP (default `127.0.0.1:9477`) that accepts POSTed hook
+  JSON from Cursor command hooks via `scripts/hooks/forward-to-shadow.sh`. Also usable
+  by other command-only hook systems (Codex, Gemini).
+- **Auto** (default): runs file-tail and hook-receiver together so Claude and Cursor
+  can both be observed without an env switch.
+- **Streaming HTTP / WebSocket / Socket**: byte-stream transports with reconnect
+  handling for push feeds.
 
-Each transport feeds the same incremental parser and normalizer pipeline so the downstream
-event buffer, IPC bridge, renderer, and inference consumers stay unchanged.
+Each transport feeds the same incremental parser → **harness driver normalizer**
+pipeline (`src/capture/drivers/`) so the downstream event buffer, IPC bridge, renderer,
+and inference consumers stay unchanged. In-tree drivers: `claude-code`, `cursor`.
 
 ## File Map
 
 ```
 src/capture/
-  session-discovery.ts     — Find active Claude Code sessions
-  transcript-watcher.ts    — FileSystemWatcher on JSONL file
+  session-discovery.ts     — Dispatch discovery across registered drivers
+  transcript-watcher.ts    — File-tail transport (JSONL)
+  hook-receiver-transport.ts — Local HTTP/Unix hook POST endpoint
+  auto-capture-transport.ts  — file-tail + hook-receiver composite
   incremental-parser.ts    — Chunk → parsed JSON objects
-  normalizer.ts            — Raw transcript entry → CanonicalEvent
+  drivers/                 — Per-harness normalizers + discovery (claude-code, cursor)
+  normalizer.ts            — @deprecated shim → claude-code driver
   event-buffer.ts          — Ring buffer with subscriptions
   ipc-bridge.ts            — Main↔renderer IPC
-  session-manager.ts       — Orchestrator: discover → watch → parse → normalize → buffer
+  session-manager.ts       — Orchestrator: transport → parse → normalize → buffer
 ```
 
 ---

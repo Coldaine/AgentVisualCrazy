@@ -150,7 +150,9 @@ export function createSessionManager(
       const effectiveTransport =
         overridePath && transport.kind === 'file-tail'
           ? createCaptureTransport({ kind: 'file-tail', overridePath })
-          : transport;
+          : overridePath && transport.kind === 'auto'
+            ? createCaptureTransport({ kind: 'auto', overridePath })
+            : transport;
 
       transportSubscription = await effectiveTransport.start({
         getBackpressure: () => buffer.getBackpressure(),

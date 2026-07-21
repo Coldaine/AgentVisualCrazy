@@ -42,11 +42,12 @@ strategy, trigger logic, MCP server, context budget.
 
 ## Event Capture
 
-Transport-pluggable. The default tails Claude Code JSONL files (with checksum-based rotation
-detection); the runtime can also ingest streaming HTTP, WebSocket, and raw socket feeds through
-the same parser → normalizer → bounded-queue → IPC pipeline. The queue has a hot in-memory
+Transport-pluggable. The default `auto` transport runs Claude Code JSONL file-tail (with
+checksum-based rotation detection) alongside a local Cursor hook-receiver
+(`127.0.0.1:9477`). Streaming HTTP, WebSocket, and raw socket feeds share the same
+parser → driver normalizer → bounded-queue → IPC pipeline. The queue has a hot in-memory
 window, spill-to-disk, and per-consumer checkpoints. Per-harness `HarnessDriver`s
-(`src/capture/drivers/`) make new agents pluggable; Claude Code is the implemented driver.
+(`src/capture/drivers/`) make new agents pluggable; Claude Code and Cursor are implemented.
 
 → [`docs/domain-events.md`](domain-events.md): transcript watcher, canonical schema, normalizer,
 session discovery, IPC bridge.

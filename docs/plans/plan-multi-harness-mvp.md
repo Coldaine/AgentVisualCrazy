@@ -1,6 +1,6 @@
 # Multi-Harness MVP Refactor Plan
 
-> **Status: proposed (2026-05-20).** Tracks the refactor from a Claude-Code-only capture pipeline to a harness-agnostic ingestion + interpretation architecture, plus one second concrete driver (Cursor via hook receiver) wired end-to-end.
+> **Status: in progress (2026-07-21).** PRs 2–5 landed (schema widen, HarnessDriver, pluggable discovery, capability-driven derive). PR 6 (Cursor driver + hook-receiver) is implemented in-tree. Tracks the refactor from a Claude-Code-only capture pipeline to a harness-agnostic ingestion + interpretation architecture, plus one second concrete driver (Cursor via hook receiver) wired end-to-end.
 >
 > Reference: [`docs/research/harness-ingestion-matrix.md`](../research/harness-ingestion-matrix.md) — the durable matrix of which harness exposes which observability surface.
 

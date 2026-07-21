@@ -37,7 +37,7 @@ describe('HarnessDriverRegistry', () => {
 
   it('returns undefined for unregistered EventSource', () => {
     const reg = new HarnessDriverRegistry().register(claudeCodeDriver);
-    expect(reg.getForSource('cursor-hook')).toBeUndefined();
+    expect(reg.getForSource('future-unknown-source')).toBeUndefined();
   });
 
   it('getDefault returns the first registered driver', () => {
@@ -80,10 +80,12 @@ describe('HarnessDriverRegistry', () => {
 // ---------------------------------------------------------------------------
 
 describe('singleton driverRegistry', () => {
-  it('has claude-code pre-seeded', () => {
+  it('has claude-code and cursor pre-seeded', () => {
     expect(driverRegistry.get('claude-code')).toBe(claudeCodeDriver);
     expect(driverRegistry.getForSource('claude-transcript')).toBe(claudeCodeDriver);
     expect(driverRegistry.getForSource('claude-hook')).toBe(claudeCodeDriver);
+    expect(driverRegistry.getForSource('cursor-hook')?.id).toBe('cursor');
+    expect(driverRegistry.getForSource('cursor-agent-trace')?.id).toBe('cursor');
   });
 
   it('falls back to claude-code for unknown source via getDefault', () => {

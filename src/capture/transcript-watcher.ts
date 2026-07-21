@@ -65,7 +65,9 @@ function buildSession(discovered: DiscoveredSession): CaptureSession {
   return {
     sessionId: discovered.sessionId,
     label: `Live: ${discovered.sessionId.slice(0, 12)}`,
-    source: 'claude-transcript',
+    // Preserve the discovering driver's source so non-Claude JSONL (e.g.
+    // cursor-agent-trace) is normalized by the matching harness driver.
+    source: discovered.source,
     path: discovered.filePath,
     transportId: 'file-tail'
   };
