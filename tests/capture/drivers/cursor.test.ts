@@ -305,6 +305,20 @@ describe('cursor driver — normalizeEntry', () => {
       payload: { text: 'trace text' },
     });
   });
+
+  it('accepts agent-trace entries that carry a non-hook type field', () => {
+    const events = normalizeCursorEntry(
+      { type: 'assistant_message', role: 'assistant', content: 'typed trace' },
+      SESSION,
+      'cursor-agent-trace'
+    );
+    expect(events).toHaveLength(1);
+    expect(events[0]).toMatchObject({
+      kind: 'message',
+      source: 'cursor-agent-trace',
+      payload: { text: 'typed trace' },
+    });
+  });
 });
 
 describe('cursor DiscoveryStrategy', () => {

@@ -67,14 +67,16 @@ export function createSessionManager(
   let sessionTitle = 'Live session';
   // Keep the configured options so start(overridePath) can recreate the
   // transport without dropping fields like overrideSource / hook settings.
-  const configuredTransportOptions: CaptureTransportOptions =
+  // When a prebuilt CaptureTransport instance is injected, leave it alone —
+  // we must not replace a custom transport with a freshly constructed one.
+  const configuredTransportOptions: CaptureTransportOptions | null =
     options.transport && !('start' in options.transport)
       ? options.transport
-      : { kind: 'file-tail' };
+      : null;
   const transport =
     options.transport && 'start' in options.transport
       ? options.transport
-      : createCaptureTransport(configuredTransportOptions);
+      : createCaptureTransport(configuredTransportOptions ?? { kind: 'file-tail' });
 
   const buildSnapshot = async (): Promise<SnapshotPayload | null> => {
     const events = await buffer.getAll();
@@ -154,7 +156,9 @@ export function createSessionManager(
       bridgeCleanup = bridge.start();
 
       const effectiveTransport =
-        overridePath && (transport.kind === 'file-tail' || transport.kind === 'auto')
+        overridePath &&
+        configuredTransportOptions &&
+        (transport.kind === 'file-tail' || transport.kind === 'auto')
           ? createCaptureTransport({
               ...configuredTransportOptions,
               kind: transport.kind,

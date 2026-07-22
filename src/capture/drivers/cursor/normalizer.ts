@@ -329,7 +329,10 @@ export function normalizeEntry(
   const timestamp = extractTimestamp(entry);
   const name = eventName(entry);
 
-  if (source === 'cursor-agent-trace' && !name) {
+  // Agent-trace JSONL often carries a non-hook `type` (e.g. "message"). Route
+  // those through the agent-trace normalizer, which still accepts real hook
+  // names when present.
+  if (source === 'cursor-agent-trace') {
     return normalizeAgentTraceEntry(entry, sessionId, source, timestamp);
   }
 
