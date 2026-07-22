@@ -115,6 +115,13 @@
 - PR #33 merged: finish-line coordination plans and architecture assessment landed on main
 - Main now carries the full Phase 2 foundation; remaining work is provider depth, optional visual atmosphere, and follow-up polish
 
+## 2026-07-22 — Cursor hook CI gates (PR #111 follow-up)
+
+- Required CI step `npm run test:cursor-hooks` (forwarder → receiver → derive)
+- Optional CI job `cursor-cli-hook-selftest` runs headless Cursor CLI when
+  `CURSOR_API_KEY` is set (`scripts/hooks/ci-cursor-cli-self-test.sh`)
+- Documented Cursor-in-CI path from official CLI + hooks docs
+
 ## 2026-07-21 — Cursor harness via hook receiver (PR #111)
 
 - Added `cursor` `HarnessDriver` (`normalizeEntry`, capabilities, agent-trace discovery)

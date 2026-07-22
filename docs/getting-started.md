@@ -67,22 +67,19 @@ Full install notes live in [`scripts/hooks/README.md`](../scripts/hooks/README.m
    `scripts/hooks/forward-to-shadow.ps1` (Windows); `chmod +x` the shell script.
 4. Run a Cursor Agent turn — hook events POST to the local receiver and show in the graph.
 
-Live smoke (no Electron UI required):
+### Cursor hook CI / live smoke
 
 ```bash
-npx tsx scripts/hooks/live-capture-server.mjs --port 9477 --out /tmp/shadow-live-capture.jsonl
-# other terminal:
-npm run test:live -- tests/live/cursor-hooks-live.test.ts
+# Required CI gate (no API key) — forwarder → receiver → derive
+npm run test:cursor-hooks
+
+# Optional: real Cursor CLI binary fires project hooks into the receiver
+# (needs CURSOR_API_KEY + `agent` from https://cursor.com/install)
+npm run test:cursor-cli-hooks
 ```
 
-If you added/changed `.cursor/hooks.json` **after** this cloud agent VM started,
-reload hook config so the exec-daemon picks it up:
-
-```bash
-scripts/hooks/reload-exec-daemon-hooks.sh
-```
-
-Then run any Shell tool — events should appear with your `bc-…` conversation id.
+See [`scripts/hooks/README.md`](../scripts/hooks/README.md) for the GitHub Actions
+job and mid-session reload helper (`reload-exec-daemon-hooks.sh`).
 
 Optional env vars:
 

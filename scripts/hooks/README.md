@@ -41,20 +41,43 @@ not `~/.cursor/hooks.json`.
 Forwarders **fail open**: if the observer is offline they still exit `0` with
 `{}` so Cursor never blocks the agent loop.
 
+## CI gates
+
+| Gate | Command / job | Needs `CURSOR_API_KEY`? | What it proves |
+|------|---------------|-------------------------|----------------|
+| **Contract (required)** | `npm run test:cursor-hooks` | No | Real `forward-to-shadow.sh` → hook-receiver → cursor driver → derive |
+| **Cursor CLI self-test** | CI job `cursor-cli-hook-selftest` / `npm run test:cursor-cli-hooks` | Yes | Headless `agent -p` loads `.cursor/hooks.json` and POSTs into the receiver |
+
+How Cursor-in-CI works (official):
+
+1. Install CLI: `curl https://cursor.com/install -fsS | bash` ([GitHub Actions](https://cursor.com/docs/cli/github-actions))
+2. Auth with `CURSOR_API_KEY` ([headless CLI](https://cursor.com/docs/cli/headless))
+3. Commit project hooks at `.cursor/hooks.json` — cloud agents and (per [deployment patterns](https://cursor.com/docs/enterprise/deployment-patterns)) the CLI honor project hooks; user `~/.cursor/hooks.json` does **not** apply in cloud/CI VMs ([hooks docs](https://cursor.com/docs/hooks))
+4. Point `SHADOW_HOOK_URL` at the local receiver before `agent -p --force "…"`
+
+Add the secret once:
+
+```bash
+gh secret set CURSOR_API_KEY --repo OWNER/REPO --body "$CURSOR_API_KEY"
+```
+
+Without the secret, the CLI job skips with a notice; the contract gate still fails the PR if broken.
+
 ## Live verification
 
 ```bash
-# Terminal A — capture server (same transport the Electron app uses)
-npx tsx scripts/hooks/live-capture-server.mjs --port 9477 --out /tmp/shadow-live-capture.jsonl
+# Required contract gate (no API key)
+npm run test:cursor-hooks
 
-# Terminal B — drive the forwarder the way Cursor would
-npm run test:live -- tests/live/cursor-hooks-live.test.ts
+# Terminal A — capture server (same transport the Electron app uses)
+npm run capture:live -- --port 9477 --out /tmp/shadow-live-capture.jsonl
+
+# Terminal B — full Cursor CLI self-test (needs CURSOR_API_KEY + agent on PATH)
+npm run test:cursor-cli-hooks
 ```
 
 Or install `.cursor/hooks.json` (committed in this repo for dogfooding), start the
-capture server / app, and run a Cursor Agent turn in a harness that actually
-invokes project hooks (desktop Cursor or a cloud agent that loads hooks at
-session start).
+capture server / app, and run a Cursor Agent turn.
 
 ### Mid-session reload (cloud / background agent VMs)
 

@@ -1,16 +1,18 @@
 /**
- * LIVE TEST — real forwarder script → real hook-receiver → cursor normalizer.
+ * CI GATE — real forwarder script → real hook-receiver → cursor normalizer.
  *
- * Closest automated stand-in for "Cursor hooked itself":
- * this cloud/background agent VM does not invoke `.cursor/hooks.json` for our
- * own tool calls (dogfood 2026-07-21: zero invocations), but we CAN drive the
- * exact script Cursor would spawn with Cursor-shaped JSON on stdin.
+ * This is the required, secret-free contract test for Cursor observation:
+ * Cursor spawns command hooks with JSON on stdin; we prove that exact path
+ * (`scripts/hooks/forward-to-shadow.sh`) produces glanceable DerivedState.
+ *
+ * For a full Cursor CLI binary self-test (needs CURSOR_API_KEY), see
+ * `scripts/hooks/ci-cursor-cli-self-test.sh` / CI job `cursor-cli-hook-selftest`.
  *
  * Important: the forwarder is spawned asynchronously. Using spawnSync against
  * an in-process HTTP server deadlocks (event loop blocked → curl waits → 2s
  * timeout → posts=0).
  *
- * Runs from `npm run test:live` (pre-push). No ~/.claude required.
+ * Runs from `npm run test:cursor-hooks` (CI + pre-push via test:live).
  */
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:http';
