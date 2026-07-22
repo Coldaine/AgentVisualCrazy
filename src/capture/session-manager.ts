@@ -65,10 +65,16 @@ export function createSessionManager(
   let bridge: IpcBridge | null = null;
   let latestModelInsights: ShadowInsight[] = [];
   let sessionTitle = 'Live session';
+  // Keep the configured options so start(overridePath) can recreate the
+  // transport without dropping fields like overrideSource / hook settings.
+  const configuredTransportOptions: CaptureTransportOptions =
+    options.transport && !('start' in options.transport)
+      ? options.transport
+      : { kind: 'file-tail' };
   const transport =
     options.transport && 'start' in options.transport
       ? options.transport
-      : createCaptureTransport(options.transport ?? { kind: 'file-tail' });
+      : createCaptureTransport(configuredTransportOptions);
 
   const buildSnapshot = async (): Promise<SnapshotPayload | null> => {
     const events = await buffer.getAll();
@@ -148,11 +154,13 @@ export function createSessionManager(
       bridgeCleanup = bridge.start();
 
       const effectiveTransport =
-        overridePath && transport.kind === 'file-tail'
-          ? createCaptureTransport({ kind: 'file-tail', overridePath })
-          : overridePath && transport.kind === 'auto'
-            ? createCaptureTransport({ kind: 'auto', overridePath })
-            : transport;
+        overridePath && (transport.kind === 'file-tail' || transport.kind === 'auto')
+          ? createCaptureTransport({
+              ...configuredTransportOptions,
+              kind: transport.kind,
+              overridePath
+            } as CaptureTransportOptions)
+          : transport;
 
       transportSubscription = await effectiveTransport.start({
         getBackpressure: () => buffer.getBackpressure(),

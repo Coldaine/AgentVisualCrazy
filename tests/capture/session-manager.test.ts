@@ -1,4 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { createServer } from 'node:http';
+import { mkdirSync, writeFileSync } from 'node:fs';
 import { mkdtemp, rm } from 'node:fs/promises';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
@@ -109,6 +111,54 @@ describe('createSessionManager', () => {
 
     manager.stop();
     expect(subscriptionStopped).toBe(true);
+  });
+
+  it('preserves overrideSource when start(overridePath) recreates an auto transport', async () => {
+    const tempRoot = await mkdtemp(path.join(tmpdir(), 'shadow-session-override-source-'));
+    tempDirs.push(tempRoot);
+    const traceDir = path.join(tempRoot, '.agent-trace');
+    mkdirSync(traceDir, { recursive: true });
+    const trace = path.join(traceDir, 'traces.jsonl');
+    writeFileSync(
+      trace,
+      `${JSON.stringify({
+        role: 'assistant',
+        content: 'cursor trace line',
+        timestamp: '2026-05-20T12:00:00.000Z'
+      })}\n`
+    );
+
+    const probe = createServer();
+    await new Promise<void>((resolve) => probe.listen(0, '127.0.0.1', () => resolve()));
+    const address = probe.address();
+    if (!address || typeof address === 'string') throw new Error('no port');
+    const hookPort = address.port;
+    await new Promise<void>((resolve, reject) =>
+      probe.close((error) => (error ? reject(error) : resolve()))
+    );
+
+    const manager = createSessionManager(() => null, {
+      queuePersistenceRoot: tempRoot,
+      transport: {
+        kind: 'auto',
+        overrideSource: 'cursor-agent-trace',
+        hookHost: '127.0.0.1',
+        hookPort
+      },
+      logger: createTestLogger()
+    });
+
+    await manager.start(trace);
+    await waitFor(async () => {
+      const events = await manager.getBuffer().getAll();
+      return events.some((event) => event.harnessId === 'cursor');
+    });
+
+    const events = await manager.getBuffer().getAll();
+    expect(events.every((event) => event.harnessId === 'cursor')).toBe(true);
+    expect(events.some((event) => event.source === 'cursor-agent-trace')).toBe(true);
+
+    manager.stop();
   });
 
   it('quarantines model insights: setModelInsights replaces heuristic insights; clearing falls back', async () => {
