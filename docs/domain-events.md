@@ -47,12 +47,16 @@ Multi-harness plan: [`docs/plans/plan-multi-harness-mvp.md`](plans/plan-multi-ha
 | `sessionEnd` | `session_ended` |
 | `beforeSubmitPrompt` | `message` (`actor: user`) |
 | `afterAgentResponse` / `afterAgentThought` | `message` (`actor: assistant`; thought sets `thinking: true`) |
-| `preToolUse` / `beforeShellExecution` / `beforeMCPExecution` / `beforeReadFile` | `tool_started` |
-| `postToolUse` / `afterShellExecution` / `afterMCPExecution` | `tool_completed` |
-| `afterFileEdit` | synthetic `tool_started` + `tool_completed` (Write) |
+| `preToolUse` | `tool_started` |
+| `postToolUse` | `tool_completed` |
 | `postToolUseFailure` | `tool_failed` |
-| `subagentStart` / `subagentStop` | `agent_spawned` / `agent_completed` |
+| `afterFileEdit` | synthetic `tool_started` + `tool_completed` (Write; stable id `edit:<path>`) |
+| `beforeShellExecution` / `beforeMCPExecution` / `beforeReadFile` / `afterShellExecution` / `afterMCPExecution` | same as pre/post **only when** `tool_use_id` is present (skipped otherwise to avoid double-counting with the generic family) |
+| `subagentStart` / `subagentStop` | `agent_spawned` / `agent_completed` (`actor` + `payload.agentId` = Cursor `subagent_id`) |
 | `stop` | `agent_idle` |
+
+Stock `.cursor/hooks.json` registers the generic tool family only (`preToolUse` /
+`postToolUse` / `postToolUseFailure`), not the specialized shell/MCP/file twins.
 
 ## Transcript Watcher
 

@@ -1,50 +1,16 @@
 {
   "version": 1,
   "hooks": {
-    "sessionStart": [
-      { "command": "scripts/hooks/forward-to-shadow.sh" }
-    ],
-    "sessionEnd": [
-      { "command": "scripts/hooks/forward-to-shadow.sh" }
-    ],
-    "beforeSubmitPrompt": [
-      { "command": "scripts/hooks/forward-to-shadow.sh" }
-    ],
-    "preToolUse": [
-      { "command": "scripts/hooks/forward-to-shadow.sh" }
-    ],
-    "postToolUse": [
-      { "command": "scripts/hooks/forward-to-shadow.sh" }
-    ],
-    "postToolUseFailure": [
-      { "command": "scripts/hooks/forward-to-shadow.sh" }
-    ],
-    "beforeShellExecution": [
-      { "command": "scripts/hooks/forward-to-shadow.sh" }
-    ],
-    "afterShellExecution": [
-      { "command": "scripts/hooks/forward-to-shadow.sh" }
-    ],
-    "beforeReadFile": [
-      { "command": "scripts/hooks/forward-to-shadow.sh" }
-    ],
-    "afterFileEdit": [
-      { "command": "scripts/hooks/forward-to-shadow.sh" }
-    ],
-    "subagentStart": [
-      { "command": "scripts/hooks/forward-to-shadow.sh" }
-    ],
-    "subagentStop": [
-      { "command": "scripts/hooks/forward-to-shadow.sh" }
-    ],
-    "afterAgentResponse": [
-      { "command": "scripts/hooks/forward-to-shadow.sh" }
-    ],
-    "afterAgentThought": [
-      { "command": "scripts/hooks/forward-to-shadow.sh" }
-    ],
-    "stop": [
-      { "command": "scripts/hooks/forward-to-shadow.sh" }
-    ]
+    "sessionStart": [{ "command": "scripts/hooks/forward-to-shadow.sh" }],
+    "sessionEnd": [{ "command": "scripts/hooks/forward-to-shadow.sh" }],
+    "beforeSubmitPrompt": [{ "command": "scripts/hooks/forward-to-shadow.sh" }],
+    "preToolUse": [{ "command": "scripts/hooks/forward-to-shadow.sh" }],
+    "postToolUse": [{ "command": "scripts/hooks/forward-to-shadow.sh" }],
+    "postToolUseFailure": [{ "command": "scripts/hooks/forward-to-shadow.sh" }],
+    "subagentStart": [{ "command": "scripts/hooks/forward-to-shadow.sh" }],
+    "subagentStop": [{ "command": "scripts/hooks/forward-to-shadow.sh" }],
+    "afterAgentResponse": [{ "command": "scripts/hooks/forward-to-shadow.sh" }],
+    "afterAgentThought": [{ "command": "scripts/hooks/forward-to-shadow.sh" }],
+    "stop": [{ "command": "scripts/hooks/forward-to-shadow.sh" }]
   }
 }

@@ -134,10 +134,26 @@ function normalizeHookEntry(
         }),
       ];
     }
+    // Prefer the generic preToolUse / postToolUse family. Specialized
+    // beforeShellExecution / beforeReadFile / beforeMCPExecution (and their
+    // after* twins) overlap those generics and often omit tool_use_id, so the
+    // stock hooks.json only registers the generic family. We still accept the
+    // specialized names for custom installs, but only when a stable tool id is
+    // present — otherwise we'd invent random IDs and double-count tools.
     case 'preToolUse':
     case 'beforeShellExecution':
     case 'beforeMCPExecution':
     case 'beforeReadFile': {
+      const toolUseId =
+        typeof entry.tool_use_id === 'string' && entry.tool_use_id
+          ? entry.tool_use_id
+          : typeof entry.tool_call_id === 'string' && entry.tool_call_id
+            ? entry.tool_call_id
+            : null;
+      if (name !== 'preToolUse' && !toolUseId) {
+        logger.debug('capture', 'cursor_driver.skip_specialized_tool_start', { name });
+        return [];
+      }
       const toolName =
         typeof entry.tool_name === 'string'
           ? entry.tool_name
@@ -157,7 +173,7 @@ function normalizeHookEntry(
       return [
         baseEvent(sessionId, source, timestamp, 'assistant', 'tool_started', {
           toolName,
-          toolUseId: entry.tool_use_id ?? entry.tool_call_id ?? randomUUID(),
+          toolUseId: toolUseId ?? randomUUID(),
           args,
         }),
       ];
@@ -166,33 +182,38 @@ function normalizeHookEntry(
     case 'afterShellExecution':
     case 'afterMCPExecution':
     case 'afterFileEdit': {
-      const toolUseId = entry.tool_use_id ?? entry.tool_call_id ?? randomUUID();
-      const output =
-        entry.tool_output ??
-        entry.result_json ??
-        entry.output ??
-        (name === 'afterFileEdit'
-          ? { file_path: entry.file_path, edits: entry.edits }
-          : null);
-      // afterFileEdit has no matching preToolUse in some Cursor versions —
-      // emit a synthetic tool_started so file attention still lights up.
+      const toolUseId =
+        typeof entry.tool_use_id === 'string' && entry.tool_use_id
+          ? entry.tool_use_id
+          : typeof entry.tool_call_id === 'string' && entry.tool_call_id
+            ? entry.tool_call_id
+            : null;
+      // afterFileEdit is kept as a fallback when Write tools don't surface via
+      // postToolUse; require a path and synthesize a stable id from it.
       if (name === 'afterFileEdit' && typeof entry.file_path === 'string') {
+        const editId = toolUseId ?? `edit:${entry.file_path}`;
+        const output = { file_path: entry.file_path, edits: entry.edits };
         return [
           baseEvent(sessionId, source, timestamp, 'assistant', 'tool_started', {
             toolName: 'Write',
-            toolUseId,
+            toolUseId: editId,
             args: { file_path: entry.file_path, path: entry.file_path },
           }),
           baseEvent(sessionId, source, timestamp, 'assistant', 'tool_completed', {
-            toolUseId,
+            toolUseId: editId,
             output,
             toolName: 'Write',
           }),
         ];
       }
+      if (name !== 'postToolUse' && !toolUseId) {
+        logger.debug('capture', 'cursor_driver.skip_specialized_tool_end', { name });
+        return [];
+      }
+      const output = entry.tool_output ?? entry.result_json ?? entry.output ?? null;
       return [
         baseEvent(sessionId, source, timestamp, 'assistant', 'tool_completed', {
-          toolUseId,
+          toolUseId: toolUseId ?? randomUUID(),
           output,
           toolName: entry.tool_name ?? null,
           durationMs: entry.duration ?? entry.duration_ms ?? null,
@@ -210,18 +231,33 @@ function normalizeHookEntry(
       ];
     }
     case 'subagentStart': {
+      // deriveState keys agentNodes by actor (or payload.agentId). Use the
+      // Cursor subagent id as actor so concurrent subagents don't collapse
+      // into a single `system` node.
+      const agentId =
+        typeof entry.subagent_id === 'string' && entry.subagent_id
+          ? entry.subagent_id
+          : `subagent:${String(entry.subagent_type ?? 'unknown')}`;
       return [
-        baseEvent(sessionId, source, timestamp, 'system', 'agent_spawned', {
-          agentId: entry.subagent_id ?? randomUUID(),
+        baseEvent(sessionId, source, timestamp, agentId, 'agent_spawned', {
+          agentId,
+          label: String(entry.subagent_type ?? agentId),
           agentType: entry.subagent_type ?? null,
           task: entry.task ?? null,
+          parentId: entry.parent_conversation_id ?? null,
           parentConversationId: entry.parent_conversation_id ?? null,
         }),
       ];
     }
     case 'subagentStop': {
+      const agentId =
+        typeof entry.subagent_id === 'string' && entry.subagent_id
+          ? entry.subagent_id
+          : `subagent:${String(entry.subagent_type ?? 'unknown')}`;
       return [
-        baseEvent(sessionId, source, timestamp, 'system', 'agent_completed', {
+        baseEvent(sessionId, source, timestamp, agentId, 'agent_completed', {
+          agentId,
+          label: String(entry.subagent_type ?? agentId),
           agentType: entry.subagent_type ?? null,
           status: entry.status ?? null,
           summary: entry.summary ?? null,

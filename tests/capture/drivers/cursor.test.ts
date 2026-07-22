@@ -160,7 +160,7 @@ describe('cursor driver — normalizeEntry', () => {
     expect(edited.map((e) => e.kind)).toEqual(['tool_started', 'tool_completed']);
   });
 
-  it('emits subagent lifecycle events', () => {
+  it('emits subagent lifecycle events with distinct actor ids', () => {
     const spawned = normalizeCursorEntry(
       {
         hook_event_name: 'subagentStart',
@@ -170,18 +170,95 @@ describe('cursor driver — normalizeEntry', () => {
       },
       SESSION
     );
-    expect(spawned[0]?.kind).toBe('agent_spawned');
+    expect(spawned[0]).toMatchObject({
+      kind: 'agent_spawned',
+      actor: 'sa-1',
+      payload: { agentId: 'sa-1', label: 'explore' },
+    });
 
     const done = normalizeCursorEntry(
       {
         hook_event_name: 'subagentStop',
+        subagent_id: 'sa-1',
         subagent_type: 'explore',
         status: 'completed',
         summary: 'done',
       },
       SESSION
     );
-    expect(done[0]?.kind).toBe('agent_completed');
+    expect(done[0]).toMatchObject({
+      kind: 'agent_completed',
+      actor: 'sa-1',
+      payload: { agentId: 'sa-1' },
+    });
+  });
+
+  it('keeps concurrent subagents as separate derive agentNodes', () => {
+    const events = [
+      ...normalizeCursorEntry(
+        {
+          hook_event_name: 'subagentStart',
+          subagent_id: 'sa-a',
+          subagent_type: 'explore',
+          task: 'a',
+        },
+        SESSION
+      ),
+      ...normalizeCursorEntry(
+        {
+          hook_event_name: 'subagentStart',
+          subagent_id: 'sa-b',
+          subagent_type: 'generalPurpose',
+          task: 'b',
+        },
+        SESSION
+      ),
+    ];
+    const state = deriveState(events);
+    expect(state.agentNodes.map((n) => n.id).sort()).toEqual(['sa-a', 'sa-b']);
+  });
+
+  it('skips specialized tool hooks without a stable tool id (avoids double-count)', () => {
+    expect(
+      normalizeCursorEntry(
+        {
+          hook_event_name: 'beforeShellExecution',
+          command: 'ls',
+          cwd: '/repo',
+        },
+        SESSION
+      )
+    ).toEqual([]);
+    expect(
+      normalizeCursorEntry(
+        {
+          hook_event_name: 'afterShellExecution',
+          command: 'ls',
+          output: 'ok',
+        },
+        SESSION
+      )
+    ).toEqual([]);
+  });
+
+  it('accepts specialized tool hooks when tool_use_id is present', () => {
+    const shell = normalizeCursorEntry(
+      {
+        hook_event_name: 'beforeShellExecution',
+        tool_use_id: 'shell-1',
+        command: 'ls',
+        cwd: '/repo',
+      },
+      SESSION
+    );
+    expect(shell[0]).toMatchObject({
+      kind: 'tool_started',
+      payload: {
+        toolName: 'Shell',
+        toolUseId: 'shell-1',
+        args: { command: 'ls', cwd: '/repo' },
+      },
+    });
   });
 
   it('returns empty for unknown hook events', () => {
@@ -190,21 +267,7 @@ describe('cursor driver — normalizeEntry', () => {
     ).toEqual([]);
   });
 
-  it('maps beforeShellExecution / beforeSubmitPrompt / sessionEnd / stop', () => {
-    const shell = normalizeCursorEntry(
-      {
-        hook_event_name: 'beforeShellExecution',
-        command: 'ls',
-        cwd: '/repo',
-      },
-      SESSION
-    );
-    expect(shell[0]?.kind).toBe('tool_started');
-    expect(shell[0]?.payload).toMatchObject({
-      toolName: 'Shell',
-      args: { command: 'ls', cwd: '/repo' },
-    });
-
+  it('maps beforeSubmitPrompt / sessionEnd / stop', () => {
     const prompt = normalizeCursorEntry(
       { hook_event_name: 'beforeSubmitPrompt', prompt: 'do the thing' },
       SESSION

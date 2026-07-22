@@ -9,7 +9,7 @@ Gemini) into POSTs against AgentVisualCrazy's local hook-receiver.
 |------|---------|
 | `forward-to-shadow.sh` | POSIX forwarder (macOS / Linux / WSL / Cursor cloud) |
 | `forward-to-shadow.ps1` | Windows PowerShell forwarder |
-| `cursor-hooks.example.json` | Example `.cursor/hooks.json` wiring every useful Agent hook |
+| `cursor-hooks.example.json` | Example `.cursor/hooks.json` (generic tool hooks + session/subagent/response) |
 
 ## Install for Cursor
 
@@ -90,7 +90,7 @@ scripts/hooks/reload-exec-daemon-hooks.sh
 
 That hits `agent.v1.ControlService/ReloadAgentSkills`, which also reloads hook
 config. After reload, subsequent Shell / tool calls in **this** agent session
-fire `beforeShellExecution` / `preToolUse` / etc. into the forwarder.
+fire `preToolUse` / `postToolUse` / etc. into the forwarder.
 
 **Dogfood proof (2026-07-21, bc-019f84ed…):** before reload → 0 self-hook
 events; after reload → live capture received real events with

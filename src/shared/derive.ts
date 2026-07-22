@@ -241,11 +241,16 @@ export function deriveState(events: CanonicalEvent[], title = 'Observed session'
     }
 
     if (event.kind === 'agent_spawned' || event.kind === 'agent_idle' || event.kind === 'agent_completed') {
-      // emitsSubagentEvents is informational — if a driver never emits these
-      // event kinds, this branch never executes. No explicit gate needed.
-      const existing = agentMap.get(event.actor) ?? {
-        id: event.actor,
-        label: String(event.payload.label ?? event.actor),
+      // Prefer payload.agentId when present so harnesses (e.g. Cursor) that
+      // stamp a stable subagent id don't collapse into a shared actor like
+      // `system`. Fall back to event.actor for Claude-shaped events.
+      const agentId =
+        typeof event.payload.agentId === 'string' && event.payload.agentId.length > 0
+          ? event.payload.agentId
+          : event.actor;
+      const existing = agentMap.get(agentId) ?? {
+        id: agentId,
+        label: String(event.payload.label ?? agentId),
         parentId: typeof event.payload.parentId === 'string' ? event.payload.parentId : undefined,
         harnessId: event.harnessId,
         state: 'active' as const,
@@ -255,7 +260,10 @@ export function deriveState(events: CanonicalEvent[], title = 'Observed session'
         event.kind === 'agent_completed' ? 'completed' :
         event.kind === 'agent_idle' ? 'idle' :
         'active';
-      agentMap.set(event.actor, existing);
+      if (typeof event.payload.label === 'string' && event.payload.label.length > 0) {
+        existing.label = event.payload.label;
+      }
+      agentMap.set(agentId, existing);
     }
 
     if (event.kind === 'tool_started' || event.kind === 'tool_completed' || event.kind === 'tool_failed') {
