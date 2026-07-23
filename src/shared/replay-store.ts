@@ -10,6 +10,42 @@ export function serializeEvents(
   return prepared.map((event) => JSON.stringify(event)).join('\n');
 }
 
+/**
+ * Sniff whether a raw JSONL blob is an already-normalized CanonicalEvent
+ * replay (`.replay.jsonl`) or a raw harness transcript. A CanonicalEvent line
+ * always carries a top-level `kind`; a raw transcript line does not. Lives here
+ * (next to parseReplay/serializeEvents) rather than in the Electron layer so
+ * headless consumers — the replay runner CLI — can reuse it without importing
+ * `electron`. Re-exported from `electron/session-io.ts` for the app path.
+ */
+export function detectReplayFormat(raw: string): 'replay' | 'transcript' {
+  const lines = raw
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .slice(0, 25);
+
+  if (lines.length === 0) {
+    return 'replay';
+  }
+
+  for (const line of lines) {
+    try {
+      const parsed = JSON.parse(line) as Record<string, unknown>;
+      if (typeof parsed.kind === 'string') {
+        return 'replay';
+      }
+      if ('sessionId' in parsed || 'message' in parsed) {
+        return 'transcript';
+      }
+    } catch {
+      // Try later lines. JSONL may contain non-JSON prelude lines.
+    }
+  }
+
+  return 'transcript';
+}
+
 export function parseReplay(text: string): CanonicalEvent[] {
   const events: CanonicalEvent[] = [];
   const lines = text.split(/\r?\n/);

@@ -2,7 +2,7 @@ import { dialog, type BrowserWindow } from 'electron';
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { paymentRefactorSession } from '../shared/fixtures/payment-refactor-session';
-import { parseReplay, serializeEvents } from '../shared/replay-store';
+import { detectReplayFormat, parseReplay, serializeEvents } from '../shared/replay-store';
 import { DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS } from '../shared/privacy';
 import type {
   CanonicalEvent,
@@ -45,33 +45,10 @@ export function createSnapshot(
   return snapshot;
 }
 
-export function detectReplayFormat(raw: string): 'replay' | 'transcript' {
-  const lines = raw
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .slice(0, 25);
-
-  if (lines.length === 0) {
-    return 'replay';
-  }
-
-  for (const line of lines) {
-    try {
-      const parsed = JSON.parse(line) as Record<string, unknown>;
-      if (typeof parsed.kind === 'string') {
-        return 'replay';
-      }
-      if ('sessionId' in parsed || 'message' in parsed) {
-        return 'transcript';
-      }
-    } catch {
-      // Try later lines. JSONL may contain non-JSON prelude lines.
-    }
-  }
-
-  return 'transcript';
-}
+// detectReplayFormat now lives in shared/replay-store.ts (no electron
+// dependency) so the headless replay runner can reuse it. Re-exported here to
+// preserve the existing import surface (`electron/session-io`).
+export { detectReplayFormat };
 
 export async function loadSnapshotFromFile(
   filePath: string,
