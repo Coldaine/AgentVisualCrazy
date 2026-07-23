@@ -164,6 +164,36 @@ describe('buildContextPacket', () => {
     expect(packet.riskSignals).toHaveLength(1);
     expect(packet.riskSignals[0]).toMatchObject({ signal: 'Tool failed twice', severity: 'medium' });
   });
+
+  // ── D2: observedAgent tracks the dominant harnessId (plan-codex-replay.md) ──
+
+  it('sets observedAgent to the harnessId shared by every event in the window', () => {
+    const state = makeState();
+    const events: CanonicalEvent[] = [
+      { ...makeEvent('message', '2024-01-01T00:00:00Z'), harnessId: 'codex' },
+      { ...makeEvent('tool_started', '2024-01-01T00:00:10Z'), harnessId: 'codex' },
+    ];
+    const packet = buildContextPacket(state, events);
+    expect(packet.observedAgent).toBe('codex');
+  });
+
+  it('sets observedAgent to the majority harnessId when the window mixes harnesses', () => {
+    const state = makeState();
+    const events: CanonicalEvent[] = [
+      { ...makeEvent('message', '2024-01-01T00:00:00Z'), harnessId: 'codex' },
+      { ...makeEvent('message', '2024-01-01T00:00:01Z'), harnessId: 'codex' },
+      { ...makeEvent('message', '2024-01-01T00:00:02Z'), harnessId: 'claude-code' },
+    ];
+    const packet = buildContextPacket(state, events);
+    expect(packet.observedAgent).toBe('codex');
+  });
+
+  it('falls back to claude-code when no event carries a harnessId', () => {
+    const state = makeState();
+    const events: CanonicalEvent[] = [makeEvent('message', '2024-01-01T00:00:00Z')];
+    const packet = buildContextPacket(state, events);
+    expect(packet.observedAgent).toBe('claude-code');
+  });
 });
 
 // ── prompt builder ─────────────────────────────────────────────────────────

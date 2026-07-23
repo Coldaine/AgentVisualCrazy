@@ -23,6 +23,30 @@ function summarizeArgs(args: unknown): string {
   return entries.map(([k, v]) => `${k}=${JSON.stringify(v)?.slice(0, 60) ?? ''}`).join(', ');
 }
 
+/**
+ * Picks the harnessId that produced the most events in this window as the
+ * packet's `observedAgent`, falling back to 'claude-code' when no event
+ * carries a harnessId (legacy fixtures, hand-rolled test events) — the same
+ * default the driver registry uses. A single-harness session has exactly one
+ * candidate; a multi-harness/replay-merged session picks its majority.
+ */
+function dominantHarnessId(events: CanonicalEvent[]): string {
+  const counts = new Map<string, number>();
+  for (const event of events) {
+    if (!event.harnessId) continue;
+    counts.set(event.harnessId, (counts.get(event.harnessId) ?? 0) + 1);
+  }
+  let dominant: string | undefined;
+  let max = 0;
+  for (const [id, count] of counts) {
+    if (count > max) {
+      dominant = id;
+      max = count;
+    }
+  }
+  return dominant ?? 'claude-code';
+}
+
 export function buildContextPacket(
   state: DerivedState,
   events: CanonicalEvent[]
@@ -89,7 +113,7 @@ export function packContext(
 
   const packet: ShadowContextPacket = {
     sessionId: state.sessionId,
-    observedAgent: 'claude-code',
+    observedAgent: dominantHarnessId(events),
     sessionDuration,
     currentPhase: state.activePhase,
     recentEvents,
