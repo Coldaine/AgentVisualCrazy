@@ -9,6 +9,7 @@ describe('schema runtime contracts', () => {
     expect(KnownEventSources).toEqual({
       claudeHook: 'claude-hook',
       claudeTranscript: 'claude-transcript',
+      codexRollout: 'codex-rollout',
       replay: 'replay',
       shadowRuntime: 'shadow-runtime',
     });

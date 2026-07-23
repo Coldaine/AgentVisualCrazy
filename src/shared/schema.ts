@@ -13,6 +13,7 @@
 export const KnownEventSources = {
   claudeHook: 'claude-hook',
   claudeTranscript: 'claude-transcript',
+  codexRollout: 'codex-rollout',
   replay: 'replay',
   shadowRuntime: 'shadow-runtime',
 } as const;
