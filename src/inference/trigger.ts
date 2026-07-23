@@ -10,6 +10,7 @@
  */
 import type { CanonicalEvent, EventKind } from '../shared/schema';
 import { createLogger } from '../shared/logger';
+import { realClock, type Clock, type ClockTimer } from '../shared/clock';
 
 const logger = createLogger({ minLevel: 'info' });
 
@@ -27,7 +28,12 @@ const DEFAULT_CONFIG: TriggerConfig = {
   maxEventsBetween: 50,
 };
 
-export type TriggerCallback = () => void;
+/** Which condition caused a trigger to fire. */
+export type TriggerReason = 'immediate_kind' | 'max_events' | 'normal';
+
+// Callers may ignore the reason argument (existing ones do), so a plain
+// `() => void` remains assignable to TriggerCallback.
+export type TriggerCallback = (reason: TriggerReason) => void;
 
 export interface InferenceTrigger {
   onEvents(events: CanonicalEvent[]): void;
@@ -37,33 +43,34 @@ export interface InferenceTrigger {
 
 export function createInferenceTrigger(
   onTrigger: TriggerCallback,
-  config: Partial<TriggerConfig> = {}
+  config: Partial<TriggerConfig> = {},
+  clock: Clock = realClock
 ): InferenceTrigger {
   const cfg = { ...DEFAULT_CONFIG, ...config };
   let eventsSinceLastInference = 0;
   let lastInferenceAt = 0;
-  let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+  let debounceTimer: ClockTimer | null = null;
 
-  const fire = () => {
-    if (debounceTimer) clearTimeout(debounceTimer);
+  const fire = (reason: TriggerReason) => {
+    if (debounceTimer) clock.clearTimeout(debounceTimer);
     debounceTimer = null;
     eventsSinceLastInference = 0;
-    lastInferenceAt = Date.now();
+    lastInferenceAt = clock.now();
     logger.info('inference', 'trigger.fired');
-    onTrigger();
+    onTrigger(reason);
   };
 
   const scheduleDebounced = () => {
     if (debounceTimer) return; // already pending
-    debounceTimer = setTimeout(() => {
-      fire();
+    debounceTimer = clock.setTimeout(() => {
+      fire('normal');
     }, 200); // small debounce to batch rapid events
   };
 
   return {
     onEvents(events: CanonicalEvent[]) {
       eventsSinceLastInference += events.length;
-      const now = Date.now();
+      const now = clock.now();
       const elapsed = now - lastInferenceAt;
 
       // Immediate conditions
@@ -72,14 +79,14 @@ export function createInferenceTrigger(
         logger.debug('inference', 'trigger.immediate_kind', {
           kinds: events.filter((e) => IMMEDIATE_KINDS.has(e.kind)).map((e) => e.kind),
         });
-        fire();
+        fire('immediate_kind');
         return;
       }
 
       // Force condition
       if (eventsSinceLastInference >= cfg.maxEventsBetween) {
         logger.debug('inference', 'trigger.max_events', { count: eventsSinceLastInference });
-        fire();
+        fire('max_events');
         return;
       }
 
@@ -99,12 +106,12 @@ export function createInferenceTrigger(
     reset() {
       eventsSinceLastInference = 0;
       lastInferenceAt = 0;
-      if (debounceTimer) clearTimeout(debounceTimer);
+      if (debounceTimer) clock.clearTimeout(debounceTimer);
       debounceTimer = null;
     },
 
     stop() {
-      if (debounceTimer) clearTimeout(debounceTimer);
+      if (debounceTimer) clock.clearTimeout(debounceTimer);
       debounceTimer = null;
     },
   };
