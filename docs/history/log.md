@@ -122,3 +122,24 @@
 - Pulse origin uses node position when available, falls back to canvas center (0.5, 0.5)
 - Pulse mapping documented inline in `canvas-pulse.ts` with rationale table
 - 285 tests passing
+
+## 2026-07-23 — First deterministic replay of the Codex corpus (heuristic + live shadow)
+
+- Replayed `tests/fixtures/transcripts/codex/rollout-2026-07-23-homelab-coordinator.jsonl`
+  (2,885 canonical events, 276.8 virtual minutes) through the new replay runner twice:
+  `--speed 0 --infer none` and `--speed 60 --infer live` (DeepSeek via openai-compatible).
+- Determinism proven: identical `sha256:4c82bd11e8c9…` event/trigger hash in both modes —
+  278 trigger firings (194 normal, 84 immediate) regardless of inference or speed.
+- Latency (live, DeepSeek): p50 10.5 s, p95 16.7 s, max 20.1 s per inference. Against the
+  design budget (p95 < 30 s for 1× real-time observation): PASS — live shadowing of a real
+  Codex coordinator is feasible at "not real time but pretty close" fidelity.
+- At 60×, single-flight collapsed 278 triggers into 24 inference calls (one per ~11 virtual
+  minutes); insight staleness p50 9.4 virtual minutes. High-speed replay is a corpus-sweep
+  mode; fidelity measurement needs ≤10× or 1×.
+- Checkpoints (heuristics-only): 0/4 surfaced. With live shadow: plan-pivot surfaced
+  (26.8 min lag at 60×); GHCR stall and final-not-done "surfaced" only via loose text
+  matches (matcher precision follow-up); scope-drift abort missed at 60× (window flew by in
+  <40 s wall). The shadow model is the show; heuristics alone see almost nothing.
+- Follow-ups filed from findings: checkpoint matcher precision; windowed (not cumulative)
+  failed-tool risk counts; 1×/10× fidelity run; pre-push Doppler gate still references the
+  renamed `ai-models` project (now `ai-automation`) and silently skips live inference.
