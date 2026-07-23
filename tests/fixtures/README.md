@@ -29,6 +29,22 @@ Each line is a JSON object with `sessionId`, optional `cwd`, and `message.{role,
 
 ---
 
+## Codex Rollout Fixture (`transcripts/codex/`)
+
+`rollout-2026-07-23-homelab-coordinator.jsonl` is a **real, full-scale Codex CLI rollout**
+(3,677 lines, ~10 MB) — a 4.5-hour coordinator session orchestrating homelab database
+recovery. Unlike the hand-crafted fixtures above, it is frozen captured reality:
+reasoning blocks, two tool-call encodings, subtask lifecycles, MCP calls, patch
+applications, web searches, six context compactions, and one aborted turn.
+
+It was sanitized before commit (17 secrets → `REDACTED_*` placeholders; every line still
+valid JSON). Its human-verified expected interpretations live alongside it in
+`rollout-2026-07-23-homelab-coordinator.ground-truth.md` — that file is the assertion
+source for deterministic replay tests of the (future) Codex driver and the
+interpretation engine. Do not edit either file; regenerate only from a new real capture.
+
+---
+
 ## Replay Fixtures (`replays/`)
 
 These are already-normalized `CanonicalEvent` objects in JSONL format, usable directly with
