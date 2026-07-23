@@ -120,6 +120,39 @@ const RISK_CHECKS: Record<string, (events: CanonicalEvent[]) => string | null> =
     if (repeatedReads.length < 6) return null;
     return 'Large exploration volume may indicate uncertainty or missing plan convergence';
   },
+  // New for the Codex driver (plan-codex-replay.md D1): the GHCR-403 stuck
+  // signature — the agent re-runs the same web search over and over instead
+  // of recognizing the query itself is the blocker. Declared capability-
+  // driven (any driver can opt in by listing 'repeated_searches'), not
+  // Codex-specific branching.
+  repeated_searches: (events) => {
+    const queryCounts = new Map<string, number>();
+    for (const event of events) {
+      if (
+        event.kind !== 'tool_started' &&
+        event.kind !== 'tool_completed' &&
+        event.kind !== 'tool_failed'
+      ) {
+        continue;
+      }
+      const caps = getCapabilitiesForEvent(event);
+      const name = normalizeToolName(String(event.payload.toolName ?? ''), caps);
+      if (!name.includes('search')) continue;
+
+      const args = event.payload.args;
+      const rawQuery =
+        event.payload.query ??
+        (args && typeof args === 'object' ? (args as Record<string, unknown>).query : undefined);
+      if (typeof rawQuery !== 'string' || rawQuery.trim() === '') continue;
+
+      // Near-identical = normalized whitespace/case equality (v1).
+      const normalized = rawQuery.trim().toLowerCase().replace(/\s+/g, ' ');
+      queryCounts.set(normalized, (queryCounts.get(normalized) ?? 0) + 1);
+    }
+    const hasRepeated = [...queryCounts.values()].some((count) => count >= 3);
+    if (!hasRepeated) return null;
+    return 'Repeated near-identical search queries suggest the agent is stuck retrying the same lookup';
+  },
 };
 
 function collectRiskSignals(events: CanonicalEvent[]): string[] {

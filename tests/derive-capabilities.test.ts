@@ -136,6 +136,90 @@ describe('derive — riskHeuristics gating', () => {
 });
 
 // ---------------------------------------------------------------------------
+// repeated_searches (new heuristic, plan-codex-replay.md D1 — the GHCR-403
+// stuck signature: >=3 near-identical web_search/search queries in a window)
+// ---------------------------------------------------------------------------
+
+describe('derive — repeated_searches heuristic', () => {
+  it('does not fire when the driver has not declared the capability', () => {
+    mockRegistry.register(makeDriver('no-repeat-search', makeCaps({ riskHeuristics: [] })));
+    const events = Array.from({ length: 5 }, () =>
+      makeEvent({
+        harnessId: 'no-repeat-search',
+        kind: 'tool_completed',
+        payload: { toolName: 'web_search', query: 'same query' },
+      })
+    );
+    expect(deriveState(events).riskSignals).toEqual([]);
+  });
+
+  it('fires when >=3 identical (case/whitespace-normalized) search queries appear', () => {
+    mockRegistry.register(makeDriver('codex', makeCaps({ riskHeuristics: ['repeated_searches'] })));
+    const events = [
+      makeEvent({
+        harnessId: 'codex',
+        kind: 'tool_completed',
+        payload: { toolName: 'web_search', query: 'ghcr 403 pull access denied' },
+      }),
+      makeEvent({
+        harnessId: 'codex',
+        kind: 'tool_completed',
+        payload: { toolName: 'web_search', query: 'GHCR 403   pull access denied' },
+      }),
+      makeEvent({
+        harnessId: 'codex',
+        kind: 'tool_completed',
+        payload: { toolName: 'web_search', query: '  ghcr 403 pull access denied  ' },
+      }),
+    ];
+    const risks = deriveState(events).riskSignals;
+    expect(risks.some((r) => r.toLowerCase().includes('repeated') && r.toLowerCase().includes('search'))).toBe(true);
+  });
+
+  it('does not fire for fewer than 3 near-identical queries', () => {
+    mockRegistry.register(makeDriver('codex', makeCaps({ riskHeuristics: ['repeated_searches'] })));
+    const events = [
+      makeEvent({
+        harnessId: 'codex',
+        kind: 'tool_completed',
+        payload: { toolName: 'web_search', query: 'same query' },
+      }),
+      makeEvent({
+        harnessId: 'codex',
+        kind: 'tool_completed',
+        payload: { toolName: 'web_search', query: 'same query' },
+      }),
+    ];
+    expect(deriveState(events).riskSignals).toEqual([]);
+  });
+
+  it('does not fire when 3+ searches have distinct queries', () => {
+    mockRegistry.register(makeDriver('codex', makeCaps({ riskHeuristics: ['repeated_searches'] })));
+    const events = ['first query', 'second query', 'third query'].map((query) =>
+      makeEvent({
+        harnessId: 'codex',
+        kind: 'tool_completed',
+        payload: { toolName: 'web_search', query },
+      })
+    );
+    expect(deriveState(events).riskSignals).toEqual([]);
+  });
+
+  it('reads the query from payload.args.query when payload.query is absent', () => {
+    mockRegistry.register(makeDriver('codex', makeCaps({ riskHeuristics: ['repeated_searches'] })));
+    const events = Array.from({ length: 3 }, () =>
+      makeEvent({
+        harnessId: 'codex',
+        kind: 'tool_started',
+        payload: { toolName: 'web_search', args: { query: 'stuck loop query' } },
+      })
+    );
+    const risks = deriveState(events).riskSignals;
+    expect(risks.some((r) => r.toLowerCase().includes('search'))).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // toolNameMap
 // ---------------------------------------------------------------------------
 
