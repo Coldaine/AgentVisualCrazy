@@ -1,148 +1,14 @@
-/**
- * # Shadow System Prompt — the Curator
- *
- * Sent to the shadow's AI model every time the inference engine fires. The
- * model receives this as the system prompt + a user message containing the
- * ShadowContextPacket (recent events, derived state, transcript turns, and —
- * new in the curator design — the current gallery state).
- *
- * Goal: the model is no longer a terse dashboard classifier filling fixed
- * slots. It is the **curator of a live exhibition** about the observed coding
- * agent's work: it decides which pre-built exhibit type fits the moment, fills
- * that exhibit's typed contract with curated, interpreted content plus a
- * mandatory narrative, assigns relevance and decay, and issues `galleryOps`
- * (create / refresh / retire) against the standing gallery. See
- * `docs/plans/plan-exhibit-floor.md` (the accepted design) and
- * `docs/plans/curator-prompt-v2.md` (the verbatim prompt source).
- *
- * ---
- *
- * ## Philosophy
- *
- * Five design principles carry over from the dashboard prompt; the curator
- * rewrite reframes rather than discards them:
- *
- * 1. **Interpretation over transcription.** The gallery renders on a large
- *    display a human walks past. Raw data is noise; every artifact exists for
- *    its narrative — *what it means and why it is on the floor now*.
- * 2. **Curation over completeness.** 8–20 DAG nodes max; beats are
- *    "interesting moments only"; a floor holds ~4–8 active exhibits. Fewer,
- *    better exhibits beat a feed.
- * 3. **Honest confidence.** Uncertain reads get hedged narratives and lower
- *    relevance, not a false 0.9. An interpreter that reports an unfinished
- *    session as "done" has failed — the momentum gauge is trajectory, not
- *    completion.
- * 4. **Structured JSON only.** No markdown, no prose outside the schema. The
- *    response parser (`response-parser.ts`) calls JSON.parse() directly and
- *    validates each artifact against the discriminated union in
- *    `src/renderer/exhibits/types.ts`.
- * 5. **Read-only posture.** The shadow observes and curates. It never writes
- *    code, instructs the observed agent, or acts on its behalf.
- *
- * ---
- *
- * ## Section rationale
- *
- * The prompt below is organized as a curator's brief. Each section addresses a
- * specific failure mode; if you weaken a constraint, document why here and in
- * `git log`.
- *
- * - **WHAT YOU RECEIVE.** Names the packet's four parts — RECENT ACTIVITY,
- *   EARLIER DIGEST, THE GALLERY, HEURISTIC SIGNALS. THE GALLERY is the model's
- *   own prior work fed back: it is the memory that lets beats accumulate
- *   instead of the story restarting every call.
- * - **WHAT YOU PRODUCE.** The `{ pulse, galleryOps }` contract. `pulse`
- *   (phase / phaseConfidence / riskLevel / headline) keeps the legacy renderer
- *   paths alive — the parser derives the old `phase` / `risk` / `objective`
- *   insights FROM it. `galleryOps` is the curation channel. An empty op list is
- *   a legitimate answer: silence is cheaper than noise.
- * - **THE ARTIFACT ENVELOPE.** The `ExhibitArtifact` shape (id, exhibitType,
- *   title, mandatory narrative, relevance, decayClass, status, payload). The
- *   `id` is stable across refreshes so the gallery store can replace by id.
- * - **THE EXHIBIT TYPES.** The seven-type vocabulary with per-type payload
- *   contracts and craft rules (curation caps, verbs on edges, concerns-not-
- *   directories, falsifiable evidence, earned seismograph magnitudes).
- * - **CURATION RULES.** When to create vs refresh vs retire, the ~4–8 floor
- *   cap, honest relevance, and decayClass guidance (fast/medium/slow).
- * - **WRITING NARRATIVES.** The bad/good example pins the bar: a narrative
- *   cites specifics but never reads like a log line.
- *
- * ---
- *
- * ## Companion: context packet
- *
- * The user message accompanying this system prompt is built by
- * `prompt-builder.ts` from the `ShadowContextPacket` (`context-packager.ts`):
- * session metadata, recent events, tool history, transcript turns, file
- * attention, heuristic risk signals, and THE GALLERY section (each active/stale
- * artifact's envelope + a one-line payload summary, plus retired-this-session
- * ids and reasons so the model does not recreate what it retired). The gallery
- * section is capped at ~15% of the packet token budget.
- *
- * Delivery is local-only by default. Transcript-like fields are sanitized
- * before rendering or off-host inclusion. Off-host delivery requires explicit
- * runtime opt-in; raw transcript delivery requires a separate explicit opt-in.
- *
- * The packet is plain text, not JSON, because the model reads it as context to
- * scan — not as structured input to transform. JSON is the *output* contract;
- * the input should be readable.
- *
- * ---
- *
- * ## Evaluation
- *
- * No eval harness exists yet. When the time comes, the obvious starting point:
- *
- * - **Golden set:** captured sessions with hand-authored expected galleries —
- *   which exhibit types the curator should author, with what narrative threads.
- *   The homelab-coordinator fixture (a 4.5-hour database recovery) is the first
- *   such case: a live replay should produce an `activity_narrative` matching the
- *   human ground truth, a `seismograph` with the GHCR-403 stall visible, and a
- *   final `momentum` exhibit that does NOT read "done".
- * - **Judge model:** a separate LLM scoring gallery quality against that
- *   expected exhibition.
- * - **Regression suite:** runs on every prompt edit; fails CI on judge-score
- *   drift.
- *
- * Until then: this prompt is evaluated by personal use and replay dumps.
- *
- * ---
- *
- * ## When to upgrade this setup
- *
- * Today this file is the single source of truth: rationale lives in this doc
- * comment, the prompt itself in the template literal below. Appropriate while
- * shadow-agent has one developer, no paying users, no A/B requirement, and no
- * regression detection beyond "did it break?". Triggers to graduate to a
- * prompt-management platform: first non-me user; first "this got weirdly worse"
- * complaint; first cost-attribution question; first multi-prompt scenario where
- * structured metadata earns its keep. See `docs/tooling-philosophy.md`.
- *
- * ---
- *
- * ## Iteration log
- *
- * Use `git log shadow-agent/src/inference/prompts.ts` for the canonical
- * history. Notable milestones:
- *
- * - 2026-04-01: Initial version. Established from
- *   `docs/research/shadow-inference-architecture.md`.
- * - 2026-04-17: Documented local-only default and explicit transcript
- *   consent gates.
- * - 2026-05-20: Collapsed the JSON-source + generated-docs + generated-runtime
- *   triad into this single file. See `docs/plans/plan-multi-harness-mvp.md`
- *   ("Rejected alternatives") and `docs/tooling-philosophy.md` for the why.
- * - 2026-07-23: **Curator rewrite.** Replaced the terse dashboard-classifier
- *   prompt with the exhibit curator: `{ pulse, galleryOps }` output over the
- *   seven-type exhibit vocabulary, THE GALLERY fed back as memory, curation
- *   over completeness. The old flat fields survive as the small `pulse` object,
- *   from which the parser derives the legacy insight kinds for backward
- *   compatibility. Prompt text installed verbatim from
- *   `docs/plans/curator-prompt-v2.md`; design in
- *   `docs/plans/plan-exhibit-floor.md` (PR-C).
- */
+# Curator Prompt v2 — verbatim draft
 
-export const SHADOW_SYSTEM_PROMPT = `You are Shadow, the curator of a live exhibition about a coding agent's work.
+Companion to `plan-exhibit-floor.md`. This is the full text of the rewritten
+`SHADOW_SYSTEM_PROMPT` that PR-C installs in `src/inference/prompts.ts`. It replaces the
+terse dashboard-classifier prompt with the exhibit curator. Reviewable here as prose;
+the code version is this text unchanged.
+
+---
+
+```
+You are Shadow, the curator of a live exhibition about a coding agent's work.
 
 One coding agent (the "observed agent") is working on a real task. You watch its
 transcript and you author the exhibition that a human walks past on a large display:
@@ -293,4 +159,22 @@ Good: "Three near-identical registry searches in nine minutes — the agent is
        off-limits an hour ago."
 
 Confidence and honesty rules apply everywhere: uncertain reads get hedged narratives
-and lower relevance, not false certainty.`;
+and lower relevance, not false certainty.
+```
+
+---
+
+## Notes for PR-C
+
+- The packet builder must append THE GALLERY section (serialize each active/stale
+  artifact's envelope + a payload summary line) and keep it inside the packet budget;
+  gallery text competes with transcript detail, cap it at ~15% of the packet.
+- `pulse` keeps the old renderer paths alive (status strip, risk vignette via
+  riskLevel, headline replaces objective intent). The old per-field insights
+  (`phase`/`risk`/`next_move`/`objective`/`summary` kinds) are produced FROM pulse +
+  galleryOps by the parser for backward compatibility during the transition.
+- Parser validates each artifact against the discriminated union from
+  `src/renderer/exhibits/types.ts` (PR-B); invalid artifacts are dropped with a
+  logged reason, never rendered half-formed.
+- Trigger: keep the immediate path on `agent_completed`/`tool_failed`; raise the
+  normal-path floor so routine calls are rarer and bigger.
