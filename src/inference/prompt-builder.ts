@@ -18,6 +18,26 @@ import {
 } from '../shared/privacy';
 import type { TranscriptPrivacySettings } from '../shared/schema';
 
+/**
+ * One exhibit serialized for THE GALLERY section of the packet. The envelope is
+ * always present; `payloadSummary` is a one-line description of the payload
+ * (beats + thread names, node + focus, etc.) that the packager drops first when
+ * the gallery section would blow its ~15%-of-budget cap.
+ */
+export interface GalleryPacketEntry {
+  id: string;
+  exhibitType: string;
+  title: string;
+  narrative: string;
+  relevance: number;
+  decayClass: string;
+  status: string;
+  createdAtEvent: number;
+  refreshedAtEvent?: number;
+  /** One-line payload summary; omitted in envelope-only (over-budget) mode. */
+  payloadSummary?: string;
+}
+
 export interface ShadowContextPacket {
   sessionId: string;
   observedAgent: string;
@@ -28,6 +48,17 @@ export interface ShadowContextPacket {
   recentTranscript: Array<{ actor: string; text: string }>;
   fileAttention: Array<{ filePath: string; touches: number }>;
   riskSignals: Array<{ signal: string; severity: string }>;
+  /**
+   * THE GALLERY: the curator's own prior work fed back as memory. Active/stale
+   * exhibits with envelope + one-line payload summary; capped at ~15% of the
+   * packet token budget by the packager.
+   */
+  gallery?: GalleryPacketEntry[];
+  /**
+   * Ids + reasons of exhibits retired this session, one line each, so the model
+   * does not recreate what it already retired.
+   */
+  retiredGallery?: Array<{ id: string; reason: string }>;
 }
 
 export interface BuildUserMessageOptions {
@@ -97,6 +128,27 @@ export function buildUserMessage(
       `${r.signal} (severity: ${r.severity})`
     ),
   ];
+
+  const gallery = packet.gallery ?? [];
+  lines.push('', `--- THE GALLERY (${gallery.length}) ---`);
+  for (const g of gallery) {
+    lines.push(
+      `[${g.exhibitType}] ${g.id} "${sanitize(g.title)}" ` +
+        `(relevance ${g.relevance.toFixed(2)}, ${g.status}, ${g.decayClass})`
+    );
+    lines.push(`  narrative: ${sanitize(g.narrative)}`);
+    if (g.payloadSummary) {
+      lines.push(`  payload: ${sanitize(g.payloadSummary)}`);
+    }
+  }
+
+  const retired = packet.retiredGallery ?? [];
+  if (retired.length > 0) {
+    lines.push('', `--- Retired this session (${retired.length}) ---`);
+    for (const r of retired) {
+      lines.push(`${r.id}: ${sanitize(r.reason)}`);
+    }
+  }
 
   return lines.join('\n');
 }
