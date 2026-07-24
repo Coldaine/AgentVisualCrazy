@@ -39,9 +39,11 @@ import {
 } from '../inference/trigger';
 import { buildContextPacket } from '../inference/context-packager';
 import { buildInferenceRequest } from '../inference/prompt-builder';
-import { parseModelResponse } from '../inference/response-parser';
+import { parseCuratorResponse } from '../inference/response-parser';
+import { createGalleryStore } from '../inference/gallery-store';
 import { createInferenceClient } from '../inference/inference-client-factory';
 import type { InferenceClient } from '../inference/inference-client';
+import type { ExhibitArtifact } from '../renderer/exhibits/types';
 import { createLogger, type Logger } from '../shared/logger';
 
 export type InferMode = 'none' | 'live';
@@ -63,6 +65,8 @@ export interface ReplayOptions {
   exportReplayPath?: string;
   /** Write the JSON report here. */
   reportPath?: string;
+  /** Write the final curator gallery (JSON array of ExhibitArtifact) here. */
+  galleryOutPath?: string;
   /** Injected client for tests; live mode uses the provider chain when absent. */
   inferenceClient?: InferenceClient;
   logger?: Logger;
@@ -87,6 +91,13 @@ export interface TriggerRecord {
   phase: string;
   risks: string[];
   insightSummaries: string[];
+  /** Per-firing curator gallery ops: counts + affected artifact ids. */
+  galleryOps?: {
+    create: number;
+    refresh: number;
+    retire: number;
+    ids: string[];
+  };
   /** True when a live inference was already in flight and this firing was coalesced. */
   coalesced?: boolean;
   error?: string;
@@ -128,6 +139,8 @@ export interface ReplayReport {
     bufferDepthMax: number;
   };
   checkpoints: CheckpointResult[];
+  /** The final exhibit-floor gallery the curator authored (empty in `none` mode). */
+  gallery: ExhibitArtifact[];
 }
 
 /** One (virtual time, insight) observation, fed to the checkpoint scorer. */
@@ -454,6 +467,9 @@ export async function runReplay(options: ReplayOptions): Promise<ReplayReport> {
   const triggerFirings: Array<{ eventIndex: number; reason: TriggerReason }> = [];
   const triggerRecords: TriggerRecord[] = [];
   const observations: InsightObservation[] = [];
+  // The curator's gallery accumulates across firings, fed back into each packet
+  // (its memory) and serialized into the report at the end.
+  const galleryStore = createGalleryStore();
   let bufferDepthMax = 0;
   let seq = 0;
 
@@ -482,7 +498,12 @@ export async function runReplay(options: ReplayOptions): Promise<ReplayReport> {
     inflight = true;
     const snapshot = released.slice();
     const state = deriveState(snapshot, title);
-    const packet = buildContextPacket(state, snapshot);
+    // Feed the accumulated gallery back in as the curator's memory.
+    galleryStore.refreshStaleness(snapshot.length);
+    const packet = buildContextPacket(state, snapshot, {
+      gallery: galleryStore.getActive(),
+      retiredGallery: galleryStore.getRetiredSummaries(),
+    });
     const request = buildInferenceRequest(packet, {
       delivery: 'off-host',
       privacy: { allowRawTranscriptStorage: true, allowOffHostInference: true },
@@ -493,7 +514,8 @@ export async function runReplay(options: ReplayOptions): Promise<ReplayReport> {
     const promise = activeClient
       .infer(request)
       .then((response) => {
-        const insights = parseModelResponse(response.text);
+        const { insights, galleryOps } = parseCuratorResponse(response.text);
+        const applied = galleryStore.applyOps(galleryOps, released.length);
         const landVirtualMs = clock.now();
         record.wallLatencyMs = Date.now() - wallStart;
         record.insightVirtualTimeMs = landVirtualMs;
@@ -502,6 +524,12 @@ export async function runReplay(options: ReplayOptions): Promise<ReplayReport> {
         record.phase = state.activePhase;
         record.risks = state.riskSignals;
         record.insightSummaries = insightSummaries(insights);
+        record.galleryOps = {
+          create: applied.created.length,
+          refresh: applied.refreshed.length,
+          retire: applied.retired.length,
+          ids: [...applied.created, ...applied.refreshed, ...applied.retired],
+        };
         for (const insight of insights) {
           observations.push({ virtualMs: landVirtualMs, insight });
         }
@@ -644,6 +672,7 @@ export async function runReplay(options: ReplayOptions): Promise<ReplayReport> {
       bufferDepthMax,
     },
     checkpoints: scoreCheckpoints(DEFAULT_CHECKPOINTS, observations),
+    gallery: galleryStore.getArtifacts(),
   };
 
   // --- side outputs --------------------------------------------------------
@@ -657,6 +686,9 @@ export async function runReplay(options: ReplayOptions): Promise<ReplayReport> {
   }
   if (options.reportPath) {
     await writeFile(options.reportPath, `${JSON.stringify(report, null, 2)}\n`, 'utf8');
+  }
+  if (options.galleryOutPath) {
+    await writeFile(options.galleryOutPath, `${JSON.stringify(report.gallery, null, 2)}\n`, 'utf8');
   }
 
   return report;

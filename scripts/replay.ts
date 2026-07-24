@@ -12,6 +12,7 @@
  *   --infer none|live            none (heuristics only, default) | live (real provider chain).
  *   --export-replay <path>       Write normalized CanonicalEvents (Electron-loadable) here.
  *   --report <path>              Write the JSON report here.
+ *   --gallery-out <path>         Write the final curator gallery (JSON) here.
  *   --title <text>               Session title for derive/report.
  */
 import { runReplay, type InferMode, type ReplayOptions } from '../src/replay/replay-runner';
@@ -59,6 +60,9 @@ function parseArgs(argv: string[]): ParsedArgs {
       case '--report':
         options.reportPath = next();
         break;
+      case '--gallery-out':
+        options.galleryOutPath = next();
+        break;
       case '--title':
         options.title = next();
         break;
@@ -85,6 +89,7 @@ Usage: npm run replay -- <file> [flags]
   --infer none|live            none (heuristics only, default) | live (real provider chain)
   --export-replay <path>       Write normalized CanonicalEvents (Electron-loadable)
   --report <path>              Write JSON report
+  --gallery-out <path>         Write the final curator gallery (JSON)
   --title <text>               Session title
 `;
 
@@ -122,8 +127,13 @@ async function main(): Promise<void> {
       lines.push(`    [ missed ] ${cp.label}`);
     }
   }
+  if (report.gallery.length > 0) {
+    const retired = report.gallery.filter((a) => a.status === 'retired').length;
+    lines.push(`  gallery: ${report.gallery.length} exhibits (${report.gallery.length - retired} active, ${retired} retired)`);
+  }
   if (options.reportPath) lines.push(`  report → ${options.reportPath}`);
   if (options.exportReplayPath) lines.push(`  replay → ${options.exportReplayPath}`);
+  if (options.galleryOutPath) lines.push(`  gallery → ${options.galleryOutPath}`);
   process.stdout.write(`${lines.join('\n')}\n`);
 }
 
