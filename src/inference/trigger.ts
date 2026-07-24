@@ -2,11 +2,17 @@
  * Inference trigger: decides when to run the inference engine.
  *
  * Trigger conditions (any one fires):
- *   - At least minEventsBetween (10) new events since last inference
- *   - At least timeBetweenMs (30 s) since last inference
+ *   - At least minEventsBetween (25) new events since last inference
+ *   - At least timeBetweenMs (120 s) since last inference
  *   - maxEventsBetween (50) events forces a trigger regardless of timer
  *   - Risk escalation: derived risk level rises to 'medium' or above
  *   - Specific event kinds: tool_failed, agent_completed always trigger immediately
+ *
+ * Cadence (2026-07-23, curator design — docs/plans/plan-exhibit-floor.md): the
+ * curator makes fewer, bigger calls. The immediate paths (agent_completed,
+ * tool_failed) fire on turn boundaries and failures; the normal-path floor is
+ * raised to 25 events / 120 s so routine 10-event dribbles no longer trigger a
+ * call. maxEventsBetween stays at 50 as the hard ceiling.
  */
 import type { CanonicalEvent, EventKind } from '../shared/schema';
 import { createLogger } from '../shared/logger';
@@ -17,14 +23,14 @@ const logger = createLogger({ minLevel: 'info' });
 const IMMEDIATE_KINDS = new Set<EventKind>(['tool_failed', 'agent_completed']);
 
 export interface TriggerConfig {
-  minEventsBetween: number;   // default 10
-  timeBetweenMs: number;       // default 30_000
+  minEventsBetween: number;   // default 25
+  timeBetweenMs: number;       // default 120_000
   maxEventsBetween: number;    // default 50
 }
 
 const DEFAULT_CONFIG: TriggerConfig = {
-  minEventsBetween: 10,
-  timeBetweenMs: 30_000,
+  minEventsBetween: 25,
+  timeBetweenMs: 120_000,
   maxEventsBetween: 50,
 };
 
