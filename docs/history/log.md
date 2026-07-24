@@ -143,3 +143,24 @@
 - Follow-ups filed from findings: checkpoint matcher precision; windowed (not cumulative)
   failed-tool risk counts; 1×/10× fidelity run; pre-push Doppler gate still references the
   renamed `ai-models` project (now `ai-automation`) and silently skips live inference.
+
+## 2026-07-23 — PR-D: first live curator gallery run (exhibit floor)
+
+- Replayed the homelab PG18-recovery corpus (2,885 events, 4.6h virtual) at 60x
+  through the full curator pipeline (PRs #115-#117) with DeepSeek live.
+- 125 triggers -> 16 curator calls (raised 25-event/120s floor working as designed;
+  p50 19.9s / p95 32.9s latency).
+- The curator authored **17 exhibits** (momentum, concern snapshots, walkthroughs,
+  activity narratives, a thermal map, a seismograph), retiring 14 as the story moved
+  on - every retirement with a visitor-facing reason ("a stunning but completed
+  satellite; the session's center of gravity has moved to PR merge mechanics").
+- Final floor: momentum "Two blockers, three hopes" (gauge 48, PRS MERGED 0,
+  DRY-RUN ATTEMPTS FAILED 3), fresh concern snapshot "The dry-run validation wall",
+  active walkthrough "Package rebrand breaks stalemate". Honest not-done ending.
+- Checkpoints: scope-drift abort, plan pivot, and GHCR-403 stall surfaced;
+  final-not-done checkpoint missed by the text matcher (though the momentum
+  exhibit itself reads plainly as not-done - matcher precision follow-up stands).
+- Gallery + report archived in docs/history/gallery-run-2026-07-23/.
+- Visual verification: gallery rendered on the exhibit floor via web preview;
+  screenshots delivered. UI nit found: momentum next-item confidence renders
+  "0.85%" instead of "85%" (0..1 vs 0..100 scale mismatch in the chip formatter).

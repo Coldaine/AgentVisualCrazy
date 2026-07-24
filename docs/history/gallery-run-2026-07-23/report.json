@@ -1,0 +1,3496 @@
+{
+  "meta": {
+    "input": "tests/fixtures/transcripts/codex/rollout-2026-07-23-homelab-coordinator.jsonl",
+    "sessionId": "019f8ee7-e51f-7ed1-b650-b7fb11ffecda",
+    "driver": "codex",
+    "speed": 60,
+    "infer": "live",
+    "events": 2885,
+    "startVirtualUtc": "2026-07-23T12:16:39.153Z",
+    "endVirtualUtc": "2026-07-23T16:53:27.837Z",
+    "durationVirtualMinutes": 276.8114
+  },
+  "determinismHash": "sha256:1f09e4575b14a1f5b3241d051d2d89ecabdc372a46b86a9ca46d21e51083a30f",
+  "triggers": [
+    {
+      "seq": 0,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784809006865,
+      "virtualTimeUtc": "2026-07-23T12:16:46.865Z",
+      "eventIndex": 11,
+      "wallLatencyMs": 11010,
+      "insightVirtualTimeMs": 1784809557539,
+      "stalenessVirtualMs": 550674,
+      "eventsBehind": 238,
+      "phase": "validation",
+      "risks": [
+        "1 failed tool call detected"
+      ],
+      "insightSummaries": [
+        "phase: Phase: exploration",
+        "risk: Risk level: medium",
+        "objective: Fresh agent grounds itself in repo conventions, then immediately hits a path-expansion failure on first tool call.",
+        "summary: First step wobbles — The agent declared intent to follow a multi-agent parallel plan, then its very first action — reading a skill path — failed. The command used a literal '?' in the path, which sugg…",
+        "summary: Plan inheritance begins — The agent accepted a four-slot parallel data-platform plan from a previous agent, treating it as the binding source of intent. It stated it would ground itself in documentati…",
+        "summary: Path templating risk — The very first tool command contained a bare '?' in a Get-Content path where a variable or glob was likely intended. This points to a template interpolation gap between the prio…"
+      ],
+      "galleryOps": {
+        "create": 3,
+        "refresh": 0,
+        "retire": 0,
+        "ids": [
+          "stumble-at-start",
+          "parallel-plan-inherited",
+          "tool-path-leak"
+        ]
+      }
+    },
+    {
+      "seq": 1,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784809016086,
+      "virtualTimeUtc": "2026-07-23T12:16:56.086Z",
+      "eventIndex": 17,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784809016086,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 2,
+      "reason": "max_events",
+      "virtualTimeMs": 1784809127212,
+      "virtualTimeUtc": "2026-07-23T12:18:47.212Z",
+      "eventIndex": 67,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784809127212,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 3,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784809199823,
+      "virtualTimeUtc": "2026-07-23T12:19:59.823Z",
+      "eventIndex": 93,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784809199823,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 4,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784809206787,
+      "virtualTimeUtc": "2026-07-23T12:20:06.787Z",
+      "eventIndex": 98,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784809206787,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 5,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784809241638,
+      "virtualTimeUtc": "2026-07-23T12:20:41.638Z",
+      "eventIndex": 112,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784809241638,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 6,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784809349043,
+      "virtualTimeUtc": "2026-07-23T12:22:29.043Z",
+      "eventIndex": 160,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784809349043,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 7,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784809376430,
+      "virtualTimeUtc": "2026-07-23T12:22:56.430Z",
+      "eventIndex": 173,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784809376430,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 8,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784809456158,
+      "virtualTimeUtc": "2026-07-23T12:24:16.158Z",
+      "eventIndex": 210,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784809456158,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 9,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784809519372,
+      "virtualTimeUtc": "2026-07-23T12:25:19.372Z",
+      "eventIndex": 237,
+      "wallLatencyMs": 11438,
+      "insightVirtualTimeMs": 1784810156554,
+      "stalenessVirtualMs": 637182,
+      "eventsBehind": 186,
+      "phase": "implementation",
+      "risks": [
+        "9 failed tool calls detected",
+        "Heavy shell/tool churn suggests validation or recovery thrash"
+      ],
+      "insightSummaries": [
+        "phase: Phase: implementation",
+        "risk: Risk level: medium",
+        "objective: Three-agent parallel pipeline is running — two subagents delivered clean results while the orchestrator juggles review threads and waits for the third."
+      ],
+      "galleryOps": {
+        "create": 0,
+        "refresh": 3,
+        "retire": 0,
+        "ids": [
+          "stumble-at-start",
+          "tool-path-leak",
+          "parallel-plan-inherited"
+        ]
+      }
+    },
+    {
+      "seq": 10,
+      "reason": "normal",
+      "virtualTimeMs": 1784809644297,
+      "virtualTimeUtc": "2026-07-23T12:27:24.297Z",
+      "eventIndex": 279,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784809644297,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 11,
+      "reason": "normal",
+      "virtualTimeMs": 1784809765817,
+      "virtualTimeUtc": "2026-07-23T12:29:25.817Z",
+      "eventIndex": 323,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784809765817,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 12,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784809887946,
+      "virtualTimeUtc": "2026-07-23T12:31:27.946Z",
+      "eventIndex": 343,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784809887946,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 13,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784809916132,
+      "virtualTimeUtc": "2026-07-23T12:31:56.132Z",
+      "eventIndex": 361,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784809916132,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 14,
+      "reason": "normal",
+      "virtualTimeMs": 1784810036431,
+      "virtualTimeUtc": "2026-07-23T12:33:56.431Z",
+      "eventIndex": 401,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784810036431,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 15,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784810058671,
+      "virtualTimeUtc": "2026-07-23T12:34:18.671Z",
+      "eventIndex": 410,
+      "wallLatencyMs": 15774,
+      "insightVirtualTimeMs": 1784810978462,
+      "stalenessVirtualMs": 919791,
+      "eventsBehind": 281,
+      "phase": "implementation",
+      "risks": [
+        "12 failed tool calls detected",
+        "Heavy shell/tool churn suggests validation or recovery thrash"
+      ],
+      "insightSummaries": [
+        "phase: Phase: implementation",
+        "risk: Risk level: low",
+        "objective: Orchestrator integrates three subagent results — recovery tooling passes, scaffold commits land, telemetry returns a clean gap report — and decides to pull the plug on one stalled worker.",
+        "summary: Four slots, one decision — One orchestrator, four subagents, four outcomes — and the orchestrator is now the bottleneck by design. The additive scaffold lands cleanly but leaves PG18 digest and R2 end…"
+      ],
+      "galleryOps": {
+        "create": 1,
+        "refresh": 2,
+        "retire": 1,
+        "ids": [
+          "four-results-one-review",
+          "parallel-plan-inherited",
+          "stumble-at-start",
+          "tool-path-leak"
+        ]
+      }
+    },
+    {
+      "seq": 16,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784810175472,
+      "virtualTimeUtc": "2026-07-23T12:36:15.472Z",
+      "eventIndex": 444,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784810175472,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 17,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784810209886,
+      "virtualTimeUtc": "2026-07-23T12:36:49.886Z",
+      "eventIndex": 451,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784810209886,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 18,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784810261738,
+      "virtualTimeUtc": "2026-07-23T12:37:41.738Z",
+      "eventIndex": 456,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784810261738,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 19,
+      "reason": "max_events",
+      "virtualTimeMs": 1784810350300,
+      "virtualTimeUtc": "2026-07-23T12:39:10.300Z",
+      "eventIndex": 506,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784810350300,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 20,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784810388067,
+      "virtualTimeUtc": "2026-07-23T12:39:48.067Z",
+      "eventIndex": 527,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784810388067,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 21,
+      "reason": "normal",
+      "virtualTimeMs": 1784810510048,
+      "virtualTimeUtc": "2026-07-23T12:41:50.048Z",
+      "eventIndex": 569,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784810510048,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 22,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784810578426,
+      "virtualTimeUtc": "2026-07-23T12:42:58.426Z",
+      "eventIndex": 590,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784810578426,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 23,
+      "reason": "normal",
+      "virtualTimeMs": 1784810700097,
+      "virtualTimeUtc": "2026-07-23T12:45:00.097Z",
+      "eventIndex": 630,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784810700097,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 24,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784810742753,
+      "virtualTimeUtc": "2026-07-23T12:45:42.753Z",
+      "eventIndex": 649,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784810742753,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 25,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784810830345,
+      "virtualTimeUtc": "2026-07-23T12:47:10.345Z",
+      "eventIndex": 664,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784810830345,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 26,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784810939826,
+      "virtualTimeUtc": "2026-07-23T12:48:59.826Z",
+      "eventIndex": 700,
+      "wallLatencyMs": 15436,
+      "insightVirtualTimeMs": 1784811822316,
+      "stalenessVirtualMs": 882490,
+      "eventsBehind": 167,
+      "phase": "implementation",
+      "risks": [
+        "20 failed tool calls detected",
+        "Heavy shell/tool churn suggests validation or recovery thrash"
+      ],
+      "insightSummaries": [
+        "phase: Phase: implementation",
+        "risk: Risk level: medium",
+        "objective: Shipwright build pipeline blocked by Pod Security Admission — agent is patching namespace policy and retrying the BuildRun after Flux reconciliation."
+      ],
+      "galleryOps": {
+        "create": 0,
+        "refresh": 3,
+        "retire": 0,
+        "ids": [
+          "parallel-plan-inherited",
+          "four-results-one-review",
+          "stumble-at-start"
+        ]
+      }
+    },
+    {
+      "seq": 27,
+      "reason": "normal",
+      "virtualTimeMs": 1784811060371,
+      "virtualTimeUtc": "2026-07-23T12:51:00.371Z",
+      "eventIndex": 727,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784811060371,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 28,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784811090821,
+      "virtualTimeUtc": "2026-07-23T12:51:30.821Z",
+      "eventIndex": 748,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784811090821,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 29,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784811148040,
+      "virtualTimeUtc": "2026-07-23T12:52:28.040Z",
+      "eventIndex": 763,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784811148040,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 30,
+      "reason": "normal",
+      "virtualTimeMs": 1784811287164,
+      "virtualTimeUtc": "2026-07-23T12:54:47.164Z",
+      "eventIndex": 805,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784811287164,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 31,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784811326873,
+      "virtualTimeUtc": "2026-07-23T12:55:26.873Z",
+      "eventIndex": 810,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784811326873,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 32,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784811393603,
+      "virtualTimeUtc": "2026-07-23T12:56:33.603Z",
+      "eventIndex": 833,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784811393603,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 33,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784811413168,
+      "virtualTimeUtc": "2026-07-23T12:56:53.168Z",
+      "eventIndex": 841,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784811413168,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 34,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784811721480,
+      "virtualTimeUtc": "2026-07-23T13:02:01.480Z",
+      "eventIndex": 861,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784811721480,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 35,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784811751276,
+      "virtualTimeUtc": "2026-07-23T13:02:31.276Z",
+      "eventIndex": 870,
+      "wallLatencyMs": 24022,
+      "insightVirtualTimeMs": 1784813184741,
+      "stalenessVirtualMs": 1433465,
+      "eventsBehind": 182,
+      "phase": "implementation",
+      "risks": [
+        "24 failed tool calls detected",
+        "Heavy shell/tool churn suggests validation or recovery thrash"
+      ],
+      "insightSummaries": [
+        "phase: Phase: implementation",
+        "risk: Risk level: medium",
+        "objective: After the PSA blockade was cleared, the agent is deep in forensic reconstruction of PostgreSQL extension requirements — the build pipeline is idled while evidence replaces assumption.",
+        "summary: Extension forensics heat — The agent is deep inside backup snapshots (two time points), sibling repo DAGs, and GitHub API searches — cross-referencing extension names, pg_dump versions, and package in…",
+        "summary: Evidence before pipeline — The pipeline is stalled on purpose: the human demanded evidence-backed extension requirements. The gauge reads 'mid-forward' because the agent is actively gathering that evi…",
+        "next_move: evidence-based extension requirements doc"
+      ],
+      "galleryOps": {
+        "create": 2,
+        "refresh": 3,
+        "retire": 1,
+        "ids": [
+          "extension-forensics-map",
+          "on-the-clock-gauge",
+          "parallel-plan-inherited",
+          "four-results-one-review",
+          "stumble-at-start",
+          "four-results-one-review"
+        ]
+      }
+    },
+    {
+      "seq": 36,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784811833117,
+      "virtualTimeUtc": "2026-07-23T13:03:53.117Z",
+      "eventIndex": 886,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784811833117,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 37,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784811886719,
+      "virtualTimeUtc": "2026-07-23T13:04:46.719Z",
+      "eventIndex": 896,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784811886719,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 38,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784812197252,
+      "virtualTimeUtc": "2026-07-23T13:09:57.252Z",
+      "eventIndex": 919,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784812197252,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 39,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784812490789,
+      "virtualTimeUtc": "2026-07-23T13:14:50.789Z",
+      "eventIndex": 941,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784812490789,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 40,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784812601916,
+      "virtualTimeUtc": "2026-07-23T13:16:41.916Z",
+      "eventIndex": 956,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784812601916,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 41,
+      "reason": "normal",
+      "virtualTimeMs": 1784812810994,
+      "virtualTimeUtc": "2026-07-23T13:20:10.994Z",
+      "eventIndex": 981,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784812810994,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 42,
+      "reason": "normal",
+      "virtualTimeMs": 1784812954535,
+      "virtualTimeUtc": "2026-07-23T13:22:34.535Z",
+      "eventIndex": 1006,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784812954535,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 43,
+      "reason": "normal",
+      "virtualTimeMs": 1784813076455,
+      "virtualTimeUtc": "2026-07-23T13:24:36.455Z",
+      "eventIndex": 1032,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784813076455,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 44,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784813131411,
+      "virtualTimeUtc": "2026-07-23T13:25:31.411Z",
+      "eventIndex": 1047,
+      "wallLatencyMs": 16503,
+      "insightVirtualTimeMs": 1784814106306,
+      "stalenessVirtualMs": 974895,
+      "eventsBehind": 64,
+      "phase": "implementation",
+      "risks": [
+        "26 failed tool calls detected",
+        "Heavy shell/tool churn suggests validation or recovery thrash"
+      ],
+      "insightSummaries": [
+        "phase: Phase: implementation",
+        "risk: Risk level: medium",
+        "objective: The agent resolved a near-data-loss scare by proving Database MCP survived intact in its own worktree, then cleaned duplicate files from the original branch — PR #111 is now surgically scoped to Molti…",
+        "next_move: Original branch returns to feature work"
+      ],
+      "galleryOps": {
+        "create": 0,
+        "refresh": 3,
+        "retire": 1,
+        "ids": [
+          "parallel-plan-inherited",
+          "on-the-clock-gauge",
+          "extension-forensics-map",
+          "stumble-at-start"
+        ]
+      }
+    },
+    {
+      "seq": 45,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784813245087,
+      "virtualTimeUtc": "2026-07-23T13:27:25.087Z",
+      "eventIndex": 1086,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784813245087,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 46,
+      "reason": "normal",
+      "virtualTimeMs": 1784814048210,
+      "virtualTimeUtc": "2026-07-23T13:40:48.210Z",
+      "eventIndex": 1111,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784814048210,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 47,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784814083552,
+      "virtualTimeUtc": "2026-07-23T13:41:23.552Z",
+      "eventIndex": 1121,
+      "wallLatencyMs": 22531,
+      "insightVirtualTimeMs": 1784814906449,
+      "stalenessVirtualMs": 822897,
+      "eventsBehind": 102,
+      "phase": "implementation",
+      "risks": [
+        "27 failed tool calls detected",
+        "Heavy shell/tool churn suggests validation or recovery thrash"
+      ],
+      "insightSummaries": [
+        "phase: Phase: implementation",
+        "risk: Risk level: medium",
+        "objective: Three parallel research agents are surveying the database landscape while the observed agent consolidates PR boundaries and plans a database-only execution strategy.",
+        "next_move: Consolidate research into database-only execution plan",
+        "summary: Parallel research wave — The observed agent has deployed three autonomous sub-agents, each with a read-only mandate and a distinct domain: database inventory and recovery (target 019f8ee9-f09b...), cu…"
+      ],
+      "galleryOps": {
+        "create": 1,
+        "refresh": 2,
+        "retire": 1,
+        "ids": [
+          "three-front-research",
+          "parallel-plan-inherited",
+          "on-the-clock-gauge",
+          "extension-forensics-map"
+        ]
+      }
+    },
+    {
+      "seq": 48,
+      "reason": "normal",
+      "virtualTimeMs": 1784814363538,
+      "virtualTimeUtc": "2026-07-23T13:46:03.538Z",
+      "eventIndex": 1146,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784814363538,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 49,
+      "reason": "normal",
+      "virtualTimeMs": 1784814529559,
+      "virtualTimeUtc": "2026-07-23T13:48:49.559Z",
+      "eventIndex": 1171,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784814529559,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 50,
+      "reason": "normal",
+      "virtualTimeMs": 1784814662780,
+      "virtualTimeUtc": "2026-07-23T13:51:02.780Z",
+      "eventIndex": 1198,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784814662780,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 51,
+      "reason": "normal",
+      "virtualTimeMs": 1784814840965,
+      "virtualTimeUtc": "2026-07-23T13:54:00.965Z",
+      "eventIndex": 1226,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784814840965,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 52,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784814906449,
+      "virtualTimeUtc": "2026-07-23T13:55:06.449Z",
+      "eventIndex": 1231,
+      "wallLatencyMs": 22459,
+      "insightVirtualTimeMs": 1784816005215,
+      "stalenessVirtualMs": 1098766,
+      "eventsBehind": 182,
+      "phase": "implementation",
+      "risks": [
+        "27 failed tool calls detected",
+        "Heavy shell/tool churn suggests validation or recovery thrash"
+      ],
+      "insightSummaries": [
+        "phase: Phase: implementation",
+        "risk: Risk level: high",
+        "objective: Three sub-agents deployed, one killed mid-flight — the plan is assembling but the observed agent is flying blind on cluster state another agent couldn't deliver.",
+        "summary: Sub-agent cascade fracturing — The third research sub-agent (target 019f8ef6-5953…) was told to stop, then killed when it didn't. Its mandate — Kubernetes/CNPG/FalkorDB dependency mapping — is now bei…",
+        "next_move: Remaining agents return — plan solidifies"
+      ],
+      "galleryOps": {
+        "create": 1,
+        "refresh": 2,
+        "retire": 0,
+        "ids": [
+          "subagent-fatality",
+          "three-front-research",
+          "on-the-clock-gauge"
+        ]
+      }
+    },
+    {
+      "seq": 53,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784815518388,
+      "virtualTimeUtc": "2026-07-23T14:05:18.388Z",
+      "eventIndex": 1254,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784815518388,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 54,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784815603578,
+      "virtualTimeUtc": "2026-07-23T14:06:43.578Z",
+      "eventIndex": 1284,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784815603578,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 55,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784815660547,
+      "virtualTimeUtc": "2026-07-23T14:07:40.547Z",
+      "eventIndex": 1306,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784815660547,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 56,
+      "reason": "max_events",
+      "virtualTimeMs": 1784815770389,
+      "virtualTimeUtc": "2026-07-23T14:09:30.389Z",
+      "eventIndex": 1356,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784815770389,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 57,
+      "reason": "max_events",
+      "virtualTimeMs": 1784815889975,
+      "virtualTimeUtc": "2026-07-23T14:11:29.975Z",
+      "eventIndex": 1406,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784815889975,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 58,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784815905867,
+      "virtualTimeUtc": "2026-07-23T14:11:45.867Z",
+      "eventIndex": 1411,
+      "wallLatencyMs": 25002,
+      "insightVirtualTimeMs": 1784818058103,
+      "stalenessVirtualMs": 2152236,
+      "eventsBehind": 12,
+      "phase": "implementation",
+      "risks": [
+        "30 failed tool calls detected",
+        "Heavy shell/tool churn suggests validation or recovery thrash"
+      ],
+      "insightSummaries": [
+        "phase: Phase: implementation",
+        "risk: Risk level: high",
+        "objective: Two sub-agents completed, one died at its post — the backup boundary on paper is now real, but two sub-agent fatalities in a single session erode the parallel intelligence strategy.",
+        "next_move: FalkorDB recovery proof in scratch namespace",
+        "summary: Parallel strategy fraying — Two of three parallel research sub-agents have now gone dark in this session: the first was killed after ignoring a stop signal; the third hit a usage-limit wall and errore…",
+        "summary: FalkorDB manifest hunt — The 49 KiB FalkorDB RDB from July 11 is real — SHA256 verified, last written 2026-07-11. But can the current pinned server image (v4.20.1) load it? The observed agent's respon…"
+      ],
+      "galleryOps": {
+        "create": 2,
+        "refresh": 1,
+        "retire": 3,
+        "ids": [
+          "two-subagents-lost",
+          "falkordb-manifest-probe",
+          "on-the-clock-gauge",
+          "subagent-fatality",
+          "three-front-research",
+          "parallel-plan-inherited"
+        ]
+      }
+    },
+    {
+      "seq": 59,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784818058103,
+      "virtualTimeUtc": "2026-07-23T14:47:38.103Z",
+      "eventIndex": 1425,
+      "wallLatencyMs": 18547,
+      "insightVirtualTimeMs": 1784818681352,
+      "stalenessVirtualMs": 623249,
+      "eventsBehind": 34,
+      "phase": "implementation",
+      "risks": [
+        "30 failed tool calls detected",
+        "Heavy shell/tool churn suggests validation or recovery thrash"
+      ],
+      "insightSummaries": [
+        "phase: Phase: implementation",
+        "risk: Risk level: high",
+        "objective: Two sub-agents lost in 117 minutes — the observed agent serializes FalkorDB recovery proof alone while the parallel strategy shows structural cracks.",
+        "next_move: FalkorDB RDB load test against v4.20.1"
+      ],
+      "galleryOps": {
+        "create": 0,
+        "refresh": 3,
+        "retire": 0,
+        "ids": [
+          "two-subagents-lost",
+          "on-the-clock-gauge",
+          "falkordb-manifest-probe"
+        ]
+      }
+    },
+    {
+      "seq": 60,
+      "reason": "normal",
+      "virtualTimeMs": 1784818649528,
+      "virtualTimeUtc": "2026-07-23T14:57:29.528Z",
+      "eventIndex": 1451,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784818649528,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 61,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784818681352,
+      "virtualTimeUtc": "2026-07-23T14:58:01.352Z",
+      "eventIndex": 1459,
+      "wallLatencyMs": 32291,
+      "insightVirtualTimeMs": 1784821127140,
+      "stalenessVirtualMs": 2445788,
+      "eventsBehind": 288,
+      "phase": "implementation",
+      "risks": [
+        "30 failed tool calls detected",
+        "Heavy shell/tool churn suggests validation or recovery thrash"
+      ],
+      "insightSummaries": [
+        "phase: Phase: refactoring",
+        "risk: Risk level: high",
+        "objective: Rebasing a drifting integration branch while two sub-agents lie dead — the observed agent has serialized its way back to safe footing, but the parallel strategy is on life support.",
+        "next_move: Resolve PR #113 and #114 CI failures",
+        "summary: Branch saved seven commits — When the observed agent fetched the remote, it found the integration branch seven commits behind origin/main. Worse, the drift included overlapping files in docs/kubernete…"
+      ],
+      "galleryOps": {
+        "create": 1,
+        "refresh": 3,
+        "retire": 1,
+        "ids": [
+          "rebase-rescue",
+          "two-subagents-lost",
+          "on-the-clock-gauge",
+          "falkordb-manifest-probe",
+          "parallel-plan-inherited"
+        ]
+      }
+    },
+    {
+      "seq": 62,
+      "reason": "normal",
+      "virtualTimeMs": 1784820130293,
+      "virtualTimeUtc": "2026-07-23T15:22:10.293Z",
+      "eventIndex": 1484,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784820130293,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 63,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784820217865,
+      "virtualTimeUtc": "2026-07-23T15:23:37.865Z",
+      "eventIndex": 1508,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784820217865,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 64,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784820236325,
+      "virtualTimeUtc": "2026-07-23T15:23:56.325Z",
+      "eventIndex": 1516,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784820236325,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 65,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784820322191,
+      "virtualTimeUtc": "2026-07-23T15:25:22.191Z",
+      "eventIndex": 1545,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784820322191,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 66,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784820408086,
+      "virtualTimeUtc": "2026-07-23T15:26:48.086Z",
+      "eventIndex": 1570,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784820408086,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 67,
+      "reason": "normal",
+      "virtualTimeMs": 1784820528332,
+      "virtualTimeUtc": "2026-07-23T15:28:48.332Z",
+      "eventIndex": 1613,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784820528332,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 68,
+      "reason": "normal",
+      "virtualTimeMs": 1784820656153,
+      "virtualTimeUtc": "2026-07-23T15:30:56.153Z",
+      "eventIndex": 1643,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784820656153,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 69,
+      "reason": "normal",
+      "virtualTimeMs": 1784820778392,
+      "virtualTimeUtc": "2026-07-23T15:32:58.392Z",
+      "eventIndex": 1668,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784820778392,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 70,
+      "reason": "normal",
+      "virtualTimeMs": 1784820904298,
+      "virtualTimeUtc": "2026-07-23T15:35:04.298Z",
+      "eventIndex": 1694,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784820904298,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 71,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784821012280,
+      "virtualTimeUtc": "2026-07-23T15:36:52.280Z",
+      "eventIndex": 1720,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784821012280,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 72,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784821105943,
+      "virtualTimeUtc": "2026-07-23T15:38:25.943Z",
+      "eventIndex": 1739,
+      "wallLatencyMs": 32909,
+      "insightVirtualTimeMs": 1784822901103,
+      "stalenessVirtualMs": 1795160,
+      "eventsBehind": 420,
+      "phase": "implementation",
+      "risks": [
+        "36 failed tool calls detected",
+        "Heavy shell/tool churn suggests validation or recovery thrash"
+      ],
+      "insightSummaries": [
+        "phase: Phase: debugging",
+        "risk: Risk level: high",
+        "objective: The PG18 recovery loader failed because a non-root container cannot write into a fresh PVC — one mkdir per mount point, each denied.",
+        "summary: Loader failure: six mkdirs — The scratch loader pod ran the non-root CNPG image (uid 26) against a newly provisioned PVC whose root directory belonged to root:root with 755 permissions. Every `/scratc…",
+        "summary: The fourth front: manifests — While the loader failure was fresh, three independent sub-agents were dispatched — one to review the 45-resource platform manifest commit, one to find the immutable PG19 …",
+        "next_move: Research agent 1 returns platform manifest review"
+      ],
+      "galleryOps": {
+        "create": 2,
+        "refresh": 2,
+        "retire": 0,
+        "ids": [
+          "loader-failure-autopsy",
+          "manifested-scope-four",
+          "two-subagents-lost",
+          "on-the-clock-gauge"
+        ]
+      }
+    },
+    {
+      "seq": 73,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784821171905,
+      "virtualTimeUtc": "2026-07-23T15:39:31.905Z",
+      "eventIndex": 1761,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784821171905,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 74,
+      "reason": "normal",
+      "virtualTimeMs": 1784821299025,
+      "virtualTimeUtc": "2026-07-23T15:41:39.025Z",
+      "eventIndex": 1799,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784821299025,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 75,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784821371330,
+      "virtualTimeUtc": "2026-07-23T15:42:51.330Z",
+      "eventIndex": 1820,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784821371330,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 76,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784821378835,
+      "virtualTimeUtc": "2026-07-23T15:42:58.835Z",
+      "eventIndex": 1823,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784821378835,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 77,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784821499935,
+      "virtualTimeUtc": "2026-07-23T15:44:59.935Z",
+      "eventIndex": 1868,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784821499935,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 78,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784821597491,
+      "virtualTimeUtc": "2026-07-23T15:46:37.491Z",
+      "eventIndex": 1889,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784821597491,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 79,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784822053516,
+      "virtualTimeUtc": "2026-07-23T15:54:13.516Z",
+      "eventIndex": 1909,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784822053516,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 80,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784822066376,
+      "virtualTimeUtc": "2026-07-23T15:54:26.376Z",
+      "eventIndex": 1912,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784822066376,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 81,
+      "reason": "normal",
+      "virtualTimeMs": 1784822190288,
+      "virtualTimeUtc": "2026-07-23T15:56:30.288Z",
+      "eventIndex": 1954,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784822190288,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 82,
+      "reason": "normal",
+      "virtualTimeMs": 1784822311443,
+      "virtualTimeUtc": "2026-07-23T15:58:31.443Z",
+      "eventIndex": 1991,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784822311443,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 83,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784822431036,
+      "virtualTimeUtc": "2026-07-23T16:00:31.036Z",
+      "eventIndex": 2026,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784822431036,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 84,
+      "reason": "normal",
+      "virtualTimeMs": 1784822556861,
+      "virtualTimeUtc": "2026-07-23T16:02:36.861Z",
+      "eventIndex": 2062,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784822556861,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 85,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784822560597,
+      "virtualTimeUtc": "2026-07-23T16:02:40.597Z",
+      "eventIndex": 2064,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784822560597,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 86,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784822647609,
+      "virtualTimeUtc": "2026-07-23T16:04:07.609Z",
+      "eventIndex": 2093,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784822647609,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 87,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784822725155,
+      "virtualTimeUtc": "2026-07-23T16:05:25.155Z",
+      "eventIndex": 2116,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784822725155,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 88,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784822821098,
+      "virtualTimeUtc": "2026-07-23T16:07:01.098Z",
+      "eventIndex": 2143,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784822821098,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 89,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784822870266,
+      "virtualTimeUtc": "2026-07-23T16:07:50.266Z",
+      "eventIndex": 2158,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784822870266,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 90,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784822877282,
+      "virtualTimeUtc": "2026-07-23T16:07:57.282Z",
+      "eventIndex": 2161,
+      "wallLatencyMs": 24000,
+      "insightVirtualTimeMs": 1784824143535,
+      "stalenessVirtualMs": 1266253,
+      "eventsBehind": 398,
+      "phase": "implementation",
+      "risks": [
+        "49 failed tool calls detected",
+        "Heavy shell/tool churn suggests validation or recovery thrash"
+      ],
+      "insightSummaries": [
+        "phase: Phase: implementation",
+        "risk: Risk level: medium",
+        "objective: FalkorDB RDB restored from backup in a scratch pod — the pg_tokenizer preload bug closes behind an evidence-driven fix, while a sub-agent completes its review with concerns.",
+        "next_move: PG18 digest fix or deferral",
+        "summary: FalkorDB restore proves artifact — While CI ran the tokenizer fix, the agent didn't wait — it built a throwaway Kubernetes pod, copied a 7-month-old RDB backup into it under UID 999, started a FalkorD…"
+      ],
+      "galleryOps": {
+        "create": 1,
+        "refresh": 2,
+        "retire": 2,
+        "ids": [
+          "falkordb-server-recovery",
+          "two-subagents-lost",
+          "on-the-clock-gauge",
+          "loader-failure-autopsy",
+          "manifested-scope-four"
+        ]
+      }
+    },
+    {
+      "seq": 91,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784822956191,
+      "virtualTimeUtc": "2026-07-23T16:09:16.191Z",
+      "eventIndex": 2188,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784822956191,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 92,
+      "reason": "normal",
+      "virtualTimeMs": 1784823085592,
+      "virtualTimeUtc": "2026-07-23T16:11:25.592Z",
+      "eventIndex": 2218,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784823085592,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 93,
+      "reason": "normal",
+      "virtualTimeMs": 1784823207665,
+      "virtualTimeUtc": "2026-07-23T16:13:27.665Z",
+      "eventIndex": 2248,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784823207665,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 94,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784823310556,
+      "virtualTimeUtc": "2026-07-23T16:15:10.556Z",
+      "eventIndex": 2290,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784823310556,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 95,
+      "reason": "max_events",
+      "virtualTimeMs": 1784823438807,
+      "virtualTimeUtc": "2026-07-23T16:17:18.807Z",
+      "eventIndex": 2340,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784823438807,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 96,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784823440471,
+      "virtualTimeUtc": "2026-07-23T16:17:20.471Z",
+      "eventIndex": 2342,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784823440471,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 97,
+      "reason": "normal",
+      "virtualTimeMs": 1784823566081,
+      "virtualTimeUtc": "2026-07-23T16:19:26.081Z",
+      "eventIndex": 2390,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784823566081,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 98,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784823634454,
+      "virtualTimeUtc": "2026-07-23T16:20:34.454Z",
+      "eventIndex": 2400,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784823634454,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 99,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784823646049,
+      "virtualTimeUtc": "2026-07-23T16:20:46.049Z",
+      "eventIndex": 2406,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784823646049,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 100,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784823657273,
+      "virtualTimeUtc": "2026-07-23T16:20:57.273Z",
+      "eventIndex": 2410,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784823657273,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 101,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784823677293,
+      "virtualTimeUtc": "2026-07-23T16:21:17.293Z",
+      "eventIndex": 2418,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784823677293,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 102,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784823710649,
+      "virtualTimeUtc": "2026-07-23T16:21:50.649Z",
+      "eventIndex": 2434,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784823710649,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 103,
+      "reason": "normal",
+      "virtualTimeMs": 1784823838016,
+      "virtualTimeUtc": "2026-07-23T16:23:58.016Z",
+      "eventIndex": 2479,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784823838016,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 104,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784823946909,
+      "virtualTimeUtc": "2026-07-23T16:25:46.909Z",
+      "eventIndex": 2510,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784823946909,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 105,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784823952253,
+      "virtualTimeUtc": "2026-07-23T16:25:52.253Z",
+      "eventIndex": 2515,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784823952253,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 106,
+      "reason": "normal",
+      "virtualTimeMs": 1784824090117,
+      "virtualTimeUtc": "2026-07-23T16:28:10.117Z",
+      "eventIndex": 2550,
+      "wallLatencyMs": 19901,
+      "insightVirtualTimeMs": 1784825218616,
+      "stalenessVirtualMs": 1128499,
+      "eventsBehind": 289,
+      "phase": "implementation",
+      "risks": [
+        "59 failed tool calls detected",
+        "Heavy shell/tool churn suggests validation or recovery thrash"
+      ],
+      "insightSummaries": [
+        "phase: Phase: implementation",
+        "risk: Risk level: medium",
+        "objective: Two PRs converging: PG18 image rebranded to a fresh Actions-owned package, recovery tooling fix pushed and under final independent review.",
+        "next_move: Final independent review of PR #113 returns APPROVED",
+        "summary: Package rebrand breaks stalemate — After definitively proving the workflow token has Packages: write (by inspecting the GHCR run log), the agent found the old pg18-allext package treats the fresh Acti…",
+        "summary: Recovery tooling closing arc — The recovery tooling sub-agent returned, fixed, tested, and pushed its commit independently. The main agent then confirmed 16/16 tests on both runtimes, pushed the corre…"
+      ],
+      "galleryOps": {
+        "create": 2,
+        "refresh": 1,
+        "retire": 3,
+        "ids": [
+          "pg18-rebrand-decision",
+          "recovery-tooling-push",
+          "on-the-clock-gauge",
+          "two-subagents-lost",
+          "rebase-rescue",
+          "falkordb-server-recovery"
+        ]
+      }
+    },
+    {
+      "seq": 107,
+      "reason": "normal",
+      "virtualTimeMs": 1784824213438,
+      "virtualTimeUtc": "2026-07-23T16:30:13.438Z",
+      "eventIndex": 2575,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784824213438,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 108,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784824222480,
+      "virtualTimeUtc": "2026-07-23T16:30:22.480Z",
+      "eventIndex": 2577,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784824222480,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 109,
+      "reason": "normal",
+      "virtualTimeMs": 1784824357578,
+      "virtualTimeUtc": "2026-07-23T16:32:37.578Z",
+      "eventIndex": 2616,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784824357578,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 110,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784824377455,
+      "virtualTimeUtc": "2026-07-23T16:32:57.455Z",
+      "eventIndex": 2619,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784824377455,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 111,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784824412751,
+      "virtualTimeUtc": "2026-07-23T16:33:32.751Z",
+      "eventIndex": 2631,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784824412751,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 112,
+      "reason": "normal",
+      "virtualTimeMs": 1784824533601,
+      "virtualTimeUtc": "2026-07-23T16:35:33.601Z",
+      "eventIndex": 2665,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784824533601,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 113,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784824667140,
+      "virtualTimeUtc": "2026-07-23T16:37:47.140Z",
+      "eventIndex": 2701,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784824667140,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 114,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784824699479,
+      "virtualTimeUtc": "2026-07-23T16:38:19.479Z",
+      "eventIndex": 2716,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784824699479,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 115,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784824772407,
+      "virtualTimeUtc": "2026-07-23T16:39:32.407Z",
+      "eventIndex": 2739,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784824772407,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 116,
+      "reason": "normal",
+      "virtualTimeMs": 1784824897694,
+      "virtualTimeUtc": "2026-07-23T16:41:37.694Z",
+      "eventIndex": 2770,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784824897694,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 117,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784824907751,
+      "virtualTimeUtc": "2026-07-23T16:41:47.751Z",
+      "eventIndex": 2775,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784824907751,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 118,
+      "reason": "normal",
+      "virtualTimeMs": 1784825034969,
+      "virtualTimeUtc": "2026-07-23T16:43:54.969Z",
+      "eventIndex": 2805,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784825034969,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 119,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784825059007,
+      "virtualTimeUtc": "2026-07-23T16:44:19.007Z",
+      "eventIndex": 2814,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784825059007,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 120,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784825075122,
+      "virtualTimeUtc": "2026-07-23T16:44:35.122Z",
+      "eventIndex": 2820,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784825075122,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 121,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784825127002,
+      "virtualTimeUtc": "2026-07-23T16:45:27.002Z",
+      "eventIndex": 2837,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784825127002,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 122,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784825138153,
+      "virtualTimeUtc": "2026-07-23T16:45:38.153Z",
+      "eventIndex": 2840,
+      "wallLatencyMs": 19554,
+      "insightVirtualTimeMs": 1784825607837,
+      "stalenessVirtualMs": 469684,
+      "eventsBehind": 31,
+      "phase": "implementation",
+      "risks": [
+        "70 failed tool calls detected",
+        "Heavy shell/tool churn suggests validation or recovery thrash"
+      ],
+      "insightSummaries": [
+        "phase: Phase: implementation",
+        "risk: Risk level: medium",
+        "objective: Server dry-run admission failures force namespace-rewrite workaround while three sub-agents converge on the finish line.",
+        "next_move: Pass server dry-run with namespace-rewrite workaround"
+      ],
+      "galleryOps": {
+        "create": 0,
+        "refresh": 4,
+        "retire": 1,
+        "ids": [
+          "on-the-clock-gauge",
+          "pg18-rebrand-decision",
+          "recovery-tooling-push",
+          "falkordb-manifest-probe",
+          "recovery-tooling-push"
+        ]
+      }
+    },
+    {
+      "seq": 123,
+      "reason": "normal",
+      "virtualTimeMs": 1784825262007,
+      "virtualTimeUtc": "2026-07-23T16:47:42.007Z",
+      "eventIndex": 2867,
+      "wallLatencyMs": 0,
+      "insightVirtualTimeMs": 1784825262007,
+      "stalenessVirtualMs": 0,
+      "eventsBehind": 0,
+      "phase": "",
+      "risks": [],
+      "insightSummaries": [],
+      "coalesced": true
+    },
+    {
+      "seq": 124,
+      "reason": "immediate_kind",
+      "virtualTimeMs": 1784825321750,
+      "virtualTimeUtc": "2026-07-23T16:48:41.750Z",
+      "eventIndex": 2884,
+      "wallLatencyMs": 22290,
+      "insightVirtualTimeMs": 1784825607837,
+      "stalenessVirtualMs": 286087,
+      "eventsBehind": 0,
+      "phase": "implementation",
+      "risks": [
+        "70 failed tool calls detected",
+        "Heavy shell/tool churn suggests validation or recovery thrash"
+      ],
+      "insightSummaries": [
+        "phase: Phase: implementation",
+        "risk: Risk level: medium",
+        "objective: All three sub-agents report complete, but server-side dry-run fails on a namespace-removal workaround — validation tooling is the new bottleneck.",
+        "next_move: Workaround the dry-run namespace filter to get server-side validation green",
+        "summary: The dry-run validation wall — Three successive server-side dry-run attempts failed despite structurally valid kustomize output (44 documents, starts with apiVersion). The failure is not a manifest err…"
+      ],
+      "galleryOps": {
+        "create": 1,
+        "refresh": 2,
+        "retire": 1,
+        "ids": [
+          "dry-run-validation-wall",
+          "on-the-clock-gauge",
+          "pg18-rebrand-decision",
+          "falkordb-manifest-probe"
+        ]
+      }
+    }
+  ],
+  "aggregates": {
+    "events": 2885,
+    "triggersFired": 125,
+    "inferCalls": 16,
+    "latencyMs": {
+      "p50": 19901,
+      "p95": 32909,
+      "max": 32909
+    },
+    "eventsBehind": {
+      "p50": 182,
+      "p95": 420,
+      "max": 420
+    },
+    "bufferDepthMax": 2885
+  },
+  "checkpoints": [
+    {
+      "id": "scope_drift_abort",
+      "label": "Scope-drift turn aborted (~12:54Z)",
+      "groundTruthUtc": "2026-07-23T12:54:24.326Z",
+      "groundTruthVirtualMs": 1784811264326,
+      "surfaced": true,
+      "firstInsightVirtualMs": 1784821127140,
+      "firstInsightUtc": "2026-07-23T15:38:47.140Z",
+      "leadMinutes": -164.38023333333334,
+      "matchedBy": "Branch saved seven commits — When the observed agent fetched the remote, it found the integration branch seven commits behind origin/main. Worse, the drift included overlapping files in docs/kubernetes/kubernetes.md and the shared platform kustomization. The agent did not forge ahead — it stashed the dead sub-agent's seven untracked manifest files, rebased the three reviewed integration commits on top of current main, and popped the stash. The operation was clean and preserved every artifact. The adjacent clarification — that this branch is the right home for images, manifests, and database docs, but not for consumer repos, MCP, or cleanup — closed the last scope ambiguity. This single turn captured the session's full arc: salvage, rebase, and scope definition packed into three minutes of shell commands."
+    },
+    {
+      "id": "plan_pivot",
+      "label": "Pivot to databases-only plan (13:39Z → 14:04Z)",
+      "groundTruthUtc": "2026-07-23T13:39:12.004Z",
+      "groundTruthVirtualMs": 1784813952004,
+      "surfaced": true,
+      "firstInsightVirtualMs": 1784814906449,
+      "firstInsightUtc": "2026-07-23T13:55:06.449Z",
+      "leadMinutes": -15.907416666666666,
+      "matchedBy": "Consolidate research into database-only execution plan"
+    },
+    {
+      "id": "ghcr_stall",
+      "label": "GHCR-403 repeated-search stall (16:12–16:26Z)",
+      "groundTruthUtc": "2026-07-23T16:12:10.188Z",
+      "groundTruthVirtualMs": 1784823130188,
+      "surfaced": true,
+      "firstInsightVirtualMs": 1784814906449,
+      "firstInsightUtc": "2026-07-23T13:55:06.449Z",
+      "leadMinutes": 137.06231666666667,
+      "matchedBy": "Parallel research wave — The observed agent has deployed three autonomous sub-agents, each with a read-only mandate and a distinct domain: database inventory and recovery (target 019f8ee9-f09b...), custom PostgreSQL 18 image requirements (target 019f8ee9-f141...), and Kubernetes/CNPG/FalkorDB dependency mapping (target 019f8ef6-5953...). Each was given a precise, question-driven brief with explicit exclusions. The observed agent did not wait — it concurrently audited existing branches, checked web research results (CNPG docs, FalkorDB releases, GHCR attestation patterns), and inspected archived dumps for extension declarations. This is a deliberate intelligence-gathering phase before committing to a plan that must be decision-complete, database-only, and aware of all phase gates."
+    },
+    {
+      "id": "final_not_done",
+      "label": "Final task_complete but work NOT done (16:48Z)",
+      "groundTruthUtc": "2026-07-23T16:48:41.750Z",
+      "groundTruthVirtualMs": 1784825321750,
+      "surfaced": false,
+      "firstInsightVirtualMs": null,
+      "firstInsightUtc": null,
+      "leadMinutes": null,
+      "matchedBy": null
+    }
+  ],
+  "gallery": [
+    {
+      "id": "on-the-clock-gauge",
+      "exhibitType": "momentum",
+      "title": "Two blockers, three hopes",
+      "narrative": "The gauge holds at 62 because both PR lanes remain unmerged, but the past few minutes reveal a new friction: server-side dry-run keeps failing on a namespace-scoping quirk that requires an in-memory rewrite to bypass. This is not a manifest error — it is a validation tooling gap — but it costs time. Meanwhile, all three sub-agents reported back cleanly: the PG19 schema is pinned with digest proof, the recovery tooling passed independent review, and the platform commit is clean. The bottleneck has shifted from authoring to validation and merge logistics.",
+      "relevance": 0.9,
+      "decayClass": "fast",
+      "status": "active",
+      "createdAtEvent": 1065,
+      "payload": {
+        "value": 48,
+        "label": "Gauge dropped because dry-run repeatedly fails, not because any sub-agent work is incomplete — the deployment pipeline's validation layer is now the weakest link. Both merges are blocked behind this.",
+        "stats": [
+          {
+            "label": "Sub-agents complete",
+            "value": "3/3",
+            "tone": "good"
+          },
+          {
+            "label": "Dry-run attempts failed",
+            "value": "3",
+            "tone": "bad"
+          },
+          {
+            "label": "PRs merged",
+            "value": "0",
+            "tone": "warn"
+          },
+          {
+            "label": "Worktrees dirty",
+            "value": "1 of 3",
+            "tone": "neutral"
+          }
+        ],
+        "next": [
+          {
+            "title": "Workaround the dry-run namespace filter to get server-side validation green",
+            "evidence": "The agent tried stripping Namespace documents and replacing `namespace: data-platform` with `namespace: default` in memory, then writing to a temp file, then piping directly — none passed. The kustomize output itself is structurally valid (Documents=44, starts with apiVersion). The failure is in how kubectl receives it.",
+            "confidence": 0.85
+          },
+          {
+            "title": "Merge the recovery-tooling PR #115 via web merge if CI is green",
+            "evidence": "Commit f7e865b is pushed on agent/postgresql-recovery-tooling; PR #115 was created. The sub-agent reported 'implemented and committed'. No review blocks were noted.",
+            "confidence": 0.7
+          },
+          {
+            "title": "Apply and merge the platform bootstrap fix (reader role, default privileges, manifest kustomize)",
+            "evidence": "The agent is actively iterating on the dry-run of infra/k8s/platform/data-platform. Once validated, that commit plus the PG18 image can be combined into a PR.",
+            "confidence": 0.5
+          }
+        ],
+        "curation": [
+          {
+            "artifactId": "falkordb-manifest-probe",
+            "action": "retire",
+            "reason": "The FalkorDB image preflight concluded last cycle with all three checks green; no further activity references it and the session's center of gravity is now merge mechanics and dry-run validation."
+          },
+          {
+            "artifactId": "pg18-rebrand-decision",
+            "action": "retire",
+            "reason": "The rebrand decision resolved the token permission cascade and is now fully committed; the active validation bottleneck is unrelated to image publishing."
+          }
+        ]
+      },
+      "refreshedAtEvent": 2885
+    },
+    {
+      "id": "dry-run-validation-wall",
+      "exhibitType": "concern_snapshot",
+      "title": "The dry-run validation wall",
+      "narrative": "Three successive server-side dry-run attempts failed despite structurally valid kustomize output (44 documents, starts with apiVersion). The failure is not a manifest error but a validation-tooling gap: the agent's in-memory namespace rewrite and temp-file workaround both failed, meaning the delivery mechanism itself is rejecting the payload. This is the session's active bottleneck — no platform bootstrap can land until kubectl server-side apply accepts the rendered manifests. Meanwhile, three sub-agents are complete and waiting.",
+      "relevance": 0.85,
+      "decayClass": "medium",
+      "status": "fresh",
+      "createdAtEvent": 2885,
+      "payload": {
+        "concerns": [
+          {
+            "id": "dry-run-failure",
+            "title": "Server-side dry-run rejected 3/3 attempts",
+            "role": "kubectl server-side apply rejects structurally valid kustomize output — likely a namespace scoping quirk in the in-memory rewrite",
+            "x": 5,
+            "y": 5,
+            "w": 35,
+            "h": 25,
+            "heat": "very-high"
+          },
+          {
+            "id": "platform-bootstrap-commit",
+            "title": "Platform bootstrap fix ready but blocked",
+            "role": "The reader-role/default-privileges commit exists locally on the manifests worktree, uncommitted until dry-run passes",
+            "x": 45,
+            "y": 5,
+            "w": 25,
+            "h": 25,
+            "heat": "high"
+          },
+          {
+            "id": "pg18-image-published",
+            "title": "PG18 image published at ghcr.io/coldaine/pg18-data-platform:18.4@sha256:2f95380f6754",
+            "role": "Complete — image exists, pinned, published via PR #116. No further action needed.",
+            "x": 75,
+            "y": 5,
+            "w": 20,
+            "h": 25,
+            "heat": "low"
+          },
+          {
+            "id": "pr-115-recovery-tooling",
+            "title": "PR #115 recovery tooling (commit f7e865b)",
+            "role": "Sub-agent returned 'implemented and committed'. PR exists, not yet reviewed or merged.",
+            "x": 5,
+            "y": 40,
+            "w": 30,
+            "h": 25,
+            "heat": "medium"
+          },
+          {
+            "id": "pr-113-database-bootstrap",
+            "title": "PR #113 database bootstrap (Draft + stale)",
+            "role": "Open, Draft, needs base update from main, no reviews. Agent noted it should be revisited after the platform fix merges.",
+            "x": 40,
+            "y": 40,
+            "w": 25,
+            "h": 25,
+            "heat": "low"
+          },
+          {
+            "id": "pg19-schema-pinned",
+            "title": "PG19 schema pinned with cryptographic proof",
+            "role": "Complete — blob 2ea59fa, SHA-256 36DFDDA6, all three tables confirmed in schema.sql",
+            "x": 70,
+            "y": 40,
+            "w": 25,
+            "h": 25,
+            "heat": "low"
+          },
+          {
+            "id": "recovery-tooling-worktree",
+            "title": "Recovery tooling worktree state",
+            "role": "Dirty with local changes (Convert-PgDump.ps1, Get-RecoveryArchiveInventory.ps1). Head is on agent/recovery-tooling branch. Uncommitted diff exists.",
+            "x": 5,
+            "y": 75,
+            "w": 30,
+            "h": 20,
+            "heat": "medium"
+          },
+          {
+            "id": "data-platform-databases-sdd",
+            "title": "SDD execution report updated",
+            "role": "The pg19-falkor-restore-execution-report.md was updated with the pinned schema authority and live verification gate.",
+            "x": 40,
+            "y": 75,
+            "w": 30,
+            "h": 20,
+            "heat": "low"
+          }
+        ],
+        "flows": [
+          [
+            "dry-run-failure",
+            "platform-bootstrap-commit"
+          ],
+          [
+            "platform-bootstrap-commit",
+            "pr-113-database-bootstrap"
+          ],
+          [
+            "pg18-image-published",
+            "dry-run-failure"
+          ],
+          [
+            "pg19-schema-pinned",
+            "data-platform-databases-sdd"
+          ],
+          [
+            "pr-115-recovery-tooling",
+            "recovery-tooling-worktree"
+          ]
+        ]
+      },
+      "refreshedAtEvent": 2885
+    },
+    {
+      "id": "pg18-rebrand-decision",
+      "exhibitType": "walkthrough",
+      "title": "Package rebrand breaks stalemate",
+      "narrative": "After definitively proving the workflow token has Packages:write, the agent found the old pg18-allext package treats the fresh Actions token as an unprivileged caller despite correct linkage and inherited access. Rather than add a long-lived PAT, the agent chose a new purpose-scoped name — pg18-data-platform — that lets GitHub Actions create and own the package from first publish. The YAML patch was small (one env var, one doc reference), validated with just validate, and committed as PR #116. This is a surgical escape from a permissions maze that had consumed multiple UI inspection turns. That rebrand remains the most consequential decision of the session — it cleared the last standing blocker on the CI image pipeline.",
+      "relevance": 0.65,
+      "decayClass": "fast",
+      "status": "active",
+      "createdAtEvent": 2854,
+      "payload": {
+        "headline": "Rebrand escapes the legacy package trap",
+        "body": "Three successive GHCR token inspections confirmed the Actions token does not own ghcr.io/coldaine/pg18-allext. Rather than escalate to a PAT or admin override, the agent introduced pg18-data-platform — a new package the pipeline can create and own from the start. This is a canonical example of solving a permissions problem by changing the scope boundary instead of escalating privilege. The change was validated with just validate on PR #116 and published successfully.",
+        "tags": [
+          {
+            "label": "Rebrand unlocks CI image pipeline",
+            "kind": "match"
+          },
+          {
+            "label": "No long-lived PAT introduced",
+            "kind": "addition"
+          },
+          {
+            "label": "Related packages (pg18-allext) still orphaned — cleanup is deferred",
+            "kind": "risk"
+          }
+        ],
+        "satellites": [
+          {
+            "id": "ghcr-package-ownership",
+            "label": "Legacy package ownership",
+            "note": "pg18-allext is owned by a now-stale token; the new package route avoids that deadlock entirely.",
+            "x": 20,
+            "y": 50
+          },
+          {
+            "id": "workflow-token-scope",
+            "label": "Workflow token Packages:write",
+            "note": "Confirmed present but bound only to new packages it creates itself.",
+            "x": 70,
+            "y": 70
+          }
+        ],
+        "files": [
+          {
+            "label": ".github/workflows/pg18-image.yml",
+            "x": 50,
+            "y": 90
+          }
+        ]
+      },
+      "refreshedAtEvent": 2885
+    },
+    {
+      "id": "subagent-fatality",
+      "exhibitType": "concern_snapshot",
+      "title": "Sub-agent cascade fracturing",
+      "narrative": "The third research sub-agent (target 019f8ef6-5953…) was told to stop, then killed when it didn't. Its mandate — Kubernetes/CNPG/FalkorDB dependency mapping — is now being executed ad-hoc by the observed agent with shell commands. What was a clean three-front intelligence strategy is now two live threads and one manual rescue. The pattern matters: a sub-agent sent to explore live cluster state became a black hole that the observed agent had to grenade. The live preflight it did manage shows the cluster is healthy, but the R2 backup CR query it attempted was syntactically invalid — the agent is distrusting 'no backups' as a false negative. A stalled sub-agent and a busted query are a dangerous combination when the plan depends on backup recoverability truth.",
+      "relevance": 0.92,
+      "decayClass": "fast",
+      "status": "retired",
+      "createdAtEvent": 1413,
+      "payload": {
+        "concerns": [
+          {
+            "id": "subagent-blackhole",
+            "title": "Killed sub-agent — cluster mapping gap",
+            "role": "One of three research fronts had to be terminated mid-flight; its work is now being done manually",
+            "x": 10,
+            "y": 10,
+            "w": 30,
+            "h": 25,
+            "heat": "very-high"
+          },
+          {
+            "id": "backup-truth",
+            "title": "Backup query was invalid — uncertainty on recovery assets",
+            "role": "The combined R2 backup CR query failed syntactically; agent is distrusting the empty result",
+            "x": 45,
+            "y": 10,
+            "w": 30,
+            "h": 25,
+            "heat": "high"
+          },
+          {
+            "id": "live-preflight",
+            "title": "Cluster preflight looked healthy",
+            "role": "Three Talos nodes Ready, pg-apps and soil-db healthy, ESO synced, Garage bootstrapped",
+            "x": 10,
+            "y": 40,
+            "w": 30,
+            "h": 20,
+            "heat": "low"
+          },
+          {
+            "id": "data-platform-missing",
+            "title": "data-platform namespace does not exist yet",
+            "role": "The platform the plan intends to stand up has no presence in the cluster",
+            "x": 45,
+            "y": 40,
+            "w": 25,
+            "h": 20,
+            "heat": "low"
+          },
+          {
+            "id": "extension-uncertainty",
+            "title": "Extension requirements still ambiguous",
+            "role": "vchord, vchord_bm25, pg_tokenizer may be needed; TimescaleDB and pgvector confirmed in logical dumps",
+            "x": 75,
+            "y": 10,
+            "w": 20,
+            "h": 25,
+            "heat": "medium"
+          },
+          {
+            "id": "plan-scope",
+            "title": "Database-only mandate is holding",
+            "role": "The observed agent is enforcing a strict database-only boundary, not yet tested against reality",
+            "x": 75,
+            "y": 40,
+            "w": 20,
+            "h": 20,
+            "heat": "medium"
+          }
+        ],
+        "flows": [
+          [
+            "subagent-blackhole",
+            "backup-truth"
+          ],
+          [
+            "subagent-blackhole",
+            "live-preflight"
+          ],
+          [
+            "backup-truth",
+            "extension-uncertainty"
+          ],
+          [
+            "live-preflight",
+            "plan-scope"
+          ]
+        ]
+      },
+      "refreshedAtEvent": 1413,
+      "retirementReason": "Sub-agent killed earlier has been eclipsed by a second dead sub-agent — this concern has grown and now deserves a broader artifact."
+    },
+    {
+      "id": "falkordb-server-recovery",
+      "exhibitType": "walkthrough",
+      "title": "FalkorDB restore proves artifact",
+      "narrative": "While CI ran the tokenizer fix, the agent didn't wait — it built a throwaway Kubernetes pod, copied a 7-month-old RDB backup into it under UID 999, started a FalkorDB 4.20.1 server in read-only mode, and issued seven redis-cli queries. The result: model_information_graph had 55 nodes and 43 edges, smoke returned 2 nodes and 1 edge, and no Browser process was involved. Then it deleted the scratch namespace. This is a live validation of the exact server-only artifact the manifest now pins — not a dry-run, not a simulation. A single, clean, disposable proof that the backup is loadable and the graph is intact.",
+      "relevance": 0.92,
+      "decayClass": "medium",
+      "status": "retired",
+      "createdAtEvent": 2565,
+      "payload": {
+        "headline": "RDB 7.4.2 loaded from July backup into ephemeral pod — 55/43 graph returned, zero Browser involvement",
+        "body": "The agent deployed a fresh FalkorDB 4.20.1 pod into a temporary namespace, copied the 2026-07-11 dump.rdb (7.4.2 format) from coldaine-rebuild backup, and waited for the server to load it. Query results: model_information_graph had 55 nodes and 43 edges, smoke returned 2/1. DBSIZE confirmed 58 keys. The pod ran with securityContext: runAsUser 999, fsGroup 999, no privilege escalation. The entire lifecycle — apply, wait, cp, exec queries, delete namespace — took under 3 minutes. This proves the pinned server-only image loads the retained RDB correctly without any Browser process sidecar.",
+        "tags": [
+          {
+            "label": "match",
+            "kind": "match"
+          },
+          {
+            "label": "live-probe",
+            "kind": "match"
+          },
+          {
+            "label": "disposable-infra",
+            "kind": "addition"
+          }
+        ],
+        "satellites": [
+          {
+            "id": "rdb-file",
+            "label": "dump.rdb 7.4.2",
+            "note": "Backup from 2026-07-11 pre-teardown; 4.8 MB, MD5 verified on copy",
+            "x": 20,
+            "y": 30
+          },
+          {
+            "id": "scratch-pod",
+            "label": "falkordb-server-smoke",
+            "note": "Ephemeral pod, Never restartPolicy, 1Gi memory limit, emptyDir volume",
+            "x": 50,
+            "y": 20
+          },
+          {
+            "id": "queries-issued",
+            "label": "7 redis-cli commands",
+            "note": "PING, GRAPH.LIST, two MATCH counts each on two graphs, DBSIZE — all succeeded",
+            "x": 50,
+            "y": 60
+          },
+          {
+            "id": "namespace-teardown",
+            "label": "falkordb-recovery-scratch deleted",
+            "note": "kubectl delete namespace with --wait, confirmed gone; zero residual resources",
+            "x": 80,
+            "y": 40
+          }
+        ],
+        "files": [
+          {
+            "label": "falkordb-server-smoke.yaml",
+            "x": 30,
+            "y": 70
+          },
+          {
+            "label": "falkordb-dump.rdb (source)",
+            "x": 70,
+            "y": 70
+          }
+        ]
+      },
+      "refreshedAtEvent": 2565,
+      "retirementReason": "The live restore proof was a stunning but completed satellite; the session's center of gravity has moved to PR merge mechanics."
+    },
+    {
+      "id": "three-front-research",
+      "exhibitType": "walkthrough",
+      "title": "Parallel research wave",
+      "narrative": "The three-front strategy is now two-and-a-half: the cluster-mapping sub-agent was terminated after failing to respond to a stop signal. The observed agent executed the kill and absorbed that work into its own shell loops. Live preflight results are materially better than an earlier run — all three Talos nodes Ready, pg-apps and soil-db healthy — but the R2 backup CR query was syntactically invalid, and the agent explicitly flags 'no backups' as unreliable. The decision-complete plan is being drafted (summary: PostgreSQL 18 + PG19 experimental + FalkorDB + recovery + migration + wiring), but the foundation it rests on has cracks that only manual shell commands are patching.",
+      "relevance": 0.9,
+      "decayClass": "fast",
+      "status": "retired",
+      "createdAtEvent": 1231,
+      "payload": {
+        "headline": "Two live specialists, one killed mid-flight, one busted query — the intelligence phase is stuttering",
+        "body": "The observed agent deployed three read-only sub-agents: database inventory and recovery (still running), custom PG18 image requirements (still running), and Kubernetes/CNPG/FalkorDB dependency mapping (terminated after ignoring stop request). The kill was necessary — not letting a silent agent hold the plan hostage. But the consequence is that cluster state facts (Longhorn disk readiness, R2 backup object CRs, plugin statuses) are now being collected manually via chains of shell commands. The R2 backup query was syntactically invalid, producing no results the agent trusts. Live preflight confirms the cluster is alive and healthy — but backup recoverability, the central risk of the entire plan, is still unresolved. The proposed plan skeleton is present, but it remains a skeleton: no concrete PR branches, no manifest diffs, no timeline.",
+        "tags": [
+          {
+            "label": "sub-agent killed",
+            "kind": "risk"
+          },
+          {
+            "label": "live preflight healthy",
+            "kind": "match"
+          },
+          {
+            "label": "backup query invalid",
+            "kind": "addition"
+          },
+          {
+            "label": "plan skeleton deferred",
+            "kind": "risk"
+          }
+        ],
+        "satellites": [
+          {
+            "id": "sat-1",
+            "label": "DB inventory agent",
+            "note": "Still running — the only untouched source of truth left",
+            "x": 10,
+            "y": 10
+          },
+          {
+            "id": "sat-2",
+            "label": "PG image agent",
+            "note": "Still running — extension discovery deferred to it",
+            "x": 10,
+            "y": 80
+          },
+          {
+            "id": "sat-3",
+            "label": "K8s agent (killed)",
+            "note": "Terminated — work absorbed manually",
+            "x": 80,
+            "y": 10
+          },
+          {
+            "id": "sat-4",
+            "label": "Live preflight",
+            "note": "Healthy cluster, but backup CR query syntax error",
+            "x": 80,
+            "y": 80
+          },
+          {
+            "id": "sat-5",
+            "label": "Backup truth gap",
+            "note": "No trustworthy answer on whether R2 backups exist",
+            "x": 50,
+            "y": 50
+          }
+        ],
+        "files": [
+          {
+            "label": "coldaine-homelab",
+            "x": 30,
+            "y": 40
+          },
+          {
+            "label": "SKILL.md",
+            "x": 50,
+            "y": 30
+          },
+          {
+            "label": "CNPG plugin status query",
+            "x": 60,
+            "y": 65
+          }
+        ]
+      },
+      "refreshedAtEvent": 1413,
+      "retirementReason": "The research wave is over — two of three lanes completed, one died. The intelligence phase has resolved into implementation artifacts and a new risk pattern."
+    },
+    {
+      "id": "two-subagents-lost",
+      "exhibitType": "concern_snapshot",
+      "title": "Parallel strategy fraying",
+      "narrative": "Three read-only sub-agents were dispatched at 15:32. One returned with a completed review — bac1ba7b, 11/11 targeted tests, 6/6 recovery templates — but with concerns: the PG18 all-zero digest remains a manifest blocker and a null $HOME tripped 'just setup'. The other two are unconfirmed. Meanwhile, the main agent is executing again: it validated a live FalkorDB restore from a 7-month-old RDB dump in a scratch pod, then deleted the ephemeral namespace cleanly. The parallel strategy is still fraying at the edges, but one lane delivered real intelligence.",
+      "relevance": 0.9,
+      "decayClass": "fast",
+      "status": "retired",
+      "createdAtEvent": 1425,
+      "payload": {
+        "concerns": [
+          {
+            "id": "sub-agent-returned",
+            "title": "review-agent-done",
+            "role": "One of three research agents returned with a full branch review; 11/11 tests pass but PG18 digest and null HOME are open items",
+            "x": 10,
+            "y": 20,
+            "w": 30,
+            "h": 25,
+            "heat": "medium"
+          },
+          {
+            "id": "sub-agent-silent",
+            "title": "two-unconfirmed",
+            "role": "Two read-only agents (PG19 digest, consumer wiring) dispatched at 15:32 are still unacknowledged",
+            "x": 50,
+            "y": 20,
+            "w": 30,
+            "h": 25,
+            "heat": "high"
+          },
+          {
+            "id": "pg18-blocker",
+            "title": "all-zero-digest",
+            "role": "PG18's manifest digest is all-zeros; sub-agent flagged it as the sole remaining blocker before merge",
+            "x": 10,
+            "y": 55,
+            "w": 30,
+            "h": 20,
+            "heat": "high"
+          },
+          {
+            "id": "falkordb-restore",
+            "title": "falkordb-rdb-validated",
+            "role": "Live RDB restore from 2026-07-11 backup succeeded in scratch pod — 55 nodes / 43 edges in model_information_graph, zero Browser involvement",
+            "x": 50,
+            "y": 55,
+            "w": 30,
+            "h": 20,
+            "heat": "medium"
+          },
+          {
+            "id": "pg-tokenizer-preload",
+            "title": "tokenizer-mandatory-preload",
+            "role": "pg_tokenizer 0.1.1 refuses CREATE EXTENSION unless preloaded; fix applied across smoke lanes and manifest branches",
+            "x": 85,
+            "y": 10,
+            "w": 15,
+            "h": 20,
+            "heat": "very-high"
+          },
+          {
+            "id": "loader-blocker",
+            "title": "pvc-permissions",
+            "role": "Scratch loader pod dead from EACCES on mkdir; non-root CNPG uid 26 cannot write to root:root PVC",
+            "x": 85,
+            "y": 40,
+            "w": 15,
+            "h": 20,
+            "heat": "medium"
+          },
+          {
+            "id": "pr-114-status",
+            "title": "pr-114-not-found",
+            "role": "gh pr view 114 failed twice — PR 114 may not exist or authentication/network issue on that worktree",
+            "x": 85,
+            "y": 70,
+            "w": 15,
+            "h": 15,
+            "heat": "low"
+          }
+        ],
+        "flows": [
+          [
+            "sub-agent-returned",
+            "pg18-blocker"
+          ],
+          [
+            "pg-tokenizer-preload",
+            "falkordb-restore"
+          ],
+          [
+            "sub-agent-silent",
+            "pr-114-status"
+          ],
+          [
+            "sub-agent-returned",
+            "pg-tokenizer-preload"
+          ]
+        ]
+      },
+      "refreshedAtEvent": 2565,
+      "retirementReason": "Only one sub-agent remains active — the parallel strategy has collapsed into a single independent review lane; merged into the gauge and the recovery-tooling narrative."
+    },
+    {
+      "id": "loader-failure-autopsy",
+      "exhibitType": "walkthrough",
+      "title": "Loader failure: six mkdirs",
+      "narrative": "The scratch loader pod ran the non-root CNPG image (uid 26) against a newly provisioned PVC whose root directory belonged to root:root with 755 permissions. Every `/scratch/*` mkdir failed with EACCES — but the error was hidden behind a silent exit code 1 and an opaque `wait` cell. The agent finally diagnosed the root cause after inspecting the pod's security context and PVC YAML side by side. This is not a code bug — it is an infrastructure precondition gap: the PVC needs an initContainer or fsGroup fix before the loader can touch disk.",
+      "relevance": 0.9,
+      "decayClass": "medium",
+      "status": "retired",
+      "createdAtEvent": 2167,
+      "payload": {
+        "headline": "Permission denied on every mkdir in /scratch",
+        "body": "The loader Pod spec set runAsUser:26, runAsGroup:26, and fsGroup:26 with fsGroupChangePolicy:OnRootMismatch. But the newly bound PVC's root directory was owned by root:root mode 755 when first mounted. Since the fsGroup change policy only corrects ownership when files are created by the group — and the root directory was already present from the volume provisioner — the container's mkdir commands at /scratch/{staging,archive,pgdata} all failed silently. The wait loop could never exit because no path existed to write to. The observed agent confirmed the exact failure by reading pod logs (the container terminated with error 1, no stdout), checking the PVC's root mount ownership via kubectl describe, and cross-referencing the repository's existing volume permission patterns.",
+        "tags": [
+          {
+            "label": "root-cause: PVC root directory was not group-writable",
+            "kind": "match"
+          },
+          {
+            "label": "reproduction: non-root container + fresh PVC",
+            "kind": "match"
+          },
+          {
+            "label": "fix path: initContainer chown or pre-provisioned PVC",
+            "kind": "addition"
+          }
+        ],
+        "satellites": [
+          {
+            "id": "pod-spec",
+            "label": "Pod spec",
+            "note": "uid 26, gid 26, fsGroup 26, OnRootMismatch",
+            "x": 15,
+            "y": 30
+          },
+          {
+            "id": "pvc-root",
+            "label": "PVC root drwxr-xr-x root:root",
+            "note": "K8s default provisioner leaves root-owned directory",
+            "x": 25,
+            "y": 70
+          },
+          {
+            "id": "mkdir-fail",
+            "label": "mkdir: permission denied ×6",
+            "note": "staging, archive, pgdata — each failed",
+            "x": 60,
+            "y": 50
+          },
+          {
+            "id": "silent-exit",
+            "label": "Exit code 1, no stdout",
+            "note": "Container terminated before the wait loop could report",
+            "x": 80,
+            "y": 30
+          },
+          {
+            "id": "fsGroup-myth",
+            "label": "fsGroup:OnRootMismatch misapplied",
+            "note": "Only fixes ownership of new files, not existing root directory",
+            "x": 40,
+            "y": 10
+          }
+        ],
+        "files": [
+          {
+            "label": "pg18-loader.yaml",
+            "x": 50,
+            "y": 80
+          }
+        ]
+      },
+      "refreshedAtEvent": 2167,
+      "retirementReason": "The root cause (PVC permissions, EACCES on mkdir) was diagnosed and the agent moved on to other work — the autopsy is complete and now lives as a cool concern in the snapshot."
+    },
+    {
+      "id": "parallel-plan-inherited",
+      "exhibitType": "activity_narrative",
+      "title": "PR surgery and recovery",
+      "narrative": "The git scare is fully resolved and has become a lesson in worktree discipline. The observed agent is now orchestrating a three-front research campaign — database inventory, custom PostgreSQL image requirements, and Kubernetes/CNPG dependency mapping — via parallel sub-agents. This is a deliberate phase transition from cleanup to planning, and the scope boundary is hardening: everything must be database-only. The old branch scaffold has been reviewed and judged incomplete, not salvageable as a baseline.",
+      "relevance": 0.88,
+      "decayClass": "medium",
+      "status": "retired",
+      "createdAtEvent": 249,
+      "payload": {
+        "beats": [
+          {
+            "at": "~13:35",
+            "title": "PR #111 confirmed clean",
+            "body": "Moltis evaluation is isolated in a non-draft PR with seven-file allowlist, digest-pinned image, and passing checks. Duplicate files removed from original branch.",
+            "side": "top",
+            "thread": "moltis-cleanup"
+          },
+          {
+            "at": "~13:38",
+            "title": "User asks for database-only plan",
+            "body": "Directs the agent to write a new plan focused exclusively on standing up all databases, incorporating lessons learned.",
+            "side": "bottom",
+            "thread": "scope-pivot"
+          },
+          {
+            "at": "~13:40",
+            "title": "Three parallel research agents launched",
+            "body": "Sub-agents dispatched: database inventory/recovery, PG18 image requirements, and Kubernetes/CNPG dependency graph. Observed agent cross-references docs and branches concurrently.",
+            "side": "top",
+            "thread": "parallel-research"
+          },
+          {
+            "at": "~13:41",
+            "title": "Old scaffold judged incomplete",
+            "body": "First integration pass determines existing data-platform-execution branch creates wrong databases, omits LAN IP, references Shipwright, and lacks full role/database catalogue. Salvage material, not baseline.",
+            "side": "bottom",
+            "thread": "parallel-research"
+          }
+        ],
+        "threads": [
+          {
+            "id": "moltis-cleanup",
+            "label": "Moltis PR isolation"
+          },
+          {
+            "id": "scope-pivot",
+            "label": "Database-only planning mandate"
+          },
+          {
+            "id": "parallel-research",
+            "label": "Three-front database research"
+          }
+        ]
+      },
+      "refreshedAtEvent": 1231,
+      "retirementReason": "Superseded by the rebase-rescue walkthrough and the refined concern_snapshot — the three-front research narrative is fully stale; the story now lives in the rebase, scope clarification, and solo serial execution turn."
+    },
+    {
+      "id": "manifested-scope-four",
+      "exhibitType": "activity_narrative",
+      "title": "The fourth front: manifests",
+      "narrative": "While the loader failure was fresh, three independent sub-agents were dispatched — one to review the 45-resource platform manifest commit, one to find the immutable PG19 digest, and one to inventory every database consumer's current wiring. These are read-only research tasks, each with a report file and no cluster write access. The parallel strategy is being tested again: three agents, three disjoint scopes, zero write permissions. If these survive without killing each other's worktrees, the agent may have found a viable multi-agent pattern.",
+      "relevance": 0.88,
+      "decayClass": "medium",
+      "status": "retired",
+      "createdAtEvent": 2167,
+      "payload": {
+        "beats": [
+          {
+            "at": "15:32",
+            "title": "Closed three dead agents, opened three live ones",
+            "body": "The three previous sub-agents (fix commits) were finished and reviewed. The agent closed their slots and immediately dispatched three new read-only research agents with disjoint worktrees: platform-manifest review, PG19 digest investigation, consumer inventory. No cluster writes, no shared files.",
+            "side": "top",
+            "thread": "multi-agent-research"
+          },
+          {
+            "at": "15:33",
+            "title": "Loader failure diagnosed as PVC permissions",
+            "body": "Six mkdir failures under /scratch, each EACCES. The container exited with code 1 before the wait loop could surface the error. The agent identified the root cause: PVC root directory was owned by root:root when mounted, and fsGroup policy does not backfill existing directories.",
+            "side": "bottom",
+            "thread": "loader-debug"
+          },
+          {
+            "at": "15:34",
+            "title": "Review package script generated",
+            "body": "The agent wrote a PowerShell script (New-ReviewPackage.ps1) to produce a structured diff package for the manifest review agent, then invoked it against the platform-manifests repository. The review agent now has a clean diff to evaluate.",
+            "side": "top",
+            "thread": "multi-agent-research"
+          },
+          {
+            "at": "15:37",
+            "title": "New review package + progress ledger updated",
+            "body": "The agent wrote the platform-review-brief.md, implementer report, PG19 image brief, and consumer inventory brief into .superpowers/sdd/, then ran a wait cell that failed — but the payload tool succeeded. The progress ledger now shows the manifest review as 'task review pending'.",
+            "side": "top",
+            "thread": "multi-agent-research"
+          },
+          {
+            "at": "15:38",
+            "title": "Loader still waiting, agent checks scheduling",
+            "body": "After the wait cell error, the agent ran a kubectl describe on the loader pod and PVC, confirming the container had already exited with termination code 1. The root cause was the permission error. The agent now has the full picture.",
+            "side": "bottom",
+            "thread": "loader-debug"
+          }
+        ],
+        "threads": [
+          {
+            "id": "multi-agent-research",
+            "label": "Read-only research agents"
+          },
+          {
+            "id": "loader-debug",
+            "label": "Loader failure diagnosis"
+          }
+        ]
+      },
+      "refreshedAtEvent": 2167,
+      "retirementReason": "The fourth front is no longer nascent — one of three sub-agents returned with results, the FalkorDB restore validated the manifest artifact live, and the parallel strategy narrative is now part of the refreshed concern_snapshot."
+    },
+    {
+      "id": "rebase-rescue",
+      "exhibitType": "walkthrough",
+      "title": "Branch saved seven commits",
+      "narrative": "When the observed agent fetched the remote, it found the integration branch seven commits behind origin/main. Worse, the drift included overlapping files in docs/kubernetes/kubernetes.md and the shared platform kustomization. The agent did not forge ahead — it stashed the dead sub-agent's seven untracked manifest files, rebased the three reviewed integration commits on top of current main, and popped the stash. The operation was clean and preserved every artifact. The adjacent clarification — that this branch is the right home for images, manifests, and database docs, but not for consumer repos, MCP, or cleanup — closed the last scope ambiguity. This single turn captured the session's full arc: salvage, rebase, and scope definition packed into three minutes of shell commands.",
+      "relevance": 0.85,
+      "decayClass": "medium",
+      "status": "retired",
+      "createdAtEvent": 1747,
+      "payload": {
+        "headline": "Stashed, rebased, popped — the integration branch is current and scoped",
+        "body": "At 14:57, the agent fetched all remotes and found origin/main had advanced by seven commits. The overlap included docs/kubernetes/kubernetes.md and shared platform kustomization files — precisely the same paths that the failed sub-agent had been editing. Rather than rebase with uncommitted work, the agent stashed seven untracked manifest files from infra/k8s/platform/data-platform, rebased the three reviewed integration commits, then popped the stash. The operation produced no conflicts. Immediately afterward, the agent stated the scope boundary explicitly: this branch is for images, manifests, and authoritative database docs. Consumer changes, Moltis, MCP, telemetry, and cleanup do not belong here. The branch is now current and its boundaries are signed off.",
+        "tags": [
+          {
+            "label": "7-commit drift recovered",
+            "kind": "match"
+          },
+          {
+            "label": "Untracked manifests preserved in stash",
+            "kind": "addition"
+          },
+          {
+            "label": "Scope boundary clarified",
+            "kind": "addition"
+          },
+          {
+            "label": "No file-level locking between agents",
+            "kind": "risk"
+          }
+        ],
+        "satellites": [
+          {
+            "id": "branch-before",
+            "label": "feat/data-platform-databases",
+            "note": "7 commits behind origin/main at detection",
+            "x": 15,
+            "y": 80
+          },
+          {
+            "id": "overlap-detected",
+            "label": "kubernetes.md + kustomization",
+            "note": "Files overlapped with origin/main drift — would have caused conflict if rebased without stash",
+            "x": 30,
+            "y": 50
+          },
+          {
+            "id": "stash-named",
+            "label": "data-platform manifest salvage",
+            "note": "Named stash preserved 7 files from dead sub-agent",
+            "x": 50,
+            "y": 60
+          },
+          {
+            "id": "rebase-clean",
+            "label": "3 commits rebased on main",
+            "note": "No merge conflicts during rebase",
+            "x": 70,
+            "y": 40
+          },
+          {
+            "id": "scope-signed",
+            "label": "Boundaries confirmed",
+            "note": "Moltis, MCP, telemetry, cleanup excluded from this branch",
+            "x": 50,
+            "y": 15
+          }
+        ],
+        "files": [
+          {
+            "label": "docs/kubernetes/data-platform.md",
+            "x": 25,
+            "y": 75
+          },
+          {
+            "label": "infra/k8s/platform/data-platform/*",
+            "x": 75,
+            "y": 65
+          }
+        ]
+      },
+      "refreshedAtEvent": 1747,
+      "retirementReason": "That branch was rescued, corrected, and pushed — the salvage story is complete and the floor should focus on the two merge lanes now in flight."
+    },
+    {
+      "id": "extension-forensics-map",
+      "exhibitType": "thermal_map",
+      "title": "Git surgery heat",
+      "narrative": "Heat has shifted decisively from extension inventory to git state recovery and PR boundary enforcement. The 'original checkout state' cell went very-hot during the reflog scare, then cooled as the agent proved the data was never lost. The 'PR boundary' cell stays hot as the agent surgically removes the Moltis duplicates to keep the two PRs independent. The 'extension inventory' and 'Dockerfile version audit' cells from the fossil-finding phase have gone cold — the agent is no longer digging through backup archives.",
+      "relevance": 0.75,
+      "decayClass": "fast",
+      "status": "retired",
+      "createdAtEvent": 1065,
+      "payload": {
+        "cells": [
+          {
+            "path": "original checkout state",
+            "weight": 8,
+            "heat": 0.9,
+            "label": "Resolved — no data lost"
+          },
+          {
+            "path": "PR boundary enforcement",
+            "weight": 6,
+            "heat": 0.7,
+            "label": "Active — deleting duplicate stubs"
+          },
+          {
+            "path": "Moltis eval review",
+            "weight": 5,
+            "heat": 0.5,
+            "label": "Validated, push complete"
+          },
+          {
+            "path": "Database MCP recovery",
+            "weight": 4,
+            "heat": 0.3,
+            "label": "Safe in own PR"
+          },
+          {
+            "path": "extension inventory",
+            "weight": 3,
+            "heat": 0.1,
+            "label": "Cold — no longer active"
+          },
+          {
+            "path": "Dockerfile version audit",
+            "weight": 2,
+            "heat": 0.1,
+            "label": "Cold — no longer active"
+          }
+        ],
+        "hottest": {
+          "path": "original checkout state",
+          "why": "The reflog hunt to prove Database MCP wasn't deleted was the session's highest-stakes moment; it dominated the last few minutes of tool activity."
+        }
+      },
+      "refreshedAtEvent": 1129,
+      "retirementReason": "The forensic focus has ended — the observed agent is now directing three parallel research sub-agents for structured database planning, not digging through backup archives or git reflogs."
+    },
+    {
+      "id": "recovery-tooling-push",
+      "exhibitType": "activity_narrative",
+      "title": "Recovery tooling closing arc",
+      "narrative": "The recovery tooling sub-agent returned, fixed, tested, and pushed its commit independently. The main agent then confirmed 16/16 tests on both runtimes, pushed the corrected head to the PR branch, and immediately dispatched a final independent review with a strict read-only charter — no edits, no CI manipulation, no state changes. This beats a straight-merge path: the approval will be from a fresh context, not a stale one. The sub-agent has completed its lane; the main agent is now running live validation against the Kubernetes API while checking the remaining sub-agents' outputs.",
+      "relevance": 0.7,
+      "decayClass": "fast",
+      "status": "retired",
+      "createdAtEvent": 2854,
+      "payload": {
+        "beats": [
+          {
+            "at": "~16:30",
+            "title": "Sub-agent returns with fix",
+            "body": "Recovery tooling sub-agent completed its independent fix cycle and pushed the commit.",
+            "side": "top",
+            "thread": "recovery-tooling"
+          },
+          {
+            "at": "~16:33",
+            "title": "16/16 confirmed on both runtimes",
+            "body": "Main agent verified all tests pass on both target runtimes.",
+            "side": "top",
+            "thread": "recovery-tooling"
+          },
+          {
+            "at": "~16:38",
+            "title": "Independent review dispatched",
+            "body": "Fresh review with read-only charter sent — no edits, no CI manipulation, no state changes.",
+            "side": "top",
+            "thread": "recovery-tooling"
+          },
+          {
+            "at": "~16:45",
+            "title": "Live validation begins",
+            "body": "Agent shifts to server-side dry-run of the platform commit against live API, hitting namespace-scoping limitations that require a workaround.",
+            "side": "bottom",
+            "thread": "platform-merge"
+          }
+        ],
+        "threads": [
+          {
+            "id": "recovery-tooling",
+            "label": "Recovery tooling PR"
+          },
+          {
+            "id": "platform-merge",
+            "label": "Platform fix merge lane"
+          }
+        ]
+      },
+      "refreshedAtEvent": 2885,
+      "retirementReason": "The recovery tooling sub-agent returned and passed independent review; the active concern is now the platform fix dry-run and the two merge lanes — the push narrative is complete."
+    },
+    {
+      "id": "falkordb-manifest-probe",
+      "exhibitType": "walkthrough",
+      "title": "FalkorDB manifest proven",
+      "narrative": "The Docker Hub interrogation concluded: v4.20.1 uses linux/amd64 digest 9042fdc4, image config shows a non-root user (999:999), no Cmd, entrypoint is falkordb-server. The agent now knows exactly where dump.rdb lives relative to the container's filesystem — and that the image user is not root, a constraint that will matter when mapping the backup restore path. This probe was clean: three API calls (token, manifest list, config blob), no guessing, no wasted shell commands. The preflight is done. What remains is the actual recovery mount — attaching the RDB as a volume and starting the pod. This concern has cooled; the session's activity has moved to merge mechanics and dry-run validation.",
+      "relevance": 0.55,
+      "decayClass": "fast",
+      "status": "retired",
+      "createdAtEvent": 1425,
+      "payload": {
+        "headline": "Image config confirmed — FalkorDB v4.20.1 is ready for a volume-mount recovery",
+        "body": "Three Docker Hub API calls (token, manifest list, config blob) confirmed: linux/amd64 digest 9042fdc4, non-root user 999:999, entrypoint falkordb-server. The dump.rdb path relative to the container filesystem is now known. The image user's non-root constraint will matter for the actual recovery mount.",
+        "tags": [
+          {
+            "label": "Non-root constraint flagged",
+            "kind": "risk"
+          },
+          {
+            "label": "Image config confirmed",
+            "kind": "match"
+          },
+          {
+            "label": "No shell waste",
+            "kind": "match"
+          }
+        ],
+        "satellites": [
+          {
+            "id": "token-probe",
+            "label": "Docker Hub token",
+            "note": "Anonymous token obtained, no auth needed",
+            "x": 10,
+            "y": 20
+          },
+          {
+            "id": "manifest-fetch",
+            "label": "Manifest list for v4.20.1",
+            "note": "linux/amd64 digest 9042fdc4 confirmed",
+            "x": 50,
+            "y": 20
+          },
+          {
+            "id": "config-blob",
+            "label": "Image config",
+            "note": "Non-root user (999:999), entrypoint falkordb-server",
+            "x": 90,
+            "y": 20
+          },
+          {
+            "id": "dump-rdb-path",
+            "label": "dump.rdb location",
+            "note": "Now known relative to container filesystem",
+            "x": 50,
+            "y": 80
+          }
+        ],
+        "files": [
+          {
+            "label": "infra/k8s/platform/data-platform/falkordb.yaml",
+            "x": 50,
+            "y": 50
+          }
+        ]
+      },
+      "refreshedAtEvent": 2885,
+      "retirementReason": "The FalkorDB image preflight concluded last cycle with all three checks green; no further activity references it and the session's center of gravity has moved to merge mechanics and dry-run validation."
+    },
+    {
+      "id": "four-results-one-review",
+      "exhibitType": "walkthrough",
+      "title": "The PSA recovery arc",
+      "narrative": "The PSA incident from 12:36 to 12:49 was a clean, systematic recovery: the agent followed a single thread from failure through git archaeology to patch, PR, merge, Flux reconcile, and cleanup — all without cluster drift. The NotReady control-plane member was deliberately left alone. This arc is complete; it now sits as a completed satellite in the larger story of the PG18 image build.",
+      "relevance": 0.5,
+      "decayClass": "slow",
+      "status": "retired",
+      "createdAtEvent": 716,
+      "payload": {
+        "headline": "PSA wall breached, baseline restored",
+        "body": "Pod Security Admission rejected Shipwright's BuildRun at 12:36. The agent diagnosed the enforcement mismatch, traced git history to confirm baseline intent, patched the kustomization namespace overlay, opened and merged a PR, triggered Flux reconciliation, and cleared the dead BuildRun. The NotReady control-plane member was consciously excluded from scope.",
+        "tags": [
+          {
+            "label": "resolution",
+            "kind": "match"
+          },
+          {
+            "label": "PSA enforcement drift",
+            "kind": "addition"
+          },
+          {
+            "label": "NotReady member excluded",
+            "kind": "risk"
+          }
+        ],
+        "satellites": [
+          {
+            "id": "bp1",
+            "label": "BuildRun creation",
+            "note": "Initial trigger at 12:36",
+            "x": 20,
+            "y": 70
+          },
+          {
+            "id": "bp2",
+            "label": "Forensic git archaeology",
+            "note": "Traced cluster baseline to git origin",
+            "x": 40,
+            "y": 50
+          },
+          {
+            "id": "bp3",
+            "label": "Namespace kustomization patch",
+            "note": "Restored baseline annotations via patch + PR",
+            "x": 60,
+            "y": 40
+          },
+          {
+            "id": "bp4",
+            "label": "Merge + Flux reconcile",
+            "note": "PR merged, Flux applied without error",
+            "x": 80,
+            "y": 30
+          },
+          {
+            "id": "bp5",
+            "label": "Dead BuildRun cleared",
+            "note": "Stale BuildRun deleted; new one staged",
+            "x": 90,
+            "y": 60
+          }
+        ],
+        "files": []
+      },
+      "refreshedAtEvent": 1065,
+      "retirementReason": "The PSA recovery walkthrough has cooled from central narrative to completed satellite; the floor space is better used for the live extension archaeology story."
+    },
+    {
+      "id": "stumble-at-start",
+      "exhibitType": "seismograph",
+      "title": "Forensic tremor cluster",
+      "narrative": "The last 15 minutes show a dense cluster of low-to-medium churn (0.3-0.5) — not a failure cascade, but the rhythm of systematic evidence gathering: 20+ shell queries into backup dumps, package manifests, GitHub API, and cross-repo git histories. No spike above 0.3 since the PSA milestone at 12:48. This is the sound of an agent replacing assumptions with data.",
+      "relevance": 0.4,
+      "decayClass": "fast",
+      "status": "retired",
+      "createdAtEvent": 249,
+      "payload": {
+        "trace": [
+          {
+            "at": "2026-07-23T12:36:00Z",
+            "magnitude": 0.7,
+            "kind": "failure",
+            "label": "PSA blocks BuildRun"
+          },
+          {
+            "at": "2026-07-23T12:40:00Z",
+            "magnitude": 0.55,
+            "kind": "churn",
+            "label": "Git archaeology + patch"
+          },
+          {
+            "at": "2026-07-23T12:48:00Z",
+            "magnitude": 0.35,
+            "kind": "milestone",
+            "label": "Merge + Flux reconcile"
+          },
+          {
+            "at": "2026-07-23T12:49:00Z",
+            "magnitude": 0.2,
+            "kind": "quiet",
+            "label": "Dead BuildRun cleared"
+          },
+          {
+            "at": "2026-07-23T13:01:00Z",
+            "magnitude": 0.35,
+            "kind": "churn",
+            "label": "Forensic evidence gathering begins"
+          }
+        ],
+        "annotations": [
+          {
+            "at": "2026-07-23T13:02:00Z",
+            "text": "20+ shell queries into backup dumps, sibling repos, GitHub Actions API"
+          },
+          {
+            "at": "2026-07-23T13:03:00Z",
+            "text": "No further pipeline activity — waiting for evidence synthesis"
+          }
+        ],
+        "windowMinutes": 30
+      },
+      "refreshedAtEvent": 1065,
+      "retirementReason": "The forensic tremor cluster from the evidence-gathering phase has settled into one clean apply_patch — the seismic trace story is over."
+    },
+    {
+      "id": "tool-path-leak",
+      "exhibitType": "concern_snapshot",
+      "title": "Path templating risk",
+      "narrative": "The early '?' path leak was an isolated interpolation glitch in a Get-Content command. It did not recur across the 20 subsequent tool calls. The orchestrator completed a review cycle and dispatched two subagents without further templating errors. This concern is cooling — the failure was a single-event formatting issue, not a systemic leak.",
+      "relevance": 0.3,
+      "decayClass": "medium",
+      "status": "retired",
+      "createdAtEvent": 249,
+      "payload": {
+        "concerns": [
+          {
+            "id": "templating-leak",
+            "title": "Path interpolation gap",
+            "role": "syntactic fragility in tool dispatch",
+            "x": 10,
+            "y": 10,
+            "w": 30,
+            "h": 20,
+            "heat": "low"
+          },
+          {
+            "id": "review-settling",
+            "title": "Stale review decision",
+            "role": "PR 97 still marked CHANGES_REQUESTED despite thread resolution",
+            "x": 50,
+            "y": 10,
+            "w": 30,
+            "h": 20,
+            "heat": "medium"
+          },
+          {
+            "id": "subagent-sync",
+            "title": "Worker wait latency",
+            "role": "third subagent not yet reported — orchestrator polling",
+            "x": 50,
+            "y": 50,
+            "w": 30,
+            "h": 20,
+            "heat": "medium"
+          },
+          {
+            "id": "consumer-cutover",
+            "title": "Consumer connection migration",
+            "role": "Forgejo/Soil endpoint changes staged but not live",
+            "x": 10,
+            "y": 50,
+            "w": 30,
+            "h": 20,
+            "heat": "medium"
+          }
+        ],
+        "flows": [
+          [
+            "templating-leak",
+            "review-settling"
+          ],
+          [
+            "review-settling",
+            "consumer-cutover"
+          ]
+        ]
+      },
+      "refreshedAtEvent": 435,
+      "retirementReason": "The '?' path interpolation glitch was a single-event formatting issue that did not recur across 50 subsequent tool calls. The concern has cooled to archival significance."
+    }
+  ]
+}
