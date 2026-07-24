@@ -413,6 +413,17 @@ export default function App({ host }: ShadowAgentAppProps) {
   const GraphCanvas = rendererSurfaceAdapter.GraphCanvas;
   const TimelineSurface = rendererSurfaceAdapter.Timeline;
   const ShadowPanelSurface = rendererSurfaceAdapter.ShadowPanel;
+  // ExhibitStage is the primary main-area surface. Guarded so adapter mocks in
+  // existing tests (which omit it) keep rendering the legacy panels unchanged.
+  const ExhibitStageSurface = rendererSurfaceAdapter.ExhibitStage;
+
+  const liveGraphNode = (
+    <GraphCanvas
+      agentNodes={snapshot?.state.agentNodes ?? []}
+      latestInsight={snapshot ? pickPrimaryModelInsight(snapshot.state.shadowInsights) : undefined}
+      riskLevel={snapshot ? deriveRiskLevel(snapshot.state.riskSignals) : undefined}
+    />
+  );
 
   return (
     <div className="app-shell">
@@ -490,18 +501,22 @@ export default function App({ host }: ShadowAgentAppProps) {
           <h2>{snapshot?.state.currentObjective ?? 'Waiting for snapshot data'}</h2>
         </section>
 
-        <div className="panels panels--3col">
-          <Panel title="Graph" eyebrow="Agent topology" className="panel--wide panel--graph">
-            <div className="graph-shell">
-              <GraphCanvas
-                agentNodes={snapshot?.state.agentNodes ?? []}
-                latestInsight={snapshot ? pickPrimaryModelInsight(snapshot.state.shadowInsights) : undefined}
-                riskLevel={snapshot ? deriveRiskLevel(snapshot.state.riskSignals) : undefined}
-              />
-            </div>
-          </Panel>
+        {ExhibitStageSurface ? (
+          <section className="exhibit-surface">
+            <ExhibitStageSurface liveGraph={liveGraphNode} />
+          </section>
+        ) : null}
 
-          <div className="panels__left-bottom">
+        <details className="secondary-surfaces" open={!ExhibitStageSurface}>
+          <summary className="secondary-surfaces__summary">Session panels</summary>
+          <div className="panels panels--3col">
+            {ExhibitStageSurface ? null : (
+              <Panel title="Graph" eyebrow="Agent topology" className="panel--wide panel--graph">
+                <div className="graph-shell">{liveGraphNode}</div>
+              </Panel>
+            )}
+
+            <div className="panels__left-bottom">
             <TimelineSurface timeline={snapshot?.state.timeline ?? []} />
             <Panel title="Privacy" eyebrow="Consent gates">
               <PrivacyPanel
@@ -527,10 +542,11 @@ export default function App({ host }: ShadowAgentAppProps) {
             insights={snapshot?.state.shadowInsights ?? []}
           />
 
-          <Panel title="File Attention" eyebrow="Hot spots" className="panel--wide">
-            <FileAttentionView files={snapshot?.state.fileAttention ?? []} />
-          </Panel>
-        </div>
+            <Panel title="File Attention" eyebrow="Hot spots" className="panel--wide">
+              <FileAttentionView files={snapshot?.state.fileAttention ?? []} />
+            </Panel>
+          </div>
+        </details>
       </main>
     </div>
   );
