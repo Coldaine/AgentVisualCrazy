@@ -54,6 +54,31 @@ function validResponse(overrides: Record<string, unknown> = {}): string {
   });
 }
 
+/** A curator (v2) response that authors one exhibit via a create op. */
+function curatorResponse(artifactId = 'session-story', ops?: unknown[]): string {
+  return JSON.stringify({
+    pulse: { phase: 'debugging', phaseConfidence: 0.7, riskLevel: 'medium', headline: 'Circling a 403.' },
+    galleryOps: ops ?? [
+      {
+        op: 'create',
+        artifact: {
+          id: artifactId,
+          exhibitType: 'activity_narrative',
+          title: 'The database session, as a story',
+          narrative: 'A pivot to database-only recovery that ends unfinished.',
+          relevance: 0.9,
+          decayClass: 'slow',
+          status: 'fresh',
+          payload: {
+            threads: [{ id: 'plan', label: 'plan pivot' }],
+            beats: [{ at: '08:39', title: 'scope narrows', body: 'x', side: 'top', thread: 'plan' }],
+          },
+        },
+      },
+    ],
+  });
+}
+
 /**
  * Non-checkpoint event buffer: subscribers are called directly on push().
  */
@@ -334,6 +359,54 @@ describe('createInferenceEngine — orchestrator integration', () => {
       expect(client.calls.length).toBe(1);
     });
     expect(onInsights).toHaveBeenCalled();
+    engine.stop();
+  });
+
+  it('applies curator gallery ops, exposes the gallery, and feeds it into the next packet', async () => {
+    const onInsights = vi.fn();
+    const onGallery = vi.fn();
+    const buffer = new FakeEventBuffer();
+    client.enqueue({ text: curatorResponse('session-story'), model: 'fake/1', latencyMs: 5 });
+    client.enqueue({ text: curatorResponse('session-story', []), model: 'fake/1', latencyMs: 5 });
+
+    const engine = createInferenceEngine({
+      buffer,
+      getState: async () => derivedState(),
+      onInsights,
+      onGallery,
+      client,
+      privacy: ALLOWED_PRIVACY,
+    });
+
+    await engine.start();
+
+    // First firing authors an exhibit.
+    buffer.push(makeEvent('e1', 'tool_failed'));
+    await vi.waitFor(() => {
+      expect(client.calls.length).toBe(1);
+    });
+
+    // The gallery is exposed to the renderer with the created artifact.
+    expect(onGallery).toHaveBeenCalledOnce();
+    const exposed: Array<{ id: string; status: string }> = onGallery.mock.calls[0]?.[0] ?? [];
+    expect(exposed.some((a) => a.id === 'session-story')).toBe(true);
+
+    // Derived legacy insights still flow (phase from pulse, summary from the created artifact).
+    const insights: ShadowInsight[] = onInsights.mock.calls[0]?.[0] ?? [];
+    expect(insights.some((i) => i.kind === 'phase')).toBe(true);
+    expect(insights.some((i) => i.kind === 'summary')).toBe(true);
+
+    // Second firing: the packet fed to the model now contains THE GALLERY with
+    // the prior exhibit — the gallery is the curator's memory.
+    buffer.push(makeEvent('e2', 'tool_failed'));
+    await vi.waitFor(() => {
+      expect(client.calls.length).toBe(2);
+    });
+    const secondPacket = client.calls[1]!.userMessage;
+    expect(secondPacket).toContain('--- THE GALLERY');
+    expect(secondPacket).toContain('session-story');
+    expect(secondPacket).toContain('The database session, as a story');
+
     engine.stop();
   });
 

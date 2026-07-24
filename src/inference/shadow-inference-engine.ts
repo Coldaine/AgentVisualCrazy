@@ -15,22 +15,31 @@ import { createLogger } from '../shared/logger';
 import { DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS } from '../shared/privacy';
 import { buildContextPacket } from './context-packager';
 import { buildInferenceRequest } from './prompt-builder';
-import { parseModelResponse } from './response-parser';
+import { parseCuratorResponse } from './response-parser';
+import { createGalleryStore } from './gallery-store';
 import { createInferenceTrigger, type TriggerConfig } from './trigger';
 import { createInferenceClient } from './inference-client-factory';
 import { loadCredentials } from './auth';
 import type { InferenceClient } from './inference-client';
 import type { EventBufferLike } from './inference-client';
+import type { ExhibitArtifact } from '../renderer/exhibits/types';
 
 const logger = createLogger({ minLevel: 'info' });
 const INFERENCE_CONSUMER_ID = 'inference-trigger';
 
 export type InsightCallback = (insights: ShadowInsight[]) => void;
+export type GalleryCallback = (artifacts: ExhibitArtifact[]) => void;
 
 export interface InferenceEngineOptions {
   buffer: EventBufferLike;
   getState: () => DerivedState | Promise<DerivedState>;
   onInsights: InsightCallback;
+  /**
+   * Called after each curator response with the full current gallery (active,
+   * stale, and retired). Wire this to the session manager so the exhibit floor
+   * reflects the model's curation.
+   */
+  onGallery?: GalleryCallback;
   triggerConfig?: Partial<TriggerConfig>;
   privacy?: TranscriptPrivacySettings;
   client?: InferenceClient;
@@ -56,6 +65,7 @@ function isCheckpointedEventBuffer(buffer: EventBufferLike): buffer is Checkpoin
 export function createInferenceEngine(opts: InferenceEngineOptions): InferenceEngine {
   const { buffer, getState, onInsights } = opts;
   const privacy = opts.privacy ?? DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS;
+  const galleryStore = createGalleryStore();
   let client: InferenceClient | null = null;
   let inflight = false;
   let pendingTrigger = false;
@@ -75,7 +85,14 @@ export function createInferenceEngine(opts: InferenceEngineOptions): InferenceEn
     try {
       const state = await getState();
       const events = await buffer.getAll();
-      const packet = buildContextPacket(state, events);
+      // Feed the current gallery back in as the curator's memory. Refresh
+      // staleness against the current event position first so the model sees
+      // accurate statuses.
+      galleryStore.refreshStaleness(events.length);
+      const packet = buildContextPacket(state, events, {
+        gallery: galleryStore.getActive(),
+        retiredGallery: galleryStore.getRetiredSummaries(),
+      });
       const request = buildInferenceRequest(packet, {
         delivery: 'off-host',
         privacy
@@ -83,12 +100,23 @@ export function createInferenceEngine(opts: InferenceEngineOptions): InferenceEn
 
       logger.info('inference', 'engine.run_start', { eventCount: events.length });
       const inferenceResponse = await client.infer(request);
-      const insights = parseModelResponse(inferenceResponse.text);
+      const { insights, galleryOps } = parseCuratorResponse(inferenceResponse.text);
+
+      // Apply the curator's ops as of the current event index, then expose the
+      // resulting gallery to the renderer.
+      const applied = galleryStore.applyOps(galleryOps, events.length);
 
       logger.info('inference', 'engine.run_done', {
         latencyMs: inferenceResponse.latencyMs,
         insights: insights.length,
+        created: applied.created.length,
+        refreshed: applied.refreshed.length,
+        retired: applied.retired.length,
       });
+
+      if (opts.onGallery && galleryOps.length > 0) {
+        opts.onGallery(galleryStore.getArtifacts());
+      }
 
       if (insights.length > 0) {
         onInsights(insights);

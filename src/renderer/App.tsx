@@ -503,7 +503,10 @@ export default function App({ host }: ShadowAgentAppProps) {
 
         {ExhibitStageSurface ? (
           <section className="exhibit-surface">
-            <ExhibitStageSurface liveGraph={liveGraphNode} />
+            {/* Live/replay snapshots carry the curator's gallery; the boot/
+                fixture snapshot leaves it undefined so the stage shows its
+                hand-authored fixture gallery. */}
+            <ExhibitStageSurface artifacts={snapshot?.gallery} liveGraph={liveGraphNode} />
           </section>
         ) : null}
 

@@ -8,6 +8,7 @@
 import type { WebContents } from 'electron';
 import { DEFAULT_TRANSCRIPT_PRIVACY_SETTINGS } from '../shared/privacy';
 import type { SnapshotPayload, LoadedSource, TranscriptPrivacySettings, ShadowInsight } from '../shared/schema';
+import type { ExhibitArtifact } from '../renderer/exhibits/types';
 import { buildRendererInput } from '../shared/renderer-input-adapter';
 import { createIncrementalParser } from './incremental-parser';
 import { driverRegistry } from './drivers';
@@ -43,6 +44,12 @@ export interface SessionManager {
    * and a renderer re-pull is nudged via the IPC bridge.
    */
   setModelInsights(insights: ShadowInsight[]): void;
+  /**
+   * Store the latest curator gallery. It rides the next snapshot (as
+   * `snapshot.gallery`) so the renderer's ExhibitStage shows the live floor,
+   * and a renderer re-pull is nudged via the IPC bridge.
+   */
+  setGallery(artifacts: ExhibitArtifact[]): void;
 }
 
 export function createSessionManager(
@@ -64,6 +71,7 @@ export function createSessionManager(
   let bridgeCleanup: (() => void) | null = null;
   let bridge: IpcBridge | null = null;
   let latestModelInsights: ShadowInsight[] = [];
+  let latestGallery: ExhibitArtifact[] = [];
   let sessionTitle = 'Live session';
   const transport =
     options.transport && 'start' in options.transport
@@ -97,6 +105,10 @@ export function createSessionManager(
         ...rendererInput.state,
         shadowInsights
       },
+      // The curator gallery only rides live/replay snapshots. When empty
+      // (no inference yet), leave it undefined so ExhibitStage falls back to
+      // its hand-authored fixture gallery rather than rendering an empty floor.
+      gallery: latestGallery.length > 0 ? latestGallery : undefined,
       captureQueue: buffer.getMetrics()
     };
   };
@@ -218,6 +230,13 @@ export function createSessionManager(
       latestModelInsights = insights;
       // Nudge the renderer to re-pull the snapshot so new model insights
       // surface even between transcript events (and on idle / session-end).
+      bridge?.markDirty();
+    },
+
+    setGallery(artifacts: ExhibitArtifact[]) {
+      latestGallery = artifacts;
+      // Same dirty-refresh path: surface the curated floor without waiting on
+      // the next transcript event.
       bridge?.markDirty();
     },
   };

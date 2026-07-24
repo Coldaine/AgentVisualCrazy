@@ -161,6 +161,14 @@ export interface RendererInput {
 
 export interface SnapshotPayload extends RendererInput {
   captureQueue?: EventQueueMetrics;
+  /**
+   * The current exhibit-floor gallery for live/replay snapshots, produced by
+   * the shadow curator (see src/inference/gallery-store.ts). Undefined for the
+   * boot/fixture snapshot — the renderer's ExhibitStage falls back to its
+   * hand-authored fixture gallery in that case. Type-only import: erased at
+   * runtime, so the shared layer carries no dependency on the renderer.
+   */
+  gallery?: import('../renderer/exhibits/types').ExhibitArtifact[];
 }
 
 export interface ExportResult {

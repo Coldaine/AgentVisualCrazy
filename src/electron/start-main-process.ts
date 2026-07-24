@@ -167,6 +167,14 @@ export function startMainProcess(): void {
             if (process.env.SHADOW_DISABLE_INSIGHT_RENDER !== '1') {
               currentSessionManager.setModelInsights(insights);
             }
+          },
+          onGallery: (artifacts) => {
+            logger.info('inference', 'gallery_received', { count: artifacts.length });
+            // Forward the curated exhibit floor to the renderer via the same
+            // stable session manager + dirty-refresh path as insights.
+            if (process.env.SHADOW_DISABLE_INSIGHT_RENDER !== '1') {
+              currentSessionManager.setGallery(artifacts);
+            }
           }
         });
       const refreshInferenceEngine = async () => {
