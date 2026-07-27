@@ -72,7 +72,7 @@ agent-flow is copied as-is, then adapted. The intended deviations (sourced from 
 6. **Session memory across triggers** — refresh, retire, update gallery artifacts; later runs refer to prior conclusions.
 7. **Hypothesis → evidence with cited event ids.**
 8. **Read-only tool surface** — observation tools only; never Write/Edit/Bash against the watched repo.
-9. **ChatGPT Pro OAuth via the Codex endpoint** (`chatgpt.com/backend-api/codex/responses`) as primary; `OPENAI_API_KEY` as fallback.
+9. **ChatGPT Pro OAuth via the Codex endpoint** (`chatgpt.com/backend-api/codex/responses`) only. No Platform API key path.
 10. **MCP server** exposing `curator_status` / `curator_events` / `curator_ask` to other agents.
 
 ### Privacy / safety
@@ -98,7 +98,7 @@ agent-flow is copied as-is, then adapted. The intended deviations (sourced from 
 | M7 | **Read-only tool surface.** Observation tools only. Never Write / Edit / Bash against the watched agent's repo. |
 | M8 | **Exhibit Stage UI.** Render a curated gallery with Exhibit Floor design language (Frame, glass, idle cycling). `live_graph` (agent-flow's canvas) is one exhibit in rotation. |
 | M9 | **Idea bank as palette.** The RepoVis concept bank (recoverable from the pin at `docs/ideas/repoviz/`) is the expansion source beyond v1. |
-| M10 | **ChatGPT Pro OAuth.** Primary model auth is ChatGPT Plus/Pro Codex OAuth (browser + device-code), hitting the Codex backend, adapted from Mastra Code / OpenCode patterns into `@mastra/core` Agent via AI SDK `LanguageModel`. `OPENAI_API_KEY` is fallback. |
+| M10 | **ChatGPT Pro OAuth only.** Model auth is ChatGPT Plus/Pro Codex OAuth (browser + device-code), hitting the Codex backend, adapted from Mastra Code / OpenCode patterns into `@mastra/core` Agent via AI SDK `LanguageModel`. **No `OPENAI_API_KEY` / Platform API fallback.** |
 | M11 | **Mastra in Electron main.** `@mastra/core` Agent + tools + memory; no dependency on the Mastra Code TUI as a runtime. |
 | M12 | **Triggers + single-flight.** Keep event/time/risk triggers; at most one curator investigation in flight. |
 | M13 | **Privacy.** Local-only default; off-host and raw-transcript opt-in. OAuth tokens under `~/.agentvisualcrazy/` via Electron `safeStorage`. |
@@ -161,9 +161,10 @@ interface ExhibitArtifact {
 
 | Path | Behavior |
 |------|----------|
-| Primary | Codex OAuth (ChatGPT Plus/Pro): browser callback and device-code. Custom fetch rewrites Responses/chat calls to the Codex endpoint; tokens refresh automatically. |
-| Fallback | `OPENAI_API_KEY` / existing credential loader → stock `openai/*` Mastra router. |
-| Priority | When OAuth credentials are present and selected, use Codex subscription path — not Platform API billing. |
+| Only | Codex OAuth (ChatGPT Plus/Pro): browser callback and device-code. Custom fetch rewrites Responses/chat calls to the Codex endpoint; tokens refresh automatically. |
+| Forbidden | `OPENAI_API_KEY` / Platform API billing / stock `openai/*` API-key router as a product auth path. |
+
+Without OAuth credentials the curator must refuse live inference (offline mock/fixture for UI/dev only — not an API-key substitute).
 
 Feasibility: `@mastra/core` Agent accepts AI SDK language models. Mastra Code's `openaiCodexProvider()` pattern (`wrapLanguageModel` + OAuth fetch) is the adaptation target — not "use Mastra Code as a subprocess."
 
@@ -173,7 +174,7 @@ Feasibility: `@mastra/core` Agent accepts AI SDK language models. Mastra Code's 
 
 1. Two different session moments produce **structurally different** gallery compositions (different exhibit types / order), not the same four dashboard sections with new strings.
 2. Curator **tool-calls lookbacks** before publishing artifacts (visible in logs/trace).
-3. ChatGPT Pro OAuth login works end-to-end; active OAuth path uses the Codex endpoint. API-key fallback still works.
+3. ChatGPT Pro OAuth login works end-to-end; active path uses the Codex endpoint only. No API-key auth path exists in code or docs.
 4. At least the v1 seven exhibits + `live_graph` render from typed contracts with **mandatory narrative**.
 5. No filesystem-mutation tools are registered on the curator.
 6. agent-flow's renderer runs inside Electron via Next.js static export; the canvas is live and fed by real events.
