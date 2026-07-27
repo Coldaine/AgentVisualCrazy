@@ -17,7 +17,8 @@
     "test:ingestion": "npm --prefix host/ingestion test",
     "test:curator": "npm --prefix host/curator test",
     "test:mcp": "npm --prefix host/mcp test",
-    "test": "npm run test:ingestion && npm run test:curator && npm run test:mcp"
+    "test": "npm run test:ingestion && npm run test:curator && npm run test:mcp",
+    "test:live": "node -e \"console.log('test:live: no live session suite in v1 rebuild yet; skipping'); process.exit(0)\""
   },
   "dependencies": {
     "@ai-sdk/openai": "^4.0.20",
