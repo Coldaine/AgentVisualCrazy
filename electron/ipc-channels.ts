@@ -6,4 +6,9 @@ export const IPC = {
   HOST_MESSAGE: 'avc:host-message',
   /** Curator lookback: ObservationStore.recent(n) */
   OBSERVATION_QUERY_RECENT: 'avc:observation-query-recent',
+  /**
+   * Main → renderer exhibit gallery publish.
+   * Payload also arrives as `{ type: 'exhibit-artifacts', ... }` on HOST_MESSAGE.
+   */
+  EXHIBIT_ARTIFACTS: 'avc:exhibit-artifacts',
 } as const

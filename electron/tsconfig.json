@@ -15,6 +15,7 @@
   "include": [
     "./**/*.ts",
     "../host/ingestion/src/**/*.ts",
+    "../host/curator/src/**/*.ts",
     "../extension/src/protocol.ts",
     "../extension/src/transcript-parser.ts",
     "../extension/src/codex-rollout-parser.ts",
