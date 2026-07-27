@@ -13,6 +13,11 @@ export interface ElectronHostApi {
   onMessage: (handler: (message: unknown) => void) => () => void
   /** Optional curator lookback into ObservationStore (main process). */
   queryRecent?: (n?: number) => Promise<unknown[]>
+  /**
+   * Dedicated exhibit-artifacts channel from curator-host.
+   * Mirrored as `{ type: 'exhibit-artifacts', artifacts }` on onMessage.
+   */
+  onExhibits?: (handler: (message: unknown) => void) => () => void
 }
 
 declare global {

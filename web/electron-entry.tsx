@@ -14,9 +14,8 @@ const showExhibits = params.get('mode') === 'exhibits'
 const root = createRoot(rootElement)
 root.render(showExhibits ? <ExhibitGalleryApp /> : <AgentVisualizer />)
 
-// Defer bridge wiring so useVSCodeBridge effects subscribe before `ready` / config IPC
-if (!showExhibits) {
-  setTimeout(() => {
-    configureElectronBridge()
-  }, 0)
-}
+// Defer bridge wiring so useVSCodeBridge effects subscribe before `ready` / config IPC.
+// Exhibits mode still wires the host API so onExhibits / onMessage can deliver artifacts.
+setTimeout(() => {
+  configureElectronBridge()
+}, 0)

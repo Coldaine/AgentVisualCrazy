@@ -10,4 +10,5 @@ export { default as ExhibitStage } from './ExhibitStage';
 export type { ExhibitStageProps } from './ExhibitStage'
 export { default as fixtureGallery } from './fixture-gallery'
 export { ExhibitGalleryApp } from './ExhibitGalleryApp'
+export { LiveExhibitStrip } from './LiveExhibitStrip'
 export * from './types'

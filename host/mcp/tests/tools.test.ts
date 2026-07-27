@@ -67,7 +67,7 @@ describe('curator MCP tool handlers', () => {
     expect(result.events.map((e) => e.payload.content)).toEqual(['a', 'b'])
   })
 
-  it('curator_ask stubs until host/curator exists', async () => {
+  it('curator_ask stub facade reports not configured', async () => {
     const store = new ObservationStore()
     store.append(evt(1, 'message', { content: 'x' }), 'test')
     const curator = createStubCuratorFacade({ jsonlPath: null, watching: false })

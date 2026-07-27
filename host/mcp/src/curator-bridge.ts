@@ -1,8 +1,7 @@
 /**
- * Optional binding to host/curator (Mastra). Until that module exists, MCP tools
- * operate on ObservationStore alone and curator_ask returns a clear stub message.
- *
- * Follow-up: when host/curator exports a facade, resolve it here — no MCP API change.
+ * Optional binding to host/curator (Mastra). Prefers `createCuratorFacade` from
+ * host/curator when present; otherwise MCP tools use ObservationStore alone and
+ * curator_ask returns a clear stub message.
  */
 import { existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'

@@ -24,6 +24,7 @@ import { MOCK_DURATION } from "@/lib/mock-scenario"
 import { MessageFeedPanel } from "./message-feed-panel"
 import { TopBar } from "./top-bar"
 import { useAudioEffects } from "@/hooks/use-audio-effects"
+import { LiveExhibitStrip } from "@/components/exhibits"
 
 export function AgentVisualizer() {
   const bridge = useVSCodeBridge()
@@ -347,6 +348,9 @@ export function AgentVisualizer() {
           onClose={() => selection.setContextMenu(null)}
         />
       )}
+
+      {/* Live curator exhibit titles (only when artifacts arrive over IPC) */}
+      <LiveExhibitStrip />
 
       {/* Floating control strip */}
       <ControlBar
