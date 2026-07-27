@@ -1,0 +1,6 @@
+{
+  "name": "agent-visual-crazy-web",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Renderer substrate (deps and scripts live in the repo-root package.json)"
+}

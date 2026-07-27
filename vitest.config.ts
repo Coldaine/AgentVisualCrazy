@@ -1,12 +1,14 @@
-import { defineConfig, mergeConfig, configDefaults } from 'vitest/config';
-import viteConfig from './vite.config';
+import { defineConfig } from 'vitest/config'
 
-export default mergeConfig(viteConfig, defineConfig({
+/**
+ * Root vitest config for the substrate PR (PR #119).
+ * Host-package suites (host/ingestion, host/curator, host/mcp) arrive in later PRs
+ * and carry their own vitest configs; the root `npm test` chains them via npm scripts.
+ */
+export default defineConfig({
   test: {
-    silent: true,
-    reporters: [['default', { summary: true }]],
-    // Live tests (tests/live/**) read real ~/.claude sessions and run only from
-    // the pre-push hook (`npm run test:live`), never in CI. Exclude them here.
-    exclude: [...configDefaults.exclude, 'tests/live/**'],
+    include: ['tests/**/*.test.ts'],
+    exclude: ['tests/build-smoke.test.ts'],
+    environment: 'node',
   },
-}));
+})
