@@ -240,6 +240,38 @@ describe('buildCodexOAuthFetch URL rewrite', () => {
     }
     expect(capturedUrl).toBe('https://example.com/some/other/path')
   })
+
+  it('does not rewrite paths that merely contain /v1/responses or /chat/completions as substrings', async () => {
+    const tokens: CodexOAuthTokens = {
+      type: 'oauth',
+      access: 'at-anchor',
+      refresh: 'rt-anchor',
+      expires: Date.now() + 10 * 60_000,
+    }
+    const store = makeStore(tokens)
+    const fetchFn = buildCodexOAuthFetch(store)
+
+    const capturedUrls: string[] = []
+    const original = globalThis.fetch
+    try {
+      globalThis.fetch = (async (url: URL | Request | string) => {
+        capturedUrls.push(typeof url === 'string' ? url : url.toString())
+        return new Response('{}', { status: 200 })
+      }) as typeof fetch
+      await fetchFn('https://api.openai.com/foo/v1/responses/bar', { method: 'POST' })
+      await fetchFn('https://api.openai.com/v1/chat/completions-internal', { method: 'POST' })
+      await fetchFn('https://api.openai.com/v1/responses/', { method: 'POST' })
+    } finally {
+      globalThis.fetch = original
+    }
+    // None of these should be rewritten to the Codex endpoint.
+    for (const u of capturedUrls) {
+      expect(u).not.toBe(CODEX_API_ENDPOINT)
+    }
+    expect(capturedUrls[0]).toBe('https://api.openai.com/foo/v1/responses/bar')
+    expect(capturedUrls[1]).toBe('https://api.openai.com/v1/chat/completions-internal')
+    expect(capturedUrls[2]).toBe('https://api.openai.com/v1/responses/')
+  })
 })
 
 describe('TokenStore negative cases', () => {
@@ -410,6 +442,54 @@ describe('ensureFreshAccess', () => {
     } finally {
       globalThis.fetch = original
     }
+  })
+})
+
+describe('decodeJwt malformed-input + alg allowlist', () => {
+  function b64url(s: string): string {
+    return Buffer.from(s).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '')
+  }
+  function jwt(header: object, payload: object): string {
+    return `${b64url(JSON.stringify(header))}.${b64url(JSON.stringify(payload))}.sig`
+  }
+
+  it('decodes a valid HS256 token', () => {
+    const token = jwt({ alg: 'HS256', typ: 'JWT' }, { chatgpt_account_id: 'acct-1' })
+    const decoded = decodeJwt(token)
+    expect(decoded?.chatgpt_account_id).toBe('acct-1')
+  })
+
+  it('returns null for a 2-part token', () => {
+    expect(decodeJwt('aaa.bbb')).toBeNull()
+  })
+
+  it('returns null for a 4-part token', () => {
+    expect(decodeJwt('aaa.bbb.ccc.ddd')).toBeNull()
+  })
+
+  it('returns null for an empty string', () => {
+    expect(decodeJwt('')).toBeNull()
+  })
+
+  it('returns null for non-base64 payload', () => {
+    expect(decodeJwt('eyJhbGciOiJIUzI1NiJ9.!!!notbase64!!!.sig')).toBeNull()
+  })
+
+  it('returns null for alg: none (defense-in-depth)', () => {
+    const token = jwt({ alg: 'none', typ: 'JWT' }, { chatgpt_account_id: 'acct-evil' })
+    expect(decodeJwt(token)).toBeNull()
+  })
+
+  it('returns null for an unknown alg', () => {
+    const token = jwt({ alg: 'FAKE256', typ: 'JWT' }, { chatgpt_account_id: 'acct-x' })
+    expect(decodeJwt(token)).toBeNull()
+  })
+
+  it('extractAccountId reads chatgpt_account_id claim', () => {
+    const token = jwt({ alg: 'RS256', typ: 'JWT' }, {
+      'https://api.openai.com/auth': { chatgpt_account_id: 'acct-from-claim' },
+    })
+    expect(extractAccountId({ id_token: token })).toBe('acct-from-claim')
   })
 })
 
