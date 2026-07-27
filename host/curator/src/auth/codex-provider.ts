@@ -89,7 +89,7 @@ export function buildCodexOAuthFetch(store: TokenStore): typeof fetch {
     const parsed =
       url instanceof URL ? url : new URL(typeof url === 'string' ? url : (url as Request).url)
     const shouldRewrite =
-      parsed.pathname.includes('/v1/responses') || parsed.pathname.includes('/chat/completions')
+      parsed.pathname === '/v1/responses' || parsed.pathname === '/v1/chat/completions'
     const finalUrl = shouldRewrite ? new URL(CODEX_API_ENDPOINT) : parsed
 
     // Normalize body for Codex: store:false when JSON body is present.
