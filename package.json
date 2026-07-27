@@ -14,15 +14,20 @@
     "start": "electron .",
     "typecheck": "tsc -p electron/tsconfig.json --noEmit",
     "test:ingestion": "npm --prefix host/ingestion test",
-    "test": "vitest run && npm run test:ingestion",
+    "test:curator": "npm --prefix host/curator test",
+    "test": "vitest run && npm run test:ingestion && npm run test:curator",
     "test:build": "vitest run --config vitest.config.build.ts",
-    "test:live": "node -e \"console.log('test:live: skipped on ingestion PR'); process.exit(0)\""
+    "test:live": "node -e \"console.log('test:live: skipped on curator PR'); process.exit(0)\""
   },
   "dependencies": {
+    "@ai-sdk/openai": "^4.0.20",
+    "@mastra/core": "^1.52.1",
+    "ai": "^7.0.37",
     "d3-force": "^3.0.0",
     "framer-motion": "^12.42.2",
     "react": "19.2.4",
-    "react-dom": "19.2.4"
+    "react-dom": "19.2.4",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4.3.3",

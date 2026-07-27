@@ -22,4 +22,14 @@ contextBridge.exposeInMainWorld('agentVisual', {
   queryRecent: (n?: number) => {
     return ipcRenderer.invoke(IPC.OBSERVATION_QUERY_RECENT, n)
   },
+  /** Dedicated exhibit-artifacts channel (also mirrored on onMessage). */
+  onExhibits: (handler: (message: unknown) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, message: unknown) => {
+      handler(message)
+    }
+    ipcRenderer.on(IPC.EXHIBIT_ARTIFACTS, listener)
+    return () => {
+      ipcRenderer.removeListener(IPC.EXHIBIT_ARTIFACTS, listener)
+    }
+  },
 })
