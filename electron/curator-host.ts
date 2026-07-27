@@ -73,9 +73,8 @@ export class CuratorHost {
       tokenStore: this.tokenStore,
       forceMock: options.forceMock,
       modelOptions: {
-        prefer: preferEnv === 'oauth' || preferEnv === 'api-key' || preferEnv === 'mock'
-          ? preferEnv
-          : undefined,
+        // OAuth or offline mock only — no OPENAI_API_KEY / Platform API path.
+        prefer: preferEnv === 'oauth' || preferEnv === 'mock' ? preferEnv : undefined,
       },
     })
   }

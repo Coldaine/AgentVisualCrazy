@@ -41,7 +41,7 @@ These specs govern implementation detail and must stay in sync with this roadmap
 
 - ChatGPT Pro OAuth against the Codex endpoint for curator inference.
 - Tokens and local config under `~/.agentvisualcrazy/`.
-- **Exit:** curator runs authenticated end-to-end without manual API-key paste as the happy path.
+- **Exit:** curator runs authenticated end-to-end via ChatGPT Pro Codex OAuth only (no `OPENAI_API_KEY` / Platform API path).
 
 ### M5 — Exhibit Stage
 

@@ -101,7 +101,8 @@ export class CuratorRunner {
       mode = 'mock'
       text = mockInvestigateText(eventCursor)
     } else if (this.investigateFn) {
-      mode = 'api-key'
+      // Test injection only — not Platform API auth.
+      mode = 'oauth'
       const result = await this.investigateFn(this.buildPrompt(reason, eventCursor))
       text = result.text
     } else {

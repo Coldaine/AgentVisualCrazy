@@ -11,7 +11,7 @@ Mastra curator agent + ChatGPT Pro Codex OAuth for AgentVisualCrazy v1
 | `src/tools.ts` | ObservationStore query tools + prior artifacts |
 | `src/gallery-memory.ts` | In-memory session gallery (refresh/retire) |
 | `src/runner.ts` | Single-flight investigation trigger |
-| `src/auth/codex-provider.ts` | Codex OAuth `wrapLanguageModel` + API-key fallback |
+| `src/auth/codex-provider.ts` | Codex OAuth `wrapLanguageModel` only (no Platform API key) |
 | `src/auth/codex-oauth.ts` | Device-code + browser callback scaffolding |
 | `src/auth/token-store.ts` | `~/.agentvisualcrazy/` + Electron `safeStorage` |
 
@@ -19,9 +19,10 @@ Mastra curator agent + ChatGPT Pro Codex OAuth for AgentVisualCrazy v1
 
 | Mode | How to enable |
 |------|----------------|
-| **Codex OAuth** (primary) | Complete device-code or browser login; tokens in `~/.agentvisualcrazy/`. Prefer when `TokenStore.hasOAuth()`. |
-| **API key** (fallback) | Set `OPENAI_API_KEY` (no OAuth tokens, or `AVC_CURATOR_AUTH=api-key`). |
-| **Mock** | `AVC_CURATOR_MODE=mock` or no credentials — deterministic offline gallery. |
+| **Codex OAuth** (only live path) | Complete device-code or browser login; tokens in `~/.agentvisualcrazy/`. |
+| **Mock** (offline/dev only) | `AVC_CURATOR_MODE=mock` or no OAuth tokens — deterministic offline gallery. **Not** an `OPENAI_API_KEY` substitute. |
+
+**Forbidden:** `OPENAI_API_KEY` / Platform API billing as a product auth path.
 
 Device-code (headless):
 
