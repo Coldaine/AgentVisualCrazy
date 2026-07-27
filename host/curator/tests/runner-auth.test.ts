@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
+import { createHash } from 'node:crypto'
 import { TokenStore } from '../src/auth/token-store.ts'
 import { resolveAuthMode, CODEX_API_ENDPOINT } from '../src/auth/codex-provider.ts'
 import { buildCodexOAuthFetch } from '../src/auth/codex-provider.ts'
@@ -133,10 +134,19 @@ describe('jwt account extraction', () => {
 })
 
 describe('PKCE scaffolding', () => {
-  it('generates verifier/challenge', () => {
+  it('generates verifier/challenge satisfying challenge === base64url(sha256(verifier))', () => {
     const pkce = generatePkce()
     expect(pkce.verifier.length).toBeGreaterThan(20)
     expect(pkce.challenge.length).toBeGreaterThan(20)
+    const expected = createHash('sha256')
+      .update(pkce.verifier)
+      .digest()
+      .toString('base64')
+      .replace(/\+/g, '-')
+      .replace(/\//g, '_')
+      .replace(/=+$/, '')
+    expect(pkce.challenge).toBe(expected)
+    expect(pkce.verifier).not.toBe(pkce.challenge)
   })
 })
 
