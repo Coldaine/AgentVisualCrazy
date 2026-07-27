@@ -23,6 +23,14 @@ export {
   type CuratorRunnerOptions,
   type CuratorInvestigateResult,
 } from './runner.ts'
+export {
+  createCuratorFacade,
+  type CuratorFacade,
+  type CuratorFacadeOptions,
+  type CuratorAskResult,
+  type CuratorStatusSnapshot,
+  type GallerySummary,
+} from './facade.ts'
 export { parseExhibitArtifacts } from './parse-artifacts.ts'
 export { buildMockArtifacts, mockInvestigateText } from './mock-model.ts'
 

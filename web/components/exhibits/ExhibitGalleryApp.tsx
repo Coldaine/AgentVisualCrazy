@@ -1,10 +1,12 @@
 /**
- * Fixture-only Exhibit Stage shell — demos the gallery without the curator.
+ * Exhibit Stage shell — fixtures by default; swaps to live curator artifacts
+ * when `exhibit-artifacts` arrive via preload (`onExhibits` / `onMessage`).
  * `live_graph` uses a placeholder; wire AgentVisualizer (or its canvas) into
  * the `liveGraph` prop when integrating the living graph as a rotation slot.
  */
 import ExhibitStage from './ExhibitStage'
 import fixtureGallery from './fixture-gallery'
+import { useLiveExhibitArtifacts } from '@/lib/live-exhibits'
 import './exhibits.css'
 
 function LiveGraphPlaceholder() {
@@ -24,6 +26,10 @@ function LiveGraphPlaceholder() {
 }
 
 export function ExhibitGalleryApp() {
+  const liveArtifacts = useLiveExhibitArtifacts()
+  const artifacts = liveArtifacts ?? fixtureGallery
+  const source = liveArtifacts ? 'live' : 'fixture'
+
   return (
     <div
       className="exhibit-surface"
@@ -34,8 +40,9 @@ export function ExhibitGalleryApp() {
         boxSizing: 'border-box',
         background: 'var(--exhibit-surface, #050914)',
       }}
+      data-exhibit-source={source}
     >
-      <ExhibitStage artifacts={fixtureGallery} liveGraph={<LiveGraphPlaceholder />} />
+      <ExhibitStage artifacts={artifacts} liveGraph={<LiveGraphPlaceholder />} />
     </div>
   )
 }
