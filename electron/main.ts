@@ -1,8 +1,10 @@
 import { app, BrowserWindow, ipcMain, shell } from 'electron'
 import path from 'node:path'
 import { IPC } from './ipc-channels'
+import { IngestionHost } from './ingestion-host'
 
 let mainWindow: BrowserWindow | null = null
+let ingestion: IngestionHost | null = null
 
 function sendToRenderer(message: Record<string, unknown>): void {
   mainWindow?.webContents.send(IPC.HOST_MESSAGE, message)
@@ -40,15 +42,17 @@ function registerIpc(): void {
 
     switch (message.type) {
       case 'ready':
-        // Until ObservationStore/ingestion lands, keep the mock scenario visible.
-        sendToRenderer({
-          type: 'config',
-          config: { showMockData: true, mode: 'live', autoPlay: true },
-        })
-        sendToRenderer({
-          type: 'connection-status',
-          status: 'disconnected',
-          source: 'electron-shell',
+        void ingestion?.onRendererReady().catch((err) => {
+          console.error('[ingestion-host] failed to start:', err)
+          sendToRenderer({
+            type: 'config',
+            config: { showMockData: true, mode: 'live', autoPlay: true },
+          })
+          sendToRenderer({
+            type: 'connection-status',
+            status: 'disconnected',
+            source: 'electron-shell',
+          })
         })
         break
 
@@ -68,9 +72,15 @@ function registerIpc(): void {
         break
     }
   })
+
+  ipcMain.handle(IPC.OBSERVATION_QUERY_RECENT, (_event, n?: unknown) => {
+    const count = typeof n === 'number' && Number.isFinite(n) ? Math.max(0, Math.floor(n)) : 50
+    return ingestion?.queryRecent(count) ?? []
+  })
 }
 
 app.whenReady().then(() => {
+  ingestion = new IngestionHost({ send: sendToRenderer })
   registerIpc()
   createWindow()
 
@@ -85,4 +95,9 @@ app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
     app.quit()
   }
+})
+
+app.on('will-quit', () => {
+  ingestion?.dispose()
+  ingestion = null
 })
