@@ -1,7 +1,9 @@
 /**
- * Bundle Electron main + preload with host/ingestion inlined.
- * host/ingestion is ESM + .ts extension imports; esbuild resolves them into CJS
+ * Bundle Electron main + preload with host/ingestion + host/curator inlined.
+ * host packages are ESM + .ts extension imports; esbuild resolves them into CJS
  * for Electron's CommonJS main entry (package.json "main").
+ *
+ * npm packages (@mastra/core, ai, …) stay external and load from node_modules.
  */
 import * as esbuild from 'esbuild'
 import path from 'node:path'
@@ -17,6 +19,7 @@ const shared = {
   format: 'cjs',
   target: 'node20',
   sourcemap: true,
+  packages: 'external',
   external: ['electron'],
   logLevel: 'info',
 }

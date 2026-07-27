@@ -1,0 +1,26 @@
+{
+  "name": "@agentvisualcrazy/curator",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Mastra curator agent + ChatGPT Pro Codex OAuth (M3–M7, M10–M13).",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@ai-sdk/openai": "^4.0.20",
+    "@mastra/core": "^1.52.1",
+    "ai": "^7.0.37",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4"
+  }
+}

@@ -1,10 +1,12 @@
 import { app, BrowserWindow, ipcMain, shell } from 'electron'
 import path from 'node:path'
 import { IPC } from './ipc-channels'
+import { CuratorHost } from './curator-host'
 import { IngestionHost } from './ingestion-host'
 
 let mainWindow: BrowserWindow | null = null
 let ingestion: IngestionHost | null = null
+let curator: CuratorHost | null = null
 
 function sendToRenderer(message: Record<string, unknown>): void {
   mainWindow?.webContents.send(IPC.HOST_MESSAGE, message)
@@ -42,18 +44,38 @@ function registerIpc(): void {
 
     switch (message.type) {
       case 'ready':
-        void ingestion?.onRendererReady().catch((err) => {
-          console.error('[ingestion-host] failed to start:', err)
-          sendToRenderer({
-            type: 'config',
-            config: { showMockData: true, mode: 'live', autoPlay: true },
+        void ingestion
+          ?.onRendererReady()
+          .then(() => {
+            if (!ingestion) return
+            curator?.dispose()
+            curator = new CuratorHost({
+              query: ingestion.query,
+              send: sendToRenderer,
+              sendExhibits: (message) => {
+                mainWindow?.webContents.send(IPC.EXHIBIT_ARTIFACTS, message)
+              },
+            })
+            curator.start()
+            // First curation shortly after events are available.
+            void curator.kick('renderer-ready')
           })
-          sendToRenderer({
-            type: 'connection-status',
-            status: 'disconnected',
-            source: 'electron-shell',
+          .catch((err) => {
+            console.error('[ingestion-host] failed to start:', err)
+            sendToRenderer({
+              type: 'config',
+              config: { showMockData: true, mode: 'live', autoPlay: true },
+            })
+            sendToRenderer({
+              type: 'connection-status',
+              status: 'disconnected',
+              source: 'electron-shell',
+            })
           })
-        })
+        break
+
+      case 'curator-run':
+        void curator?.kick('renderer-request')
         break
 
       case 'open-file': {
@@ -98,6 +120,8 @@ app.on('window-all-closed', () => {
 })
 
 app.on('will-quit', () => {
+  curator?.dispose()
+  curator = null
   ingestion?.dispose()
   ingestion = null
 })
