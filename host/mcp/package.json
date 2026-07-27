@@ -1,0 +1,30 @@
+{
+  "name": "@agentvisualcrazy/mcp",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Read-only stdio MCP server exposing curator_* tools over ObservationStore (M11/S3 prep).",
+  "exports": {
+    ".": "./src/server.ts",
+    "./server": "./src/server.ts",
+    "./bin": "./src/index.ts"
+  },
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "mcp": "tsx src/index.ts",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@agentvisualcrazy/ingestion": "file:../ingestion",
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "zod": "^3.25.76"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "tsx": "^4.20.3",
+    "typescript": "^5.8.3",
+    "vitest": "^3.2.4"
+  }
+}

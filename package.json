@@ -13,11 +13,13 @@
     "build": "npm run build:web && npm run build:electron",
     "start": "electron .",
     "typecheck": "tsc -p electron/tsconfig.json --noEmit",
+    "mcp": "npm --prefix host/mcp start",
     "test:ingestion": "npm --prefix host/ingestion test",
     "test:curator": "npm --prefix host/curator test",
-    "test": "vitest run && npm run test:ingestion && npm run test:curator",
+    "test:mcp": "npm --prefix host/mcp test",
+    "test": "vitest run && npm run test:ingestion && npm run test:curator && npm run test:mcp",
     "test:build": "vitest run --config vitest.config.build.ts",
-    "test:live": "node -e \"console.log('test:live: skipped on curator PR'); process.exit(0)\""
+    "test:live": "node -e \"console.log('test:live: no live session suite in v1 rebuild yet; skipping'); process.exit(0)\""
   },
   "dependencies": {
     "@ai-sdk/openai": "^4.0.20",

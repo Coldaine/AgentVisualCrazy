@@ -6,17 +6,18 @@ and renders a live visualization on a **copied agent-flow** substrate.
 See [`docs/north-star.md`](docs/north-star.md) for the vision and
 [`docs/plans/roadmap.md`](docs/plans/roadmap.md) for what's next.
 
-This is a single flat Electron app — `src/` (or the copied agent-flow tree) and `tests/` live
-at the repo root. No monorepo. Runtime data and config live under `~/.agentvisualcrazy/`.
+Runtime data and config live under `~/.agentvisualcrazy/`. Layout and build boundaries
+are documented in [`docs/architecture.md`](docs/architecture.md) ("As built").
 
 ## Read These First
 
 1. `docs/north-star.md` — what we're building and why
 2. `docs/plans/roadmap.md` — the forward plan (canonical)
-3. `docs/architecture.md` — technical map
+3. `docs/architecture.md` — technical map + current state + gaps
 4. `docs/plans/req-v1-curator.md` — governing requirements
 5. `docs/plans/visual-gui-donors.md` — substrate & reference inventory
-6. This file — the rules below
+6. `docs/plans/forward.md` — the post-scaffold pivot plan (what to do next)
+7. This file — the rules below
 
 ## Where to Find Things
 
@@ -25,6 +26,7 @@ at the repo root. No monorepo. Runtime data and config live under `~/.agentvisua
 | Product vision | `docs/north-star.md` |
 | Architecture | `docs/architecture.md` |
 | Roadmap | `docs/plans/roadmap.md` |
+| Forward plan | `docs/plans/forward.md` |
 | Curator requirements | `docs/plans/req-v1-curator.md` |
 | Substrate / GUI inventory | `docs/plans/visual-gui-donors.md` |
 
