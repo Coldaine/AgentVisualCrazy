@@ -1,81 +1,68 @@
-# Roadmap — making AgentVisualCrazy real
+# Roadmap — AgentVisualCrazy v1
 
-The canonical forward plan. Read [`../north-star.md`](../north-star.md) for *what* and
-*why*; this is *what's next, in order*. Older `plan-*.md` files in this folder are historical
-context from the pre-reset era — this document supersedes them.
+Canonical forward plan for the v1 rebuild. Vision: [`../north-star.md`](../north-star.md).
+Architecture: [`../architecture.md`](../architecture.md).
 
-## Baseline (where we actually are, 2026-05-30)
+## Governing companions
 
-After the great-cleanup reset, this is one flat Electron app — no monorepo, no `third_party/`,
-no dead scaffolding. Verified facts, not aspirations:
+These specs govern implementation detail and must stay in sync with this roadmap:
 
-- **Builds** from the repo root (`npm run build`, exit 0) and **launches** (`npm start`).
-- **47 test files / 427 tests pass** (`npm test` = `tsc --noEmit` + vitest).
-- **It renders.** The built app mounts the dashboard and live-tails a real Claude Code
-  session (the `file://` asset-path + index-path bugs that left it blank are fixed).
-- **Watch** works against Claude Code JSONL. **Interpret** is wired (local-only default).
-  **Render** is a functional Canvas2D + D3-Force graph + glass-panel dashboard.
+- [`req-v1-curator.md`](req-v1-curator.md) — copied substrate + Mastra curator requirements
+- [`visual-gui-donors.md`](visual-gui-donors.md) — substrate & reference inventory (agent-flow is copied code, not a pattern harvest)
 
-What's *not* done: it has never been driven against a live model end-to-end by a human; the
-visual layer is functional, not yet the exhibit-grade ambition; only Claude Code is a real
-capture driver.
+## Doctrine reminder
 
-## Guiding goal
-
-The thing you'd actually open beside Claude and *enjoy* looking at. Usable + beautiful.
-Visual fidelity is priority #1 (per the north star).
+- agent-flow is **copied** as the renderer substrate (not vendored under `third_party/`, not pattern-harvested and rebuilt).
+- Mastra curator + ChatGPT Pro OAuth (Codex) layer on top; Electron hosts Next/Vite; Mastra in main.
+- Reject "absorb patterns and rebuild." Prefer curator / AgentVisualCrazy / `~/.agentvisualcrazy/` naming.
 
 ## Milestones
 
-### M1 — Make it genuinely usable (close the "never really used it" gap)
-- **Live inference acceptance.** Point `SHADOW_INFERENCE_PROVIDER` / `OPENAI_BASE_URL` /
-  `SHADOW_INFERENCE_MODEL` at a real endpoint, enable off-host opt-in, confirm model insights
-  actually render against a live session. (This is `docs/todo.md`'s open manual-acceptance item.)
-- **Session picker.** Right now it auto-picks the most-recently-modified `~/.claude/projects`
-  transcript. Let the user choose which session to watch.
-- **Run ergonomics.** A dev-run that's one command and obvious; document it in the README.
-- *Exit criteria:* a human watches a live Claude session, sees correct insights, and it feels solid.
+### M1 — Copy agent-flow + Electron shell
 
-### M2 — Visual fidelity pass (the reason this project exists)
-- Bring the Canvas2D graph up to the agent-flow bar: hexagonal nodes, state-colored glow,
-  particle trails, tapered bezier edges, bloom, ambient dot-grid pulse.
-- Mine [`../ideas/repoviz/repovis-creative-alternatives.md`](../ideas/repoviz/repovis-creative-alternatives.md)
-  (~40 concepts) and the `exhibit-prototype.jsx` for the exhibit visual language; pick the
-  views that fit live agent observation and build them for real.
-- In-repo donor inventory (what we demoted / underused — re-activate, don’t re-fetch):
-  [`visual-gui-donors.md`](visual-gui-donors.md).
-- *Exit criteria:* a screenshot that looks like the north-star "success" description.
+- Copy agent-flow `web/` as the new repo substrate; preserve Apache-2.0 `LICENSE` and add `NOTICE`.
+- Wrap with an Electron shell that hosts the Next/Vite renderer.
+- Establish root `npm run build` / `npm test` and the governing docs on the rebuild branch.
+- **Exit:** app launches; living graph substrate runs inside Electron.
 
-### M3 — Interpretation depth
-- Governing requirements: [`req-v1-curator.md`](req-v1-curator.md) —
-  Mastra **curator** agent (look back / investigate), ChatGPT Pro Codex OAuth, exhibit
-  artifacts for a pre-built visual vocabulary — not dump→JSON dashboard slots.
-- Land Exhibit Floor UI already committed on sibling `feat/exhibit-*` branches.
-- Visual donors to re-activate (in-repo): [`visual-gui-donors.md`](visual-gui-donors.md).
-- The realtime flowchart / insight surfaces (the unbuilt `#83` idea) remain outstanding
-  unless absorbed into an exhibit type.
-- *Exit criteria:* gallery compositions differ by moment; curator lookbacks visible; insights
-  trustworthy enough to glance at instead of reading the transcript.
+### M2 — Ingestion adapter / HarnessDriver
 
-### M4 — Reach
-- Multi-harness capture beyond Claude Code via the existing `HarnessDriver` registry +
-  a hook-receiver transport (Codex, Cursor, Gemini all expose `transcript_path` in hooks).
-- Embed surfaces (the `build:web` bundle / custom element) if wanted.
+- ObservationStore + pluggable `HarnessDriver` / ingestion adapter.
+- Feed normalized events into the copied agent-flow event model.
+- **Exit:** a live (or replayed) harness stream drives the graph without curator yet.
 
-## Housekeeping (do alongside, not blocking)
+### M3 — Mastra curator
 
-- **Doc-path sweep.** ~117 stale `shadow-agent/` path references remain in domain docs,
-  `getting-started.md`, research, and archived plans. Update the live ones; leave history/ alone.
-- **Naming decision.** Decide whether to fully rename the internal `shadow`/`SHADOW_*`
-  identifiers, `~/.shadow-agent/` storage, and `shadow_*` MCP tool names to match the
-  AgentVisualCrazy product name. This is a behavior-affecting refactor (credential paths, env
-  vars) — deliberate, not casual. Deferred until someone decides it's worth the churn.
-- **CI green check.** Confirm the flattened `.github/workflows/ci.yml` passes on the first push.
-- **Logger interface + DI redesign.** `StructuredLogger` has no interface and module-scope
-  singletons force tests to spy on `console.log` with `vi.hoisted` hacks. Extract `interface
-  Logger`, thread it via constructor parameters, add `createTestLogger()` for in-memory
-  assertion. See `docs/plans/plan-testing-observability.md#logging-architecture-redesign`.
-- **Remaining weak test cleanup.** After PR #100 eliminated all FICTION tests, 4 D-grade and
-  3 WEAK files remain (see `docs/audits/README.md`). Strengthen: IPC bridge (2 tests for 145
-  lines), host.ts (1 test), renderer-surface-adapter (1 test), record-2d-context (tests the
-  helper, not production code).
+- Mastra curator agent in the Electron main process.
+- Curator investigates the session (look back, hypothesis → evidence) and authors exhibit artifacts / briefings — reasoning agent, not classifier.
+- **Exit:** curator can produce structured exhibit artifacts from ObservationStore state.
+
+### M4 — ChatGPT Pro OAuth
+
+- ChatGPT Pro OAuth against the Codex endpoint for curator inference.
+- Tokens and local config under `~/.agentvisualcrazy/`.
+- **Exit:** curator runs authenticated end-to-end without manual API-key paste as the happy path.
+
+### M5 — Exhibit Stage
+
+- Exhibit Stage surface; `live_graph` is one exhibit among curator-staged exhibits.
+- Compose living graph + curated exhibits (not Phase/Risk/Next dashboard slots).
+- **Exit:** user can watch the living graph and flip through curator-authored exhibits in one composition.
+
+## Sequencing
+
+```
+M1 substrate + shell
+ → M2 ingestion
+   → M3 curator
+     → M4 OAuth
+       → M5 Exhibit Stage
+```
+
+M3 may use a temporary inference path until M4 lands; M5 consumes curator artifacts from M3+.
+
+## Out of scope for this roadmap
+
+- Acting on behalf of the observed agent
+- Reintroducing the v0 classifier / Phase–Risk–Next dashboard as the product core
+- Pattern-harvest rebuild of the renderer

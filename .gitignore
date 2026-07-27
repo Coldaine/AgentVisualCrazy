@@ -1,17 +1,35 @@
 # Dependencies
 node_modules/
 
-# Build output
+# Build / cache
 dist/
 dist-electron/
 dist-web/
+build/
+out/
+.next/
+.turbo/
+.vite/
+.cache/
 coverage/
+*.tsbuildinfo
 
-# Local env
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Local env / secrets
 .env
+.env.*
+!.env.example
 
-# Generated types
-scripts/*.d.mts
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
 
 # Agent / tooling state (not part of the product)
 .omc/
@@ -19,7 +37,7 @@ scripts/*.d.mts
 .claude/agents/
 .gemini/agents/
 
-# External tooling state (entire) — re-injects locally; keep it out of the repo
+# External tooling state (entire) - re-injects locally; keep it out of the repo
 .entire/
 .githooks/commit-msg
 .githooks/post-commit
