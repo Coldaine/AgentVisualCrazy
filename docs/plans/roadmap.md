@@ -42,13 +42,20 @@ Visual fidelity is priority #1 (per the north star).
 - Mine [`../ideas/repoviz/repovis-creative-alternatives.md`](../ideas/repoviz/repovis-creative-alternatives.md)
   (~40 concepts) and the `exhibit-prototype.jsx` for the exhibit visual language; pick the
   views that fit live agent observation and build them for real.
+- In-repo donor inventory (what we demoted / underused — re-activate, don’t re-fetch):
+  [`visual-gui-donors.md`](visual-gui-donors.md).
 - *Exit criteria:* a screenshot that looks like the north-star "success" description.
 
 ### M3 — Interpretation depth
-- Real, calibrated model insights: phase detection, risk signals, file-attention, next-action
-  prediction with confidence — not just rule-based stand-ins.
-- The realtime flowchart / insight surfaces (the unbuilt `#83` idea).
-- *Exit criteria:* insights are accurate and trustworthy enough to glance at instead of reading the transcript.
+- Governing requirements: [`req-v1-curator.md`](req-v1-curator.md) —
+  Mastra **curator** agent (look back / investigate), ChatGPT Pro Codex OAuth, exhibit
+  artifacts for a pre-built visual vocabulary — not dump→JSON dashboard slots.
+- Land Exhibit Floor UI already committed on sibling `feat/exhibit-*` branches.
+- Visual donors to re-activate (in-repo): [`visual-gui-donors.md`](visual-gui-donors.md).
+- The realtime flowchart / insight surfaces (the unbuilt `#83` idea) remain outstanding
+  unless absorbed into an exhibit type.
+- *Exit criteria:* gallery compositions differ by moment; curator lookbacks visible; insights
+  trustworthy enough to glance at instead of reading the transcript.
 
 ### M4 — Reach
 - Multi-harness capture beyond Claude Code via the existing `HarnessDriver` registry +
