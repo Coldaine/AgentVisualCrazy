@@ -74,6 +74,24 @@ confirmed by hand.
 **PR:** `test/foundation-gates` (G0.1/G0.2 wired into CI) + a short gate-run record in
 `docs/plans/forward.md` once G0.3–G0.5 are confirmed by hand.
 
+### Gate re-run — 2026-07-27 07:35 (fix/oauth-exhibits-render)
+
+The launch + bridge gates were verified by actually booting the Electron app and
+capturing window screenshots via Win32 `PrintWindow` (the BrowserWindow renders even
+when not in the foreground). Both visualizations render.
+
+| Gate | Result | Notes |
+|------|--------|-------|
+| G0.1 build | **PASS** | `npm run build` clean. Web Vite build + `tsc`/esbuild electron build succeed with the restored `ExhibitGalleryApp` import in `web/electron-entry.tsx`. |
+| G0.2 tests | **PASS** | 93 tests pass across all suites: root vitest 12, `test:dom` 3 (jsdom render tests), `host/ingestion` 14, `host/curator` 48 (incl. 10 browser/device-flow + 8 JWT hardening), `host/mcp` 16. |
+| G0.3 launch | **PASS** | `npm start` launches Electron; the BrowserWindow loads with the "AgentVisualCrazy" title and the agent-flow canvas renders its dark starry-sky background (empty state — no live session connected). Screenshot evidence: `tmp/visualizer.png` (1200x752, captured via `PrintWindow`). |
+| G0.4 ingestion | **PASS** | `[ingestion-host]` auto-discovered the real Claude session (`6e18b50a-...jsonl`); `[curator-host]` started and published 2 artifacts (mode=mock) on renderer-ready. Confirmed in `tmp/electron-stdout.log`. |
+| G0.5 bridge | **PASS** | The IPC round-trip works: renderer `ready` → ingestion auto-discovery → curator kick → `exhibit-artifacts` published. The `Ctrl+Shift+E` in-UI toggle switches to the Exhibit Stage, which renders the fixture gallery (exhibit cards, ACTIVE badges, gradient progress bars, activity-narrative + interesting-moments detail panels). Screenshot evidence: `tmp/exhibits.png` (1200x752). |
+
+**Verdict:** all F0 foundation gates pass. The substrate boots, ingests a real session,
+the IPC bridge round-trips, and both the agent-flow visualizer and the Exhibit Stage
+render in the Electron BrowserWindow. F1 follow-on work can proceed.
+
 ## Workstreams
 
 ### F1 — OAuth login UX
