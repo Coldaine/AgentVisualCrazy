@@ -11,6 +11,8 @@ import { vscodeBridge } from './vscode-bridge'
 export interface ElectronHostApi {
   send: (message: Record<string, unknown>) => void
   onMessage: (handler: (message: unknown) => void) => () => void
+  /** Optional curator lookback into ObservationStore (main process). */
+  queryRecent?: (n?: number) => Promise<unknown[]>
 }
 
 declare global {

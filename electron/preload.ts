@@ -18,4 +18,8 @@ contextBridge.exposeInMainWorld('agentVisual', {
       ipcRenderer.removeListener(IPC.HOST_MESSAGE, listener)
     }
   },
+  /** Curator lookback — recent ObservationStore rows from main. */
+  queryRecent: (n?: number) => {
+    return ipcRenderer.invoke(IPC.OBSERVATION_QUERY_RECENT, n)
+  },
 })
