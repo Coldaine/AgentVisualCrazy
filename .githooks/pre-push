@@ -8,4 +8,5 @@ npm test
 # Intentionally NOT in CI (no real session data there) — pre-push, on a
 # developer machine, is the right place. They SKIP (not fail) when no real
 # session exists, so a fresh checkout still pushes cleanly.
-npm run test:live
+# Rebuild branches may omit live suite; --if-present keeps pin-era hooks compatible.
+npm run test:live --if-present
