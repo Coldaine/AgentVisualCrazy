@@ -54,7 +54,7 @@ describe('TokenStore file fallback', () => {
 })
 
 describe('auth mode resolution', () => {
-  it('prefers oauth when tokens exist', () => {
+  it('uses oauth only when tokens exist; never Platform API key', () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'avc-auth-'))
     const store = new TokenStore({ configDir: dir })
     store.save({
@@ -63,12 +63,18 @@ describe('auth mode resolution', () => {
       refresh: 'r',
       expires: Date.now() + 10_000,
     })
-    expect(resolveAuthMode({ tokenStore: store, apiKey: 'sk-test' })).toBe('oauth')
-    expect(resolveAuthMode({ tokenStore: store, prefer: 'api-key', apiKey: 'sk-test' })).toBe(
-      'api-key',
-    )
-    expect(resolveAuthMode({ apiKey: 'sk-test' })).toBe('api-key')
+    expect(resolveAuthMode({ tokenStore: store })).toBe('oauth')
+    expect(resolveAuthMode({ prefer: 'mock' })).toBe('mock')
     expect(resolveAuthMode({})).toBe('mock')
+    // OPENAI_API_KEY must not enable a live auth mode.
+    const prev = process.env.OPENAI_API_KEY
+    process.env.OPENAI_API_KEY = 'sk-must-not-unlock-api-key-mode'
+    try {
+      expect(resolveAuthMode({})).toBe('mock')
+    } finally {
+      if (prev === undefined) delete process.env.OPENAI_API_KEY
+      else process.env.OPENAI_API_KEY = prev
+    }
     fs.rmSync(dir, { recursive: true, force: true })
   })
 })

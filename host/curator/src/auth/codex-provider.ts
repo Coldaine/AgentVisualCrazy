@@ -1,5 +1,6 @@
 /**
- * Codex OAuth LanguageModel + OPENAI_API_KEY fallback (M10, M11).
+ * Codex OAuth LanguageModel only (M10, M11).
+ * No OPENAI_API_KEY / Platform API path — ChatGPT Pro Codex OAuth is the only live auth.
  * Pattern: createOpenAI + custom fetch rewriting to
  * https://chatgpt.com/backend-api/codex/responses + wrapLanguageModel middleware.
  * Adapted from Mastra Code openaiCodexProvider / OpenCode Codex plugin.
@@ -108,39 +109,36 @@ export function buildCodexOAuthFetch(store: TokenStore): typeof fetch {
   }) as typeof fetch
 }
 
-export type AuthMode = 'oauth' | 'api-key' | 'mock'
+/** Live auth is OAuth only. `mock` is offline/dev — not a Platform API substitute. */
+export type AuthMode = 'oauth' | 'mock'
 
 export interface ResolveModelOptions {
   modelId?: string
   thinkingLevel?: ThinkingLevel
   tokenStore?: TokenStore
-  /** Force a mode (tests). Default: oauth if tokens present, else api-key if env set, else mock. */
+  /** Force a mode (tests). Default: oauth if tokens present, else mock. */
   prefer?: AuthMode
-  /** Override API key (defaults to process.env.OPENAI_API_KEY). */
-  apiKey?: string
   /** Injected LanguageModel for mock/tests. */
   mockModel?: unknown
 }
 
 export function resolveAuthMode(options: {
   tokenStore?: TokenStore
-  apiKey?: string
   prefer?: AuthMode
   mockModel?: unknown
 }): AuthMode {
   if (options.prefer) return options.prefer
   if (options.mockModel) return 'mock'
   if (options.tokenStore?.hasOAuth()) return 'oauth'
-  const key = options.apiKey ?? process.env.OPENAI_API_KEY
-  if (key && key.length > 0) return 'api-key'
   return 'mock'
 }
 
 /**
  * Build a Mastra-compatible model config:
  * - oauth → Codex endpoint via wrapLanguageModel + OAuth fetch
- * - api-key → stock OpenAI provider
  * - mock → caller-supplied model (or throws if missing)
+ *
+ * There is no OPENAI_API_KEY / Platform API path.
  */
 export function createCuratorModel(options: ResolveModelOptions = {}): {
   mode: AuthMode
@@ -152,39 +150,29 @@ export function createCuratorModel(options: ResolveModelOptions = {}): {
   if (mode === 'mock') {
     if (!options.mockModel) {
       throw new Error(
-        'No curator model credentials. Set OPENAI_API_KEY, complete Codex OAuth, or pass mockModel.',
+        'No curator model credentials. Complete ChatGPT Pro Codex OAuth, or pass mockModel for offline/dev.',
       )
     }
     return { mode, model: options.mockModel }
+  }
+
+  if (!options.tokenStore) {
+    throw new Error('tokenStore required for Codex OAuth mode')
+  }
+  if (!options.tokenStore.hasOAuth()) {
+    throw new Error('Codex OAuth tokens required — OPENAI_API_KEY is not supported')
   }
 
   const level = getEffectiveThinkingLevel(modelId, options.thinkingLevel ?? 'medium')
   const effort = THINKING_LEVEL_TO_REASONING_EFFORT[level]
   const middleware = createCodexMiddleware(effort)
 
-  if (mode === 'api-key') {
-    const apiKey = options.apiKey ?? process.env.OPENAI_API_KEY
-    if (!apiKey) throw new Error('OPENAI_API_KEY missing for api-key mode')
-    const openai = createOpenAI({ apiKey })
-    return {
-      mode,
-      model: wrapLanguageModel({
-        model: openai.responses(modelId),
-        middleware: [middleware],
-      }),
-    }
-  }
-
-  // oauth
-  if (!options.tokenStore) {
-    throw new Error('tokenStore required for Codex OAuth mode')
-  }
   const openai = createOpenAI({
     apiKey: 'oauth-dummy-key',
     fetch: buildCodexOAuthFetch(options.tokenStore) as typeof fetch,
   })
   return {
-    mode,
+    mode: 'oauth',
     model: wrapLanguageModel({
       model: openai.responses(modelId),
       middleware: [middleware],

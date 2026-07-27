@@ -32,7 +32,7 @@ export function buildMockArtifacts(eventCursor: number): ExhibitArtifact[] {
       id: 'mock-momentum',
       exhibitType: 'momentum',
       title: 'Session momentum (mock)',
-      narrative: `Offline mock gallery at event cursor ${eventCursor}. Enable OPENAI_API_KEY or Codex OAuth for live curation.`,
+      narrative: `Offline mock gallery at event cursor ${eventCursor}. Complete ChatGPT Pro Codex OAuth for live curation (no Platform API key).`,
       relevance: 0.55,
       decayClass: 'fast',
       createdAtEvent: eventCursor,
