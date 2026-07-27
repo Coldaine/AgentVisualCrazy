@@ -34,5 +34,6 @@ Success is **not**:
 
 - [`plans/req-v1-curator.md`](plans/req-v1-curator.md) — requirements for substrate + curator
 - [`plans/visual-gui-donors.md`](plans/visual-gui-donors.md) — substrate & reference inventory
-- [`architecture.md`](architecture.md) — technical map
+- [`plans/forward.md`](plans/forward.md) — post-scaffold pivot plan (what to do next)
+- [`architecture.md`](architecture.md) — technical map + current state + gaps
 - [`plans/roadmap.md`](plans/roadmap.md) — milestones M1–M5
