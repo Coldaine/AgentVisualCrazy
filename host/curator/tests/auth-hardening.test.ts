@@ -125,6 +125,71 @@ describe('buildCodexOAuthFetch URL rewrite', () => {
     expect(capturedBody).toContain('"store":false')
   })
 
+  it('strips a caller-supplied Authorization header and injects the OAuth bearer', async () => {
+    const tokens: CodexOAuthTokens = {
+      type: 'oauth',
+      access: 'at-oauth',
+      refresh: 'rt-oauth',
+      expires: Date.now() + 10 * 60_000,
+    }
+    const store = makeStore(tokens)
+    const fetchFn = buildCodexOAuthFetch(store)
+
+    let capturedAuth = ''
+    const original = globalThis.fetch
+    try {
+      globalThis.fetch = (async (url: URL | Request | string, init?: RequestInit) => {
+        const headers = new Headers(init?.headers)
+        capturedAuth = headers.get('Authorization') ?? ''
+        return new Response('{}', { status: 200 })
+      }) as typeof fetch
+      await fetchFn('https://api.openai.com/v1/responses', {
+        method: 'POST',
+        headers: {
+          Authorization: 'Bearer sk-must-be-stripped',
+          'X-Custom': 'keep-me',
+        },
+        body: JSON.stringify({ model: 'gpt-5.4' }),
+      })
+    } finally {
+      globalThis.fetch = original
+    }
+    expect(capturedAuth).toBe('Bearer at-oauth')
+  })
+
+  it('deletes max_output_tokens from the JSON body on rewrite', async () => {
+    const tokens: CodexOAuthTokens = {
+      type: 'oauth',
+      access: 'at-tok',
+      refresh: 'rt-tok',
+      expires: Date.now() + 10 * 60_000,
+    }
+    const store = makeStore(tokens)
+    const fetchFn = buildCodexOAuthFetch(store)
+
+    let capturedBody = ''
+    const original = globalThis.fetch
+    try {
+      globalThis.fetch = (async (_url: URL | Request | string, init?: RequestInit) => {
+        capturedBody = typeof init?.body === 'string' ? init.body : ''
+        return new Response('{}', { status: 200 })
+      }) as typeof fetch
+      await fetchFn('https://api.openai.com/v1/responses', {
+        method: 'POST',
+        body: JSON.stringify({
+          model: 'gpt-5.4',
+          max_output_tokens: 4096,
+          input: 'hi',
+        }),
+      })
+    } finally {
+      globalThis.fetch = original
+    }
+    const parsed = JSON.parse(capturedBody) as Record<string, unknown>
+    expect(parsed.max_output_tokens).toBeUndefined()
+    expect(parsed.store).toBe(false)
+  })
+
   it('rewrites /chat/completions to the Codex backend endpoint', async () => {
     const tokens: CodexOAuthTokens = {
       type: 'oauth',
@@ -296,6 +361,55 @@ describe('ensureFreshAccess', () => {
     const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'avc-empty-'))
     const store = new TokenStore({ configDir: dir })
     await expect(ensureFreshAccess(store)).rejects.toThrow(/Not logged in/)
+  })
+
+  it('dedups concurrent refreshes against the same refresh_token', async () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'avc-dedup-'))
+    const store = new TokenStore({ configDir: dir })
+    store.save({
+      type: 'oauth',
+      access: 'at-old',
+      refresh: 'rt-shared',
+      expires: Date.now() - 1000,
+      accountId: 'acct-dedup',
+    })
+
+    let refreshCalls = 0
+    let resolveRefresh!: (tokens: { access_token: string; refresh_token: string; expires_in: number }) => void
+    const refreshGate = new Promise<{ access_token: string; refresh_token: string; expires_in: number }>((r) => {
+      resolveRefresh = r
+    })
+    const original = globalThis.fetch
+    try {
+      globalThis.fetch = (async (url: URL | Request | string) => {
+        const u = typeof url === 'string' ? url : url.toString()
+        if (!u.includes('oauth/token')) return new Response('{}', { status: 200 })
+        refreshCalls++
+        return new Response(JSON.stringify(await refreshGate), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' },
+        })
+      }) as typeof fetch
+
+      // Fire three concurrent refreshes; they all overlap on the gated refresh.
+      const pending = [
+        ensureFreshAccess(store),
+        ensureFreshAccess(store),
+        ensureFreshAccess(store),
+      ]
+      // Let the microtask queue drain so all three enter the refresh path.
+      await new Promise((r) => setTimeout(r, 20))
+      expect(refreshCalls).toBe(1)
+      resolveRefresh({ access_token: 'at-new', refresh_token: 'rt-new', expires_in: 3600 })
+
+      const [a, b, c] = await Promise.all(pending)
+      expect(a.access).toBe('at-new')
+      expect(b.access).toBe('at-new')
+      expect(c.access).toBe('at-new')
+      expect(refreshCalls).toBe(1)
+    } finally {
+      globalThis.fetch = original
+    }
   })
 })
 

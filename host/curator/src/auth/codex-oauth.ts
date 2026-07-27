@@ -28,6 +28,21 @@ const DEFAULT_EXPIRES_IN = 3600
 const DEVICE_POLL_SAFETY_MS = 3000
 const ORIGINATOR = 'agentvisualcrazy'
 
+function escapeHtml(s: string): string {
+  return s
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;')
+}
+
+const CALLBACK_HEADERS = {
+  'Content-Type': 'text/html; charset=utf-8',
+  'X-Content-Type-Options': 'nosniff',
+  'Content-Security-Policy': "default-src 'none'",
+} as const
+
 export type CodexAuthMode = 'browser' | 'device'
 
 export interface DeviceCodeStart {
@@ -107,6 +122,8 @@ export async function refreshCodexTokens(refreshToken: string): Promise<CodexOAu
 
 /**
  * Ensure access token is valid, refreshing via TokenStore when needed.
+ * Concurrent callers within the refresh window await the same in-flight refresh
+ * (per-store memoization) to avoid racing the refresh_token when OpenAI rotates it.
  */
 export async function ensureFreshAccess(store: TokenStore): Promise<CodexOAuthTokens> {
   const current = store.load()
@@ -116,14 +133,30 @@ export async function ensureFreshAccess(store: TokenStore): Promise<CodexOAuthTo
   if (Date.now() < current.expires - 60_000) {
     return current
   }
-  const refreshed = await refreshCodexTokens(current.refresh)
-  // Preserve accountId if refresh response omits it.
-  if (!refreshed.accountId && current.accountId) {
-    refreshed.accountId = current.accountId
-  }
-  store.save(refreshed)
-  return refreshed
+  // Dedup concurrent refreshes against the same refresh_token so a rotated
+  // refresh_token isn't used twice. Keyed by the token value in case the store
+  // was reloaded with a different refresh token between calls.
+  const key = current.refresh
+  const existing = inflightRefreshes.get(key)
+  if (existing) return existing
+  const p = (async () => {
+    try {
+      const refreshed = await refreshCodexTokens(current.refresh)
+      // Preserve accountId if refresh response omits it.
+      if (!refreshed.accountId && current.accountId) {
+        refreshed.accountId = current.accountId
+      }
+      store.save(refreshed)
+      return refreshed
+    } finally {
+      inflightRefreshes.delete(key)
+    }
+  })()
+  inflightRefreshes.set(key, p)
+  return p
 }
+
+const inflightRefreshes = new Map<string, Promise<CodexOAuthTokens>>()
 
 /** Start device-code login (headless). Call pollDeviceCodeLogin to finish. */
 export async function startDeviceCodeLogin(): Promise<DeviceCodeStart> {
@@ -267,6 +300,11 @@ export async function startBrowserLogin(options?: {
 
       server = createServer((req, res) => {
         const url = new URL(req.url || '/', `http://localhost:${port}`)
+        if (req.method !== 'GET') {
+          res.writeHead(405, { Allow: 'GET' })
+          res.end('Method Not Allowed')
+          return
+        }
         if (url.pathname !== '/auth/callback') {
           res.writeHead(404)
           res.end('Not found')
@@ -278,8 +316,10 @@ export async function startBrowserLogin(options?: {
         const returnedState = url.searchParams.get('state')
 
         if (error) {
-          res.writeHead(200, { 'Content-Type': 'text/html' })
-          res.end(`<html><body><h1>Login failed</h1><p>${error}</p></body></html>`)
+          res.writeHead(200, CALLBACK_HEADERS)
+          res.end(
+            `<html><body><h1>Login failed</h1><p>${escapeHtml(error)}</p></body></html>`,
+          )
           if (!settled) {
             settled = true
             clearTimeout(timeout)
@@ -290,7 +330,7 @@ export async function startBrowserLogin(options?: {
         }
 
         if (!code || returnedState !== state) {
-          res.writeHead(400, { 'Content-Type': 'text/html' })
+          res.writeHead(400, CALLBACK_HEADERS)
           res.end('<html><body><h1>Invalid OAuth callback</h1></body></html>')
           if (!settled) {
             settled = true
@@ -301,7 +341,7 @@ export async function startBrowserLogin(options?: {
           return
         }
 
-        res.writeHead(200, { 'Content-Type': 'text/html' })
+        res.writeHead(200, CALLBACK_HEADERS)
         res.end(
           '<html><body><h1>Authentication successful</h1><p>Return to AgentVisualCrazy.</p></body></html>',
         )

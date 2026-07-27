@@ -48,7 +48,13 @@ export class TokenStore {
   }
 
   ensureDir(): void {
-    fs.mkdirSync(this.configDir, { recursive: true })
+    fs.mkdirSync(this.configDir, { recursive: true, mode: 0o700 })
+    // Tighten an existing dir's permissions if it already existed.
+    try {
+      fs.chmodSync(this.configDir, 0o700)
+    } catch {
+      /* ignore */
+    }
   }
 
   private plainPath(): string {
@@ -83,7 +89,13 @@ export class TokenStore {
       }
       return
     }
-    fs.writeFileSync(this.plainPath(), json, 'utf8')
+    fs.writeFileSync(this.plainPath(), json, { mode: 0o600, encoding: 'utf8' })
+    // Re-tighten in case the file already existed with looser bits.
+    try {
+      fs.chmodSync(this.plainPath(), 0o600)
+    } catch {
+      /* ignore */
+    }
   }
 
   load(): CodexOAuthTokens | null {
