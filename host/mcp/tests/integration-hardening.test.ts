@@ -10,9 +10,9 @@ import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js'
 import { ObservationStore } from '@agentvisualcrazy/ingestion'
 import type { AgentEvent } from '@agentvisualcrazy/ingestion'
-import { tryLoadCuratorFacade } from '../src/curator-bridge.ts'
+import { tryLoadCuratorFacade, createStubCuratorFacade } from '../src/curator-bridge.ts'
 import { createCuratorMcpServer } from '../src/server.ts'
-import { clampEventsN } from '../src/tools.ts'
+import { clampEventsN, handleCuratorEvents, handleCuratorStatus } from '../src/tools.ts'
 
 function evt(
   time: number,
@@ -148,5 +148,53 @@ describe('clampEventsN edge cases', () => {
     expect(clampEventsN(201)).toBe(200)
     expect(clampEventsN(1)).toBe(1)
     expect(clampEventsN(200)).toBe(200)
+  })
+})
+
+describe('payload redaction', () => {
+  it('curator_events redacts sensitive keys in serialized payloads', async () => {
+    const store = new ObservationStore()
+    store.append(
+      evt(1, 'tool_call_end', {
+        tool: 'Read',
+        result: 'file contents',
+        api_key: 'sk-leak',
+        Authorization: 'Bearer secret',
+        nested: { TOKEN: 'hidden', ok: 'visible' },
+      }),
+      'test',
+    )
+    const result = await handleCuratorEvents(store, 1)
+    const payload = result.events[0].payload as Record<string, unknown>
+    expect(payload.api_key).toBe('[redacted]')
+    expect(payload.Authorization).toBe('[redacted]')
+    expect((payload.nested as Record<string, unknown>).TOKEN).toBe('[redacted]')
+    expect((payload.nested as Record<string, unknown>).ok).toBe('visible')
+    expect(payload.result).toBe('file contents')
+  })
+
+  it('curator_status redacts the latestEvent payload via the stub facade', async () => {
+    const store = new ObservationStore()
+    store.append(
+      evt(1, 'message', { content: 'hi', password: 'p@ss' }),
+      'test',
+    )
+    const curator = createStubCuratorFacade({ jsonlPath: null, watching: false })
+    const status = (await handleCuratorStatus(store, curator)) as {
+      latestEvent: { event: { payload: Record<string, unknown> } } | null
+    }
+    expect(status.latestEvent?.event.payload.password).toBe('[redacted]')
+    expect(status.latestEvent?.event.payload.content).toBe('hi')
+  })
+
+  it('truncates oversized string values in payloads', async () => {
+    const store = new ObservationStore()
+    const huge = 'x'.repeat(10_000)
+    store.append(evt(1, 'tool_call_end', { tool: 'Read', result: huge }), 'test')
+    const result = await handleCuratorEvents(store, 1)
+    const payload = result.events[0].payload as Record<string, unknown>
+    const resultStr = payload.result as string
+    expect(resultStr.length).toBeLessThan(10_000)
+    expect(resultStr).toMatch(/truncated/)
   })
 })

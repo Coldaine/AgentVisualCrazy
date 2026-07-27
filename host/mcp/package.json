@@ -5,8 +5,9 @@
   "type": "module",
   "description": "Read-only stdio MCP server exposing curator_* tools over ObservationStore (M11/S3 prep).",
   "exports": {
-    ".": "./src/index.ts",
-    "./server": "./src/server.ts"
+    ".": "./src/server.ts",
+    "./server": "./src/server.ts",
+    "./bin": "./src/index.ts"
   },
   "scripts": {
     "start": "tsx src/index.ts",

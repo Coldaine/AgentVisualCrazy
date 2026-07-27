@@ -7,6 +7,7 @@
  *
  * stdout is JSON-RPC — log only to stderr.
  */
+import { fileURLToPath } from 'node:url'
 import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js'
 import { tryLoadCuratorFacade } from './curator-bridge.ts'
 import { createCuratorMcpServer } from './server.ts'
@@ -39,7 +40,16 @@ async function main(): Promise<void> {
   process.on('SIGTERM', shutdown)
 }
 
-main().catch((err) => {
-  console.error('[mcp] fatal:', err)
-  process.exit(1)
-})
+// Only boot the stdio server when this file is the entry point, not when
+// imported as a module (the package root export is ./src/server.ts).
+const isDirectEntry =
+  process.argv[1] && fileURLToPath(import.meta.url) === fileURLToPath(`file://${process.argv[1]}`)
+
+if (isDirectEntry) {
+  main().catch((err) => {
+    console.error('[mcp] fatal:', err)
+    process.exit(1)
+  })
+}
+
+export { main }

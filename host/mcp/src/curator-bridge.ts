@@ -7,6 +7,7 @@ import { existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import type { ObservationQuery, StoredObservation } from '@agentvisualcrazy/ingestion'
+import { redactPayload } from './tools.ts'
 
 export interface GallerySummary {
   configured: boolean
@@ -87,13 +88,16 @@ export function createStubCuratorFacade(options: {
   return {
     getStatus(store) {
       const latest = store.recent(1)[0] ?? null
+      const latestRedacted = latest
+        ? ({ ...latest, event: { ...latest.event, payload: redactPayload(latest.event.payload) } } as StoredObservation)
+        : null
       return {
         curatorConfigured: false,
         storeSize: store.size,
         jsonlPath: options.jsonlPath,
         watching: options.watching,
         phaseLike: inferPhaseLike(store),
-        latestEvent: latest,
+        latestEvent: latestRedacted,
         gallery: stubGallery(),
         note: CURATOR_NOT_CONFIGURED,
       }
