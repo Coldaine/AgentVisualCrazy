@@ -1,0 +1,46 @@
+{
+  "name": "agent-visual-crazy",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Passive visual observer for AI coding agents (Electron + agent-flow renderer)",
+  "main": "dist-electron/main.js",
+  "scripts": {
+    "dev": "npm run build:electron && concurrently -k -n vite,electron -c cyan,magenta \"npm run dev:web\" \"npm run dev:electron\"",
+    "dev:web": "vite --config web/vite.config.electron.ts",
+    "dev:electron": "wait-on tcp:127.0.0.1:5173 && cross-env VITE_DEV_SERVER_URL=http://127.0.0.1:5173 electron .",
+    "build:web": "vite build --config web/vite.config.electron.ts",
+    "build:electron": "tsc -p electron/tsconfig.json",
+    "build": "npm run build:web && npm run build:electron",
+    "start": "electron .",
+    "typecheck": "tsc -p electron/tsconfig.json --noEmit",
+    "test:ingestion": "npm --prefix host/ingestion test",
+    "test": "npm run test:ingestion"
+  },
+  "dependencies": {
+    "d3-force": "^3.0.0",
+    "framer-motion": "^12.42.2",
+    "react": "19.2.4",
+    "react-dom": "19.2.4"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.3",
+    "@tailwindcss/vite": "^4.2.2",
+    "@types/d3-force": "^3.0.10",
+    "@types/node": "^22",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "@vitejs/plugin-react": "^6.0.1",
+    "concurrently": "^9.2.0",
+    "cross-env": "^7.0.3",
+    "electron": "^37.2.0",
+    "postcss": "^8.5.23",
+    "tailwindcss": "^4.2.0",
+    "tw-animate-css": "1.3.3",
+    "typescript": "5.7.3",
+    "vite": "^8.0.1",
+    "wait-on": "^8.0.4"
+  },
+  "allowScripts": {
+    "electron@37.10.3": true
+  }
+}
